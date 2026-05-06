@@ -30,8 +30,13 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
+# local env files (never commit real keys)
+.env
 .env*.local
+
+# Local JDK path for Android builds (see jdk.home.example)
+jdk.home
+android.sdk
 
 # typescript
 *.tsbuildinfo

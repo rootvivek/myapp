@@ -1,0 +1,8 @@
+# Optional: only if ANDROID_HOME is not set and the default path is wrong.
+# Copy to "android.sdk" and put ONLY your Android SDK path on the next line.
+# macOS default (Android Studio): ~/Library/Android/sdk
+#
+# Example:
+# /Users/you/Library/Android/sdk
+#
+# Then: npm run sync:jdk

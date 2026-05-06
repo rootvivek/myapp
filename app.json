@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "myapp",
+    "name": "MCA Phone Wala",
     "slug": "myapp",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -15,6 +15,7 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.myapp",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -25,6 +26,21 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow MCA Phone Wala to access photos to attach device images.",
+          "cameraPermission": "Allow MCA Phone Wala to use the camera for device photos."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow MCA Phone Wala to use the camera to scan IMEI barcodes."
+        }
+      ]
+    ]
   }
 }

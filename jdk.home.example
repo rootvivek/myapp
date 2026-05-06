@@ -1,0 +1,13 @@
+# Copy this file to "jdk.home" (same folder as package.json).
+# Put ONLY your JDK path on the next line — no quotes. Must be the "Home"
+# directory (it contains a bin/ folder with java inside).
+#
+# macOS examples:
+# /Library/Java/JavaVirtualMachines/temurin-17.jdk/Contents/Home
+# /opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
+#
+# Then run: npm run sync:jdk   (also writes Android sdk.dir if SDK is found)
+# Then run: npm run build:apk
+#
+# If you see "SDK location not found": install Android Studio, or set ANDROID_HOME,
+# or use android.sdk.example → android.sdk with your SDK path.
