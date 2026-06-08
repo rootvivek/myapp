@@ -8,9 +8,10 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
+import { Searchbar } from 'react-native-paper';
+import LinearGradient from 'react-native-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useTheme } from '../context/ThemeContext';
@@ -39,20 +40,16 @@ function createStyles(colors: AppColors): ReturnType<typeof StyleSheet.create> {
   return StyleSheet.create({
     safe: {
       flex: 1,
-      backgroundColor: colors.bg,
+      backgroundColor: colors.bgGradient[0] || colors.bg,
     },
-    search: {
-      marginHorizontal: 0,
+    searchbar: {
+      marginHorizontal: 16,
+      marginTop: 8,
       marginBottom: spacing.sm,
       backgroundColor: colors.surface2,
-      borderWidth: 0,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: colors.border,
-      borderRadius: 0,
-      paddingHorizontal: spacing.md,
-      paddingVertical: 14,
-      color: colors.text,
-      fontSize: 16,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
     },
     centered: {
       flex: 1,
@@ -61,7 +58,7 @@ function createStyles(colors: AppColors): ReturnType<typeof StyleSheet.create> {
     },
     list: {
       paddingHorizontal: 0,
-      paddingBottom: spacing.xl,
+      paddingBottom: 100,
     },
     empty: {
       color: colors.textMuted,
@@ -175,14 +172,23 @@ export function CustomerDirectoryScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <TextInput
-        style={styles.search}
+      <LinearGradient
+        colors={colors.bgGradient}
+        style={{
+          position: 'absolute',
+          width: '100%',
+          height: '100%',
+        }}
+      />
+      <Searchbar
         placeholder="Search name or number"
         placeholderTextColor={colors.textMuted}
-        value={query}
         onChangeText={setQuery}
-        autoCorrect={false}
-        clearButtonMode="while-editing"
+        value={query}
+        style={styles.searchbar}
+        iconColor={colors.accent}
+        inputStyle={{ color: colors.text }}
+        theme={{ colors: { elevation: { level3: colors.surface } } }}
       />
       {loading && customers.length === 0 ? (
         <View style={styles.centered}>

@@ -3,12 +3,13 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import { useTheme } from '../context/ThemeContext';
 import { AddRepairScreen } from '../screens/AddRepairScreen';
-import { HomeScreen } from '../screens/HomeScreen';
+import { MainTabScreen } from '../screens/MainTabScreen';
 import { RepairDetailScreen } from '../screens/RepairDetailScreen';
 import { ScanImeiScreen } from '../screens/ScanImeiScreen';
 import { CustomerDirectoryScreen } from '../screens/CustomerDirectoryScreen';
 import { SearchScreen } from '../screens/SearchScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
+import { ManageLabourScreen } from '../screens/ManageLabourScreen';
 import type { RootStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -38,15 +39,13 @@ export function AppNavigator() {
           contentStyle: { backgroundColor: colors.bg },
         }}
       >
-        <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="Home" component={MainTabScreen} options={{ headerShown: false }} />
         <Stack.Screen
           name="AddRepair"
           component={AddRepairScreen}
-          options={({ route }) => ({
-            title: route.params?.repairId != null ? 'Edit job' : 'New job',
-          })}
+          options={{ headerShown: false }}
         />
-        <Stack.Screen name="RepairDetail" component={RepairDetailScreen} options={{ title: 'Job details' }} />
+        <Stack.Screen name="RepairDetail" component={RepairDetailScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Search" component={SearchScreen} options={{ title: 'Search' }} />
         <Stack.Screen
           name="CustomerDirectory"
@@ -54,6 +53,7 @@ export function AppNavigator() {
           options={{ title: 'Customers' }}
         />
         <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Shop & invoice' }} />
+        <Stack.Screen name="ManageLabour" component={ManageLabourScreen} options={{ headerShown: false }} />
         <Stack.Screen name="ScanImei" component={ScanImeiScreen} options={{ title: 'Scan IMEI' }} />
       </Stack.Navigator>
     </NavigationContainer>

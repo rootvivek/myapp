@@ -4,6 +4,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { RepairsProvider } from './src/context/RepairsContext';
+import { InventoryProvider } from './src/context/InventoryContext';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { AuthScreen } from './src/screens/AuthScreen';
 import { SplashScreen } from './src/components/SplashScreen';
@@ -26,8 +27,10 @@ function AuthenticatedApp() {
 
   return (
     <RepairsProvider>
-      <StatusBar barStyle={mode === 'dark' ? 'light-content' : 'dark-content'} />
-      <AppNavigator />
+      <InventoryProvider>
+        <StatusBar barStyle={mode === 'dark' ? 'light-content' : 'dark-content'} />
+        <AppNavigator />
+      </InventoryProvider>
     </RepairsProvider>
   );
 }

@@ -1,5 +1,12 @@
 export type RepairStatus = 'pending' | 'in_progress' | 'completed' | 'delivered' | 'cancelled';
 
+export type LockType = '' | 'pattern' | 'pin' | 'password';
+
+export const LOCK_TYPES: { value: LockType; label: string }[] = [
+  { value: 'pattern', label: 'Pattern' },
+  { value: 'password', label: 'Password' },
+];
+
 export const REPAIR_STATUSES: { value: RepairStatus; label: string }[] = [
   { value: 'pending', label: 'Pending' },
   { value: 'in_progress', label: 'In Progress' },
@@ -17,10 +24,14 @@ export interface Repair {
   phone: string;
   deviceModel: string;
   imei: string;
+  lockType: LockType;
+  lockValue: string;
   problem: string;
+  warranty: string;
   dateReceived: string;
   status: RepairStatus;
   repairCost: number;
+  expense: number;
   advanceAmount: number;
   isPaid: boolean;
   imagePhoneFront: string;
@@ -31,6 +42,8 @@ export interface Repair {
   /** Customer handed in with device (accessories checklist). */
   accSimTray: boolean;
   accBackCover: boolean;
+  createdBy: string;
+  createdByName: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -44,22 +57,12 @@ export const ACCESSORY_ITEMS: {
   { key: 'accBackCover', label: 'Back cover' },
 ];
 
-export type RepairImageSlot = 'front' | 'back' | 'thumb' | 'id1' | 'id2';
-
-export function countRepairImages(r: Repair): number {
-  return [
-    r.imagePhoneFront,
-    r.imagePhoneBack,
-    r.imageThumbnail,
-    r.imageId1,
-    r.imageId2,
-  ].filter((u) => u && u.length > 0).length;
-}
+export type RepairImageSlot = 'front' | 'back' | 'id1' | 'id2';
 
 export function formatAccessoriesSummary(r: Repair): string {
   return ACCESSORY_ITEMS.map(({ key, label }) => `${label}: ${r[key] ? 'Yes' : 'No'}`).join(' · ');
 }
 
-export type RepairInput = Omit<Repair, 'id' | 'createdAt' | 'updatedAt'> & {
+export type RepairInput = Omit<Repair, 'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'createdByName'> & {
   id?: number;
 };

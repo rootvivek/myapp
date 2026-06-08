@@ -24,6 +24,8 @@ export function RepairsProvider({ children }: { children: React.ReactNode }) {
       const list = await getAllRepairs();
       setRepairs(list);
       setReady(true);
+    } catch (err) {
+      console.warn('Error fetching repairs:', err);
     } finally {
       setLoading(false);
     }

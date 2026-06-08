@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -14,364 +14,245 @@ import {
 import { useTheme } from '../context/ThemeContext';
 import { accentAlpha } from '../theme';
 import type { AppColors } from '../theme';
-import { radius, spacing } from '../theme';
+import { spacing } from '../theme';
 import type { Repair, RepairStatus } from '../types/repair';
 import { REPAIR_STATUSES } from '../types/repair';
 import { formatDateDisplay } from '../utils/format';
 import { shareReceiptPdf } from '../utils/receipt';
+import { StatusChip } from './StatusChip';
 
 type Props = {
   repair: Repair;
   onPress: () => void;
-  /** When set, shows a quick action to change status without opening edit. */
   onStatusChange?: (repairId: number, status: RepairStatus) => void | Promise<void>;
 };
 
+// Status pill icons (colors are resolved dynamically from context colors)
+const STATUS_ICONS: Record<RepairStatus, string> = {
+  pending: '⏳',
+  in_progress: '🔄',
+  completed: '✅',
+  delivered: '📦',
+  cancelled: '❌',
+};
+
 function createStyles(colors: AppColors) {
-  const styles = StyleSheet.create({
+  const s = StyleSheet.create({
     card: {
       backgroundColor: colors.surface,
-      borderRadius: 4,
+      borderRadius: 12,
       borderWidth: 1,
       borderColor: colors.border,
       overflow: 'hidden',
-      marginBottom: spacing.sm,
-      shadowColor: '#000',
+      marginBottom: 6,
+      shadowColor: '#7C3AED',
       shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.12,
-      shadowRadius: 8,
-      elevation: 4,
+      shadowOpacity: 0.04,
+      shadowRadius: 6,
+      elevation: 0,
+      padding: 8,
     },
-    cardMain: {
-      padding: spacing.sm,
+    body: { flexDirection: 'row', alignItems: 'stretch' },
+    /* ── Left image ─────────────────── */
+    imgWrap: { width: 100, justifyContent: 'center', position: 'relative' },
+    img: { width: 100, height: 100, borderRadius: 8, backgroundColor: colors.surface2 },
+    badge: {
+      position: 'absolute', bottom: 6, left: 6,
+      backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 8,
+      flexDirection: 'row', alignItems: 'center', gap: 3,
+      paddingHorizontal: 6, paddingVertical: 2,
     },
-    pressed: {
-      opacity: 0.85,
-      transform: [{ scale: 0.99 }],
-    },
-    quickRow: {
+    badgeText: { color: '#fff', fontSize: 10, fontWeight: '700' },
+    /* ── Center content ─────────────── */
+    content: { flex: 1, paddingHorizontal: 8, justifyContent: 'center', gap: 3 },
+    custTexts: { flex: 1, minWidth: 0 },
+    custLabel: { color: colors.textMuted, fontSize: 10, fontWeight: '500' },
+    custName: { color: colors.text, fontSize: 13, fontWeight: '700' },
+    infoRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    infoLabel: { color: colors.textMuted, fontSize: 11, fontWeight: '600', width: 56 },
+    infoValue: { flex: 1, color: colors.text, fontSize: 12, fontWeight: '500' },
+    /* ── Right actions ──────────────── */
+    actions: { justifyContent: 'center', alignItems: 'center', gap: 8 },
+    actionBtn: {
       flexDirection: 'row',
-      alignItems: 'stretch',
-      borderTopWidth: StyleSheet.hairlineWidth,
-      borderTopColor: colors.border,
+      alignItems: 'center',
+      justifyContent: 'flex-start',
+      gap: 5,
+      width: 90,
+      height: 28,
       backgroundColor: colors.surface2,
-    },
-    quickBtn: {
-      flex: 1,
-      minWidth: 0,
-      paddingVertical: spacing.sm + 2,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    quickBtnInner: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-    },
-    quickBtnDisabled: {
-      opacity: 0.5,
-    },
-    quickBtnIcon: {
-      color: colors.accent,
-      fontSize: 18,
-      lineHeight: 18,
-      fontWeight: '700',
-    },
-    quickBtnText: {
-      color: colors.accent,
-      fontSize: 14,
-      fontWeight: '800',
-    },
-    quickStatusText: {
-      color: colors.text,
-      fontSize: 14,
-      fontWeight: '800',
-      textAlign: 'center',
-      paddingHorizontal: 4,
-    },
-    quickDivider: {
-      width: StyleSheet.hairlineWidth,
-      backgroundColor: colors.border,
-    },
-    modalWrap: {
-      flex: 1,
-      backgroundColor: 'rgba(0,0,0,0.6)',
-      justifyContent: 'center',
-      padding: spacing.lg,
-    },
-    modalSheetOuter: {
-      zIndex: 1,
-      width: '100%',
-    },
-    modalSheet: {
-      backgroundColor: colors.surface,
-      borderRadius: radius.lg,
+      borderRadius: 4,
       borderWidth: 1,
       borderColor: colors.border,
-      overflow: 'hidden',
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.25,
-      shadowRadius: 12,
-      elevation: 8,
+      paddingVertical: 2,
+      paddingHorizontal: 6,
     },
-    modalTitle: {
-      color: colors.text,
-      fontSize: 18,
-      fontWeight: '800',
-      paddingHorizontal: spacing.md,
-      paddingTop: spacing.md,
-      letterSpacing: -0.3,
+    actionIcon: { fontSize: 12 },
+    callText: { color: colors.success, fontSize: 11, fontWeight: '700' },
+    invoiceText: { color: colors.accent, fontSize: 11, fontWeight: '700' },
+    /* ── Modal ──────────────────────── */
+    modalWrap: { flex: 1, backgroundColor: colors.text === '#FFFFFF' ? 'rgba(5,8,22,0.85)' : 'rgba(15,23,42,0.45)', justifyContent: 'center', padding: spacing.lg },
+    modalOuter: { zIndex: 1, width: '100%' },
+    modalSheet: {
+      backgroundColor: colors.surface, borderRadius: 24, borderWidth: 1,
+      borderColor: 'rgba(124,58,237,0.2)', overflow: 'hidden',
+      shadowColor: '#7C3AED', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.25, shadowRadius: 24, elevation: 12,
     },
-    modalSub: {
-      color: colors.textMuted,
-      fontSize: 14,
-      paddingHorizontal: spacing.md,
-      paddingBottom: spacing.sm,
-    },
-    modalRow: {
-      paddingVertical: spacing.md,
-      paddingHorizontal: spacing.md,
-      borderTopWidth: StyleSheet.hairlineWidth,
-      borderTopColor: colors.border,
-    },
-    modalRowCurrent: {
-      backgroundColor: accentAlpha(colors.accent, 0.1),
-    },
-    modalRowText: {
-      color: colors.text,
-      fontSize: 16,
-      fontWeight: '600',
-    },
-    modalRowTextCurrent: {
-      color: colors.accent,
-      fontWeight: '700',
-    },
-    modalCancel: {
-      paddingVertical: spacing.md,
-      alignItems: 'center',
-      borderTopWidth: StyleSheet.hairlineWidth,
-      borderTopColor: colors.border,
-      backgroundColor: colors.surface2,
-    },
-    modalCancelText: {
-      color: colors.textMuted,
-      fontWeight: '700',
-      fontSize: 16,
-    },
-    rowMain: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-      gap: spacing.sm + 2,
-    },
-    thumbWrap: {
-      width: 88,
-      height: 88,
-    },
-    thumb: {
-      width: 88,
-      height: 88,
-      borderRadius: 4,
-      backgroundColor: colors.surface2,
-    },
-
-    mainText: {
-      flex: 1,
-      minWidth: 0,
-    },
-    detailLine: {
-      color: colors.text,
-      fontSize: 15,
-      lineHeight: 22,
-      marginBottom: 0,
-    },
-    detailLabel: {
-      color: colors.textMuted,
-      fontWeight: '700',
-      marginRight: 6,
-      fontSize: 13,
-    },
-    detailValue: {
-      color: colors.text,
-      fontWeight: '600',
-      fontSize: 15,
-    },
+    modalTitle: { color: colors.text, fontSize: 20, fontWeight: '800', paddingHorizontal: spacing.lg, paddingTop: spacing.lg, letterSpacing: -0.3 },
+    modalSub: { color: colors.textMuted, fontSize: 14, paddingHorizontal: spacing.lg, paddingBottom: spacing.sm },
+    modalRow: { paddingVertical: 16, paddingHorizontal: spacing.lg, borderTopWidth: 1, borderTopColor: colors.border },
+    modalRowCur: { backgroundColor: accentAlpha(colors.accent, 0.12) },
+    modalRowText: { color: colors.text, fontSize: 16, fontWeight: '600' },
+    modalRowTextCur: { color: colors.accent, fontWeight: '700' },
+    modalCancel: { paddingVertical: 16, alignItems: 'center', borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.surface2 },
+    modalCancelText: { color: colors.textMuted, fontWeight: '700', fontSize: 16 },
+    disabled: { opacity: 0.5 },
   });
-
-  return styles as typeof styles & {
-    thumb: import('react-native').ImageStyle;
-  };
+  return s as typeof s & { img: import('react-native').ImageStyle };
 }
 
-export function RepairCard({ repair, onPress, onStatusChange }: Props) {
+export const RepairCard = React.memo(function RepairCard({ repair, onPress, onStatusChange }: Props) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [statusModal, setStatusModal] = useState(false);
   const [pdfBusy, setPdfBusy] = useState(false);
+
   const statusLabel = REPAIR_STATUSES.find((s) => s.value === repair.status)?.label ?? repair.status;
 
-  function pickStatus(s: RepairStatus): void {
+  const pill = useMemo(() => {
+    const icon = STATUS_ICONS[repair.status] ?? '⏳';
+    switch (repair.status) {
+      case 'pending':
+        return { bg: colors.statusPendingBg, text: colors.statusPendingText, border: colors.statusPendingBorder, icon };
+      case 'in_progress':
+        return { bg: colors.statusInProgressBg, text: colors.statusInProgressText, border: colors.statusInProgressBorder, icon };
+      case 'completed':
+        return { bg: colors.statusCompletedBg, text: colors.statusCompletedText, border: colors.statusCompletedBorder, icon };
+      case 'delivered':
+        return { bg: colors.statusDeliveredBg, text: colors.statusDeliveredText, border: colors.statusDeliveredBorder, icon };
+      case 'cancelled':
+        return { bg: colors.statusCancelledBg, text: colors.statusCancelledText, border: colors.statusCancelledBorder, icon };
+      default:
+        return { bg: colors.statusPendingBg, text: colors.statusPendingText, border: colors.statusPendingBorder, icon };
+    }
+  }, [repair.status, colors]);
+
+  function pickStatus(s: RepairStatus) {
     setStatusModal(false);
     if (onStatusChange && s !== repair.status) void onStatusChange(repair.id, s);
   }
 
-  async function handleCall(): Promise<void> {
+  async function handleCall() {
     const raw = repair.phone.trim();
-    if (!raw) {
-      Alert.alert('No phone number', 'Add a phone number on this job to call.');
-      return;
-    }
+    if (!raw) { Alert.alert('No phone number', 'Add a phone number on this job to call.'); return; }
     const dial = raw.replace(/[^\d+]/g, '');
-    if (!dial) {
-      Alert.alert('Invalid number', 'Could not dial this phone entry.');
-      return;
-    }
-    const url = `tel:${dial}`;
+    if (!dial) { Alert.alert('Invalid number', 'Could not dial this phone entry.'); return; }
     try {
-      const ok = await Linking.canOpenURL(url);
-      if (ok) await Linking.openURL(url);
+      const ok = await Linking.canOpenURL(`tel:${dial}`);
+      if (ok) await Linking.openURL(`tel:${dial}`);
       else Alert.alert('Cannot call', 'No app can handle phone calls on this device.');
-    } catch {
-      Alert.alert('Cannot call', 'Try again or dial manually.');
-    }
+    } catch { Alert.alert('Cannot call', 'Try again or dial manually.'); }
   }
 
-  async function handleSharePdf(): Promise<void> {
+  async function handlePdf() {
     setPdfBusy(true);
     try {
       await shareReceiptPdf(repair);
-    } catch {
-      Alert.alert('Receipt PDF', 'Could not create or share the PDF. Try again.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      Alert.alert('Invoice PDF', msg);
     } finally {
       setPdfBusy(false);
     }
   }
 
-
   return (
     <View style={styles.card}>
-      <Pressable
-        onPress={onPress}
-        style={({ pressed }) => [styles.cardMain, pressed && styles.pressed]}
-        android_ripple={{ color: colors.border }}
-      >
-        <View style={styles.rowMain}>
-          <View style={styles.thumbWrap}>
-            {repair.imageThumbnail ? (
-              <Image source={{ uri: repair.imageThumbnail }} style={styles.thumb} resizeMode="cover" />
-            ) : (
-              <Image
-                source={require('../../assets/app-logo.jpg')}
-                style={styles.thumb}
-                resizeMode="cover"
-              />
+      <View style={styles.body}>
+        {/* ── Image ── */}
+        <Pressable onPress={onPress} style={styles.imgWrap}>
+          <Image
+            source={(repair.imagePhoneFront || repair.imageThumbnail) ? { uri: repair.imagePhoneFront || repair.imageThumbnail } : require('../../assets/app-logo.jpg')}
+            style={styles.img} resizeMode="cover"
+          />
+        </Pressable>
+
+        {/* ── Content ── */}
+        <Pressable onPress={onPress} style={styles.content}>
+          <View style={styles.custTexts}>
+            <Text style={styles.custLabel}>Customer name</Text>
+            <Text style={styles.custName} numberOfLines={1}>{repair.customerName}</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Device</Text>
+            <Text style={styles.infoValue} numberOfLines={1}>{repair.deviceModel}</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Problem</Text>
+            <Text style={styles.infoValue} numberOfLines={1}>{repair.problem || '—'}</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Date</Text>
+            <Text style={styles.infoValue} numberOfLines={1}>{formatDateDisplay(repair.dateReceived)}</Text>
+          </View>
+          {repair.createdByName ? (
+            <Text style={{ fontSize: 10, color: colors.textMuted, fontWeight: '600', marginTop: 2 }}>
+              Added by {repair.createdByName}
+            </Text>
+          ) : null}
+
+        </Pressable>
+
+        {/* ── Right actions ── */}
+        <View style={styles.actions}>
+          <StatusChip
+            status={repair.status}
+            label={statusLabel}
+            icon={pill.icon}
+            bg={pill.bg}
+            border={pill.border}
+            text={pill.text}
+            onPress={onStatusChange ? () => setStatusModal(true) : undefined}
+          />
+          <Pressable onPress={() => void handleCall()} style={styles.actionBtn}
+            android_ripple={{ color: 'rgba(34,197,94,0.2)' }}>
+            <Text style={styles.actionIcon}>📞</Text>
+            <Text style={styles.callText}>Call</Text>
+          </Pressable>
+          <Pressable onPress={() => void handlePdf()} disabled={pdfBusy}
+            style={[styles.actionBtn, pdfBusy && styles.disabled]}
+            android_ripple={{ color: 'rgba(96,165,250,0.2)' }}>
+            {pdfBusy ? <ActivityIndicator size="small" color="#60A5FA" /> : (
+              <><Text style={styles.actionIcon}>📋</Text><Text style={styles.invoiceText}>Invoice</Text></>
             )}
-          </View>
-          <View style={styles.mainText}>
-            <Text style={styles.detailLine} numberOfLines={1} ellipsizeMode="tail">
-              <Text style={styles.detailLabel}>Customer name :</Text>
-              <Text style={styles.detailValue}>{repair.customerName}</Text>
-            </Text>
-
-            <Text style={styles.detailLine} numberOfLines={1} ellipsizeMode="tail">
-              <Text style={styles.detailLabel}>Device :</Text>
-              <Text style={styles.detailValue}>{repair.deviceModel}</Text>
-            </Text>
-
-            <Text style={styles.detailLine} numberOfLines={2} ellipsizeMode="tail">
-              <Text style={styles.detailLabel}>Device Problem :</Text>
-              <Text style={styles.detailValue}>{repair.problem || '—'}</Text>
-            </Text>
-
-            <Text style={styles.detailLine} numberOfLines={1} ellipsizeMode="tail">
-              <Text style={styles.detailLabel}>Date of register :</Text>
-              <Text style={styles.detailValue}>{formatDateDisplay(repair.dateReceived)}</Text>
-            </Text>
-          </View>
+          </Pressable>
         </View>
-      </Pressable>
-      <View style={styles.quickRow}>
-        <Pressable
-          onPress={() => void handleCall()}
-          style={styles.quickBtn}
-          android_ripple={{ color: colors.border }}
-        >
-          <View style={styles.quickBtnInner}>
-            <Text style={styles.quickBtnIcon}>☎</Text>
-            <Text style={styles.quickBtnText}>Call</Text>
-          </View>
-        </Pressable>
-        <View style={styles.quickDivider} />
-        <Pressable
-          onPress={() => void handleSharePdf()}
-          disabled={pdfBusy}
-          style={[styles.quickBtn, pdfBusy && styles.quickBtnDisabled]}
-          android_ripple={{ color: colors.border }}
-        >
-          {pdfBusy ? (
-            <ActivityIndicator size="small" color={colors.accent} />
-          ) : (
-            <View style={styles.quickBtnInner}>
-              <Text style={styles.quickBtnIcon}>📄</Text>
-              <Text style={styles.quickBtnText}>Invoice</Text>
-            </View>
-          )}
-        </Pressable>
-        {onStatusChange ? (
-          <>
-            <View style={styles.quickDivider} />
-            <Pressable
-              onPress={() => setStatusModal(true)}
-              style={styles.quickBtn}
-              hitSlop={6}
-              android_ripple={{ color: colors.border }}
-            >
-              <Text style={styles.quickStatusText} numberOfLines={1}>
-                {statusLabel}
-              </Text>
-            </Pressable>
-          </>
-        ) : null}
       </View>
-      {onStatusChange ? (
-        <Modal
-          visible={statusModal}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setStatusModal(false)}
-        >
+
+      {/* ── Status modal ── */}
+      {onStatusChange && (
+        <Modal visible={statusModal} transparent animationType="fade" onRequestClose={() => setStatusModal(false)}>
           <View style={styles.modalWrap}>
             <Pressable style={StyleSheet.absoluteFill} onPress={() => setStatusModal(false)} />
-            <View style={styles.modalSheetOuter}>
-              <View style={styles.modalSheet}>
-                <Text style={styles.modalTitle}>Set status</Text>
-                <Text style={styles.modalSub}>{repair.deviceModel}</Text>
-                {REPAIR_STATUSES.map((s) => (
-                  <Pressable
-                    key={s.value}
-                    onPress={() => pickStatus(s.value)}
-                    style={[styles.modalRow, s.value === repair.status && styles.modalRowCurrent]}
-                    android_ripple={{ color: colors.border }}
-                  >
-                    <Text
-                      style={[
-                        styles.modalRowText,
-                        s.value === repair.status && styles.modalRowTextCurrent,
-                      ]}
-                    >
-                      {s.label}
-                      {s.value === repair.status ? '  ✓' : ''}
-                    </Text>
-                  </Pressable>
-                ))}
-                <Pressable onPress={() => setStatusModal(false)} style={styles.modalCancel}>
-                  <Text style={styles.modalCancelText}>Cancel</Text>
+            <View style={styles.modalOuter}><View style={styles.modalSheet}>
+              <Text style={styles.modalTitle}>Set status</Text>
+              <Text style={styles.modalSub}>{repair.deviceModel}</Text>
+              {REPAIR_STATUSES.map((s) => (
+                <Pressable key={s.value} onPress={() => pickStatus(s.value)}
+                  style={[styles.modalRow, s.value === repair.status && styles.modalRowCur]}
+                  android_ripple={{ color: 'rgba(124,58,237,0.12)' }}>
+                  <Text style={[styles.modalRowText, s.value === repair.status && styles.modalRowTextCur]}>
+                    {s.label}{s.value === repair.status ? '  ✓' : ''}
+                  </Text>
                 </Pressable>
-              </View>
-            </View>
+              ))}
+              <Pressable onPress={() => setStatusModal(false)} style={styles.modalCancel}>
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </Pressable>
+            </View></View>
           </View>
         </Modal>
-      ) : null}
+      )}
     </View>
   );
-}
+});

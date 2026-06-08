@@ -1,12 +1,10 @@
 import { supabase } from '../lib/supabase';
 import type { Repair, RepairImageSlot } from '../types/repair';
-import { isPersistedAppPath, pathForSlot } from './repairImages';
 import { optimizeRepairImageForUpload } from './optimizeRepairImage';
 
 const SLOT_FILE: Record<RepairImageSlot, string> = {
   front: 'front.jpg',
   back: 'back.jpg',
-  thumb: 'thumb.jpg',
   id1: 'id1.jpg',
   id2: 'id2.jpg',
 };
@@ -54,6 +52,14 @@ async function removeSlot(userId: string, repairId: number, slot: RepairImageSlo
   if (error) rethrowStorageError(error);
 }
 
+/** Remove all images for a repair from Supabase Storage (used when deleting a repair). */
+export async function removeAllRepairImages(userId: string, repairId: number): Promise<void> {
+  const files = ['front.jpg', 'back.jpg', 'thumb.jpg', 'id1.jpg', 'id2.jpg'];
+  const paths = files.map((file) => `${userId}/${repairId}/${file}`);
+  // Batch-remove all files; ignore errors (files may not exist)
+  await supabase.storage.from(BUCKET).remove(paths).catch(() => {});
+}
+
 /** Sync local / remote image picks to Supabase Storage; returns HTTPS URLs for the repair row. */
 export async function resolveImagesForSaveCloud(
   repairId: number,
@@ -65,11 +71,10 @@ export async function resolveImagesForSaveCloud(
   } = await supabase.auth.getUser();
   if (!user) throw new Error('Not signed in');
   const uid = user.id;
-  const slots: RepairImageSlot[] = ['front', 'back', 'thumb', 'id1', 'id2'];
+  const slots: RepairImageSlot[] = ['front', 'back', 'id1', 'id2'];
   const out: Record<RepairImageSlot, string> = {
     front: '',
     back: '',
-    thumb: '',
     id1: '',
     id2: '',
   };
@@ -100,7 +105,7 @@ export async function resolveImagesForSaveCloud(
   return {
     imagePhoneFront: out.front,
     imagePhoneBack: out.back,
-    imageThumbnail: out.thumb,
+    imageThumbnail: out.front,
     imageId1: out.id1,
     imageId2: out.id2,
   };

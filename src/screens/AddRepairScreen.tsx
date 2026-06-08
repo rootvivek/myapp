@@ -1,5 +1,19 @@
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import LinearGradient from 'react-native-linear-gradient';
+import {
+  ArrowLeft,
+  Lock,
+  Phone,
+  Plus,
+  ScanLine,
+  CardSim,
+  Smartphone,
+  SmartphoneCharging,
+  User,
+  Shield,
+  Calendar,
+} from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -7,29 +21,29 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { TextInput as PaperInput, Button as PaperButton, Switch as PaperSwitch, Chip as PaperChip } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Field } from '../components/Field';
 import {
   RepairImagePairRow,
-  RepairImagePairSpacer,
   RepairImageSlotCell,
 } from '../components/RepairImageSlotRow';
-import { YesNoRadioRow } from '../components/YesNoRadioRow';
 import { useTheme } from '../context/ThemeContext';
 import { getDirectoryCustomers, getRepairById, insertRepair, updateRepair } from '../db/database';
+import { PatternDrawingModal, PatternPreview } from '../components/PatternDrawingModal';
 import type { RootStackParamList } from '../navigation/types';
 import type { DirectoryCustomer } from '../types/customer';
 import type { AppColors } from '../theme';
-import { accentAlpha, radius, spacing } from '../theme';
-import type { Repair, RepairImageSlot, RepairInput, RepairStatus } from '../types/repair';
-import { ACCESSORY_ITEMS, REPAIR_STATUSES } from '../types/repair';
+import { accentAlpha, spacing } from '../theme';
+import type { LockType, Repair, RepairImageSlot, RepairInput, RepairStatus } from '../types/repair';
+import { LOCK_TYPES, REPAIR_STATUSES } from '../types/repair';
 import { todayISODate } from '../utils/format';
 import {
   emptyImageState,
@@ -48,8 +62,6 @@ import { shareReceiptPdfToWhatsAppContact } from '../utils/receipt';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AddRepair'>;
 
-
-
 const COMMON_PROBLEMS = [
   'Folder replace', 'Battery change', 'Charging issue', 'Network repair',
   'FRP lock', 'Software', 'Touch change', 'Speaker issue'
@@ -67,47 +79,77 @@ function parseMoney(s: string): number {
 }
 
 function createStyles(colors: AppColors): ReturnType<typeof StyleSheet.create> {
+  const COLORS = {
+    bg: colors.bg,
+    card: colors.surface,
+    border: colors.border,
+    input: colors.surface2,
+    primary: colors.accent,
+    secondary: colors.accent,
+    text: colors.text === '#0f172a' ? '#000000' : colors.text,
+    subText: colors.textMuted,
+  };
   return StyleSheet.create({
     safe: {
       flex: 1,
-      backgroundColor: colors.bg,
+      backgroundColor: COLORS.bg,
     },
     scroll: {
       flex: 1,
     },
     content: {
-      padding: spacing.md,
-      paddingBottom: spacing.xl,
+      paddingBottom: 140,
     },
     centered: {
       flex: 1,
       justifyContent: 'center',
       alignItems: 'center',
     },
-    section: {
-      color: colors.textMuted,
-      fontSize: 12,
-      fontWeight: '700',
-      textTransform: 'uppercase',
-      letterSpacing: 0.5,
-      marginBottom: spacing.sm,
-      marginTop: spacing.sm,
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 18,
+      paddingTop: 12,
+      paddingBottom: 8,
     },
-    hint: {
-      color: colors.textMuted,
-      fontSize: 13,
-      marginBottom: spacing.sm,
+    backBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      backgroundColor: COLORS.card,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    headerTextWrap: {
+      marginLeft: 14,
+    },
+    headerTitle: {
+      color: COLORS.text,
+      fontSize: 22,
+      fontWeight: '800',
+    },
+    sectionTitle: {
+      color: COLORS.subText,
+      fontSize: 12,
+      fontWeight: '800',
+      marginTop: 12,
+      marginBottom: 6,
+      marginHorizontal: 18,
+      letterSpacing: 0.8,
     },
     orderBanner: {
-      backgroundColor: colors.surface2,
-      borderRadius: radius.md,
+      marginHorizontal: 18,
+      marginBottom: 8,
+      backgroundColor: COLORS.card,
+      borderRadius: 16,
       borderWidth: 1,
-      borderColor: colors.border,
-      padding: spacing.md,
-      marginBottom: spacing.md,
+      borderColor: COLORS.border,
+      padding: 14,
     },
     orderBannerLabel: {
-      color: colors.textMuted,
+      color: COLORS.subText,
       fontSize: 12,
       fontWeight: '700',
       textTransform: 'uppercase',
@@ -115,220 +157,531 @@ function createStyles(colors: AppColors): ReturnType<typeof StyleSheet.create> {
       marginBottom: 4,
     },
     orderBannerValue: {
-      color: colors.accent,
-      fontSize: 18,
+      color: COLORS.primary,
+      fontSize: 15,
       fontWeight: '800',
       letterSpacing: 0.3,
     },
-
-    whatsappBlock: {
-      marginBottom: spacing.md,
-    },
-    whatsappRow: {
+    inputCard: {
+      marginHorizontal: 18,
+      marginBottom: 12,
+      backgroundColor: COLORS.card,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      height: 38,
+      paddingHorizontal: 8,
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingVertical: spacing.sm,
-      marginBottom: spacing.sm,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: radius.sm,
-      backgroundColor: colors.surface2,
-      paddingHorizontal: spacing.md,
     },
-    whatsappLabel: {
-      color: colors.text,
-      fontSize: 15,
-      fontWeight: '600',
+    inputIcon: {
+      width: 26,
+      height: 26,
+      borderRadius: 6,
+      backgroundColor: '#0F1C32',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    inputFieldWrap: {
       flex: 1,
-      marginRight: spacing.sm,
+      marginLeft: 8,
+      height: '100%',
+      justifyContent: 'center',
     },
-
-    suggestionsContainer: {
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: radius.sm,
-      marginTop: -spacing.sm,
-      marginBottom: spacing.md,
-      overflow: 'hidden',
-    },
-    suggestionItem: {
-      padding: spacing.md,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: colors.border,
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-    },
-    suggestionName: {
-      color: colors.text,
-      fontWeight: '600',
-      fontSize: 15,
-    },
-    suggestionPhone: {
-      color: colors.textMuted,
-      fontSize: 13,
-    },
-    fieldLabel: {
-      color: colors.textMuted,
-      fontSize: 13,
-      marginBottom: 6,
+    inputValue: {
+      color: '#fff',
+      fontSize: 13.5,
       fontWeight: '500',
+      padding: 0,
+      margin: 0,
+      height: '100%',
+    },
+    imeiCard: {
+      marginHorizontal: 18,
+      marginTop: 12,
+      backgroundColor: COLORS.card,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      padding: 10,
+    },
+    imeiLabel: {
+      color: COLORS.subText,
+      fontSize: 13,
+      marginBottom: 10,
     },
     imeiRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: spacing.sm,
-      marginBottom: spacing.md,
+    },
+    imeiInputWrap: {
+      flex: 1,
+      height: 38,
+      borderRadius: 10,
+      backgroundColor: COLORS.input,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 12,
     },
     imeiInput: {
       flex: 1,
-      backgroundColor: colors.surface2,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: radius.sm,
-      paddingHorizontal: spacing.md,
-      paddingVertical: 12,
-      color: colors.text,
-      fontSize: 16,
+      color: COLORS.text,
+      fontSize: 13.5,
+      padding: 0,
+      margin: 0,
     },
     scanBtn: {
-      paddingHorizontal: spacing.md,
-      paddingVertical: spacing.sm + 4,
-      borderRadius: radius.sm,
-      borderWidth: 1,
-      borderColor: colors.accent,
-      backgroundColor: accentAlpha(colors.accent, 0.12),
+      width: 100,
+      height: 38,
+      borderRadius: 10,
+      marginLeft: 10,
+      overflow: 'hidden',
+    },
+    scanBtnInner: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      flexDirection: 'row',
     },
     scanBtnText: {
-      color: colors.accent,
+      color: '#fff',
       fontWeight: '700',
+      fontSize: 14,
+      marginLeft: 4,
+    },
+    accessoryCard: {
+      marginHorizontal: 18,
+      marginBottom: 8,
+      backgroundColor: COLORS.card,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      padding: 12,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    accessoryLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    accessoryIcon: {
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      backgroundColor: COLORS.input,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    accessoryTitle: {
+      color: COLORS.text,
       fontSize: 15,
+      fontWeight: '600',
+      marginLeft: 10,
+    },
+    accessoryToggle: {
+      flexDirection: 'row',
+      backgroundColor: COLORS.input,
+      borderRadius: 12,
+      padding: 3,
+    },
+    toggleBtn: {
+      paddingVertical: 8,
+      paddingHorizontal: 18,
+      borderRadius: 10,
+    },
+    toggleBtnActive: {
+      backgroundColor: COLORS.primary,
+      borderRadius: 10,
+    },
+    toggleText: {
+      color: COLORS.subText,
+      fontSize: 14,
+      fontWeight: '700',
+    },
+    toggleTextActive: {
+      color: '#fff',
+    },
+    problemCard: {
+      marginHorizontal: 18,
+      marginBottom: 8,
+      backgroundColor: COLORS.card,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      padding: 10,
+    },
+    problemInput: {
+      color: COLORS.text,
+      fontSize: 14,
+      minHeight: 40,
+      textAlignVertical: 'top',
     },
     problemSuggestions: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      gap: spacing.sm,
-      marginBottom: spacing.md,
-      marginTop: -4,
+      gap: 8,
+      marginTop: 10,
     },
-    problemSuggestionChip: {
-      paddingHorizontal: spacing.sm + 2,
+    suggestionChip: {
+      paddingHorizontal: 12,
       paddingVertical: 6,
-      backgroundColor: colors.surface2,
+      backgroundColor: COLORS.input,
+      borderRadius: 8,
       borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 4,
+      borderColor: COLORS.border,
     },
-    problemSuggestionText: {
+    suggestionChipText: {
       fontSize: 12,
-      color: colors.textMuted,
+      color: COLORS.subText,
       fontWeight: '600',
     },
-    dateBtn: {
-      backgroundColor: colors.surface2,
+    dateCard: {
+      marginHorizontal: 18,
+      marginBottom: 18,
+      backgroundColor: COLORS.card,
+      borderRadius: 12,
       borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: radius.sm,
-      paddingVertical: 14,
-      paddingHorizontal: spacing.md,
-      marginBottom: spacing.md,
+      borderColor: COLORS.border,
+      height: 38,
+      paddingHorizontal: 12,
+      justifyContent: 'center',
     },
-    dateBtnText: {
-      color: colors.text,
+    dateValue: {
+      color: COLORS.text,
       fontSize: 16,
+      fontWeight: '600',
     },
     doneDate: {
       alignSelf: 'flex-end',
-      padding: spacing.sm,
+      padding: 12,
+      marginRight: 22,
     },
     doneDateText: {
-      color: colors.accent,
+      color: COLORS.primary,
       fontWeight: '700',
+      fontSize: 14,
     },
-    multiline: {
-      minHeight: 100,
-      textAlignVertical: 'top',
+    statusCard: {
+      marginHorizontal: 18,
+      marginBottom: 12,
+      backgroundColor: COLORS.card,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      padding: 10,
     },
     statusRow: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      gap: spacing.sm,
-      marginBottom: spacing.md,
+      gap: 8,
     },
     statusChip: {
-      paddingHorizontal: spacing.sm + 4,
-      paddingVertical: spacing.sm,
-      borderRadius: radius.sm,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 10,
       borderWidth: 1,
-      borderColor: colors.border,
-      backgroundColor: colors.surface2,
+      borderColor: COLORS.border,
+      backgroundColor: COLORS.input,
     },
     statusChipActive: {
-      borderColor: colors.accent,
-      backgroundColor: accentAlpha(colors.accent, 0.15),
+      borderColor: COLORS.primary,
+      backgroundColor: accentAlpha(COLORS.primary, 0.15),
     },
     statusChipText: {
-      color: colors.textMuted,
-      fontSize: 13,
+      color: COLORS.subText,
+      fontSize: 12,
       fontWeight: '600',
     },
     statusChipTextActive: {
-      color: colors.accent,
+      color: COLORS.primary,
+    },
+    lockCard: {
+      marginHorizontal: 18,
+      marginBottom: 8,
+      backgroundColor: COLORS.card,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      padding: 10,
+    },
+    lockHeaderRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    lockTypeOptions: {
+      flexDirection: 'row',
+      backgroundColor: COLORS.input,
+      borderRadius: 12,
+      padding: 3,
+      marginTop: 10,
+    },
+    lockTypeBtn: {
+      flex: 1,
+      paddingVertical: 8,
+      alignItems: 'center',
+      borderRadius: 10,
+    },
+    lockInputContainer: {
+      marginTop: 12,
+      paddingTop: 12,
+      borderTopWidth: 1,
+      borderTopColor: COLORS.border,
+    },
+    lockInputLabel: {
+      color: COLORS.subText,
+      fontSize: 12,
+      fontWeight: '700',
+      marginBottom: 8,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+    },
+    lockValueInput: {
+      height: 38,
+      borderRadius: 10,
+      backgroundColor: COLORS.input,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      color: COLORS.text,
+      paddingHorizontal: 12,
+      fontSize: 13.5,
+    },
+    patternBtnRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
+    patternBtn: {
+      flex: 1,
+      height: 38,
+      borderRadius: 10,
+      backgroundColor: '#8B5CF6',
+      justifyContent: 'center',
+      alignItems: 'center',
+      flexDirection: 'row',
+    },
+    patternBtnText: {
+      color: '#fff',
+      fontWeight: '700',
+      fontSize: 14,
+      marginLeft: 6,
+    },
+    paymentCard: {
+      marginHorizontal: 18,
+      marginBottom: 8,
+      backgroundColor: COLORS.card,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      padding: 10,
+    },
+    paymentRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 8,
+    },
+    paymentLabel: {
+      color: COLORS.subText,
+      fontSize: 13,
+      fontWeight: '600',
+    },
+    paymentInput: {
+      flex: 1,
+      textAlign: 'right',
+      color: COLORS.text,
+      fontSize: 15,
+      fontWeight: '600',
+      padding: 0,
+      margin: 0,
     },
     paidRow: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      paddingVertical: spacing.sm,
-      marginBottom: spacing.lg,
+      marginTop: 6,
+      paddingTop: 10,
+      borderTopWidth: 1,
+      borderTopColor: COLORS.border,
     },
     paidLabel: {
-      color: colors.text,
-      fontSize: 16,
+      color: COLORS.text,
+      fontSize: 14,
       fontWeight: '600',
     },
     toggle: {
-      width: 48,
-      height: 28,
-      borderRadius: 14,
-      backgroundColor: colors.border,
+      width: 40,
+      height: 24,
+      borderRadius: 12,
+      backgroundColor: COLORS.border,
       padding: 2,
       justifyContent: 'center',
     },
     toggleOn: {
-      backgroundColor: colors.success,
+      backgroundColor: '#22C55E',
     },
     knob: {
-      width: 24,
-      height: 24,
-      borderRadius: 12,
+      width: 20,
+      height: 20,
+      borderRadius: 10,
       backgroundColor: '#fff',
       alignSelf: 'flex-start',
     },
     knobOn: {
       alignSelf: 'flex-end',
     },
-    saveBtn: {
-      backgroundColor: colors.accent,
-      paddingVertical: 16,
-      borderRadius: radius.md,
+    photosCard: {
+      marginHorizontal: 18,
+      marginBottom: 8,
+    },
+    photosHint: {
+      color: COLORS.subText,
+      fontSize: 12,
+      marginBottom: 8,
+      marginHorizontal: 18,
+    },
+    whatsappCard: {
+      marginHorizontal: 18,
+      marginBottom: 8,
+      backgroundColor: COLORS.card,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      padding: 10,
+      flexDirection: 'row',
       alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    whatsappLabel: {
+      color: COLORS.text,
+      fontSize: 13,
+      fontWeight: '600',
+      flex: 1,
+    },
+    bottomBtn: {
+      position: 'absolute',
+      bottom: 16,
+      left: 18,
+      right: 18,
+    },
+    saveBtn: {
+      height: 54,
+      borderRadius: 16,
+      overflow: 'hidden',
+    },
+    saveBtnInner: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      flexDirection: 'row',
+    },
+    saveBtnText: {
+      color: '#fff',
+      fontSize: 16,
+      fontWeight: '800',
+      marginLeft: 8,
     },
     saveBtnDisabled: {
       opacity: 0.7,
     },
-    saveBtnText: {
-      color: '#fff',
-      fontSize: 17,
+    paperInput: {
+      marginHorizontal: 18,
+      marginBottom: 2,
+      backgroundColor: COLORS.card,
+    },
+    imeiPaperInput: {
+      flex: 1,
+      backgroundColor: COLORS.card,
+    },
+    scanPaperBtn: {
+      borderRadius: 12,
+      justifyContent: 'center',
+    },
+    scanPaperBtnContent: {
+      height: 42,
+      paddingHorizontal: 8,
+    },
+    lockPaperInput: {
+      marginTop: 3,
+      backgroundColor: COLORS.card,
+    },
+    problemPaperInput: {
+      backgroundColor: COLORS.card,
+    },
+    paymentPaperInput: {
+      backgroundColor: COLORS.card,
+    },
+    savePaperBtn: {
+      borderRadius: 12,
+      overflow: 'hidden',
+    },
+    savePaperBtnContent: {
+      height: 50,
+    },
+    savePaperBtnLabel: {
+      fontSize: 16,
       fontWeight: '700',
+    },
+    suggestionsContainer: {
+      marginHorizontal: 18,
+      backgroundColor: COLORS.card,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      borderRadius: 14,
+      marginTop: -6,
+      marginBottom: 8,
+      overflow: 'hidden',
+    },
+    suggestionItem: {
+      padding: 12,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: COLORS.border,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    suggestionName: {
+      color: COLORS.text,
+      fontWeight: '600',
+      fontSize: 14,
+    },
+    suggestionPhone: {
+      color: COLORS.subText,
+      fontSize: 12,
+    },
+    brandSuggestContainer: {
+      marginHorizontal: 18,
+      backgroundColor: COLORS.card,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      borderRadius: 14,
+      marginTop: -6,
+      marginBottom: 12,
+      overflow: 'hidden',
+      maxHeight: 200,
     },
   });
 }
 
+const ACCESSORY_UI = [
+  { icon: CardSim, title: 'SIM tray', key: 'accSimTray' as const },
+  { icon: SmartphoneCharging, title: 'Back cover', key: 'accBackCover' as const },
+];
+
 export function AddRepairScreen({ navigation, route }: Props) {
-  const { colors } = useTheme();
+  const { colors, mode } = useTheme();
+  const COLORS = useMemo(() => ({
+    bg: colors.bg,
+    card: colors.surface,
+    border: colors.border,
+    input: colors.surface2,
+    primary: colors.accent,
+    secondary: colors.accent,
+    text: colors.text === '#0f172a' ? '#000000' : colors.text,
+    subText: colors.textMuted,
+  }), [colors]);
   const styles = useMemo(() => createStyles(colors), [colors]);
   const repairId = route.params?.repairId;
   const isEdit = repairId != null;
@@ -338,10 +691,17 @@ export function AddRepairScreen({ navigation, route }: Props) {
   const [phone, setPhone] = useState('');
   const [deviceModel, setDeviceModel] = useState('');
   const [imei, setImei] = useState('');
+  const [lockType, setLockType] = useState<LockType>('');
+  const [lockValue, setLockValue] = useState('');
+  const [isPatternModalVisible, setIsPatternModalVisible] = useState(false);
   const [problem, setProblem] = useState('');
+  const [warranty, setWarranty] = useState('No Warranty');
+  const [customWarranty, setCustomWarranty] = useState('');
+  const [warrantyType, setWarrantyType] = useState<'none' | '30' | '90' | '180' | 'custom'>('none');
   const [dateReceived, setDateReceived] = useState(todayISODate());
   const [status, setStatus] = useState<RepairStatus>('pending');
   const [repairCost, setRepairCost] = useState('');
+  const [expense, setExpense] = useState('');
   const [advanceAmount, setAdvanceAmount] = useState('');
   const [isPaid, setIsPaid] = useState(false);
   const [showDate, setShowDate] = useState(false);
@@ -375,10 +735,17 @@ export function AddRepairScreen({ navigation, route }: Props) {
     }, [isEdit, loadDirectory])
   );
 
+  // Track which scannedImei value we already processed to avoid re-runs
+  const lastProcessedImeiRef = useRef<string | undefined>(undefined);
+  // Track which prefillCustomer we already processed
+  const lastProcessedCustomerRef = useRef<string | undefined>(undefined);
+
   useEffect(() => {
     const s = route.params?.scannedImei;
-    if (s) {
+    if (s && s !== lastProcessedImeiRef.current) {
+      lastProcessedImeiRef.current = s;
       setImei(normalizeImeiInput(s));
+      // Only clear the param, don't touch other fields
       navigation.setParams({ scannedImei: undefined });
     }
   }, [route.params?.scannedImei, navigation]);
@@ -386,6 +753,10 @@ export function AddRepairScreen({ navigation, route }: Props) {
   useEffect(() => {
     const c = route.params?.prefillCustomer;
     if (!c || repairId != null) return;
+    // Create a unique key from customer data to avoid re-processing
+    const customerKey = `${c.customerName}-${c.phone}-${c.deviceModel}`;
+    if (customerKey === lastProcessedCustomerRef.current) return;
+    lastProcessedCustomerRef.current = customerKey;
     setCustomerName(sanitizeCustomerNameInput(c.customerName));
     setPhone(normalizeStoredPhoneForDisplay(c.phone));
     setDeviceModel(c.deviceModel);
@@ -409,10 +780,29 @@ export function AddRepairScreen({ navigation, route }: Props) {
       setPhone(normalizeStoredPhoneForDisplay(r.phone));
       setDeviceModel(r.deviceModel);
       setImei(normalizeStoredImeiForDisplay(r.imei ?? ''));
+      setLockType((r.lockType as LockType) || '');
+      setLockValue(r.lockValue || '');
       setProblem(r.problem);
+
+      const w = r.warranty || 'No Warranty';
+      setWarranty(w);
+      if (w === 'No Warranty') {
+        setWarrantyType('none');
+      } else if (w === '30 Days') {
+        setWarrantyType('30');
+      } else if (w === '90 Days') {
+        setWarrantyType('90');
+      } else if (w === '180 Days') {
+        setWarrantyType('180');
+      } else {
+        setWarrantyType('custom');
+        setCustomWarranty(w);
+      }
+
       setDateReceived(r.dateReceived);
       setStatus(r.status);
       setRepairCost(String(r.repairCost || ''));
+      setExpense(String(r.expense || ''));
       setAdvanceAmount(String(r.advanceAmount || ''));
       setIsPaid(r.isPaid);
       const imgState = repairToImageState(r);
@@ -459,10 +849,14 @@ export function AddRepairScreen({ navigation, route }: Props) {
         phone: ph,
         deviceModel: deviceModel.trim(),
         imei: normalizeImeiInput(imei),
+        lockType,
+        lockValue,
         problem: problem.trim(),
+        warranty: warranty.trim(),
         dateReceived,
         status,
         repairCost: parseMoney(repairCost),
+        expense: parseMoney(expense),
         advanceAmount: parseMoney(advanceAmount),
         isPaid,
         imagePhoneFront: '',
@@ -498,6 +892,9 @@ export function AddRepairScreen({ navigation, route }: Props) {
         }
       }
       navigation.goBack();
+    } catch (err: any) {
+      console.error('Error saving repair:', err);
+      Alert.alert('Error saving', err.message || 'Something went wrong');
     } finally {
       setSaving(false);
     }
@@ -506,7 +903,6 @@ export function AddRepairScreen({ navigation, route }: Props) {
   function setImageSlot(slot: RepairImageSlot, uri: string) {
     setImages((prev) => ({ ...prev, [slot]: uri }));
   }
-
 
   if (loading) {
     return (
@@ -519,31 +915,70 @@ export function AddRepairScreen({ navigation, route }: Props) {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      <StatusBar barStyle={mode === 'dark' ? 'light-content' : 'dark-content'} />
+
+      {/* Background gradient */}
+      <LinearGradient
+        colors={colors.bgGradient}
+        style={{
+          position: 'absolute',
+          width: '100%',
+          height: '100%',
+        }}
+      />
+
       <ScrollView
-        style={styles.scroll}
+        showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
+        {/* Header */}
+        <View style={styles.header}>
+          <Pressable
+            onPress={() => navigation.goBack()}
+            style={styles.backBtn}
+          >
+            <ArrowLeft color={colors.text} size={24} />
+          </Pressable>
+          <View style={styles.headerTextWrap}>
+            <Text style={styles.headerTitle}>{isEdit ? 'Edit job' : 'New job'}</Text>
+          </View>
+        </View>
+
         {isEdit && orderCode ? (
           <View style={styles.orderBanner}>
             <Text style={styles.orderBannerLabel}>Order ID</Text>
-            <Text style={styles.orderBannerValue} selectable>
-              {orderCode}
-            </Text>
+            <Text style={styles.orderBannerValue} selectable>{orderCode}</Text>
           </View>
         ) : null}
 
+        {/* Customer Details */}
+        <Text style={styles.sectionTitle}>CUSTOMER DETAILS</Text>
 
-        <Text style={styles.section}>Customer & device</Text>
         <View style={{ zIndex: 10 }}>
-          <Field
-            label="Customer name *"
+          <PaperInput
+            label="Customer Name"
+            placeholder="Enter customer name"
             value={customerName}
             onChangeText={(t) => {
               setCustomerName(sanitizeCustomerNameInput(t));
               setShowSuggestions(true);
             }}
+            mode="outlined"
+            dense={true}
+            outlineColor={colors.border}
+            activeOutlineColor={colors.accent}
+            textColor={colors.text}
+            placeholderTextColor={colors.textMuted}
+            theme={{
+              colors: {
+                background: colors.surface,
+                placeholder: colors.textMuted,
+              },
+            }}
+            style={styles.paperInput}
+            left={<PaperInput.Icon icon={() => <User color={colors.accent} size={20} />} />}
           />
           {(!isEdit && showSuggestions && customerName.trim().length > 1) && (
             (() => {
@@ -574,51 +1009,69 @@ export function AddRepairScreen({ navigation, route }: Props) {
             })()
           )}
         </View>
-        <Field
-          label="Phone number * (10 digits)"
+
+        <PaperInput
+          label="Phone Number"
+          placeholder="Enter phone number"
           value={phone}
           onChangeText={(t) => setPhone(normalizePhoneInput(t))}
           keyboardType="number-pad"
           maxLength={10}
+          mode="outlined"
+          dense={true}
+          outlineColor={colors.border}
+          activeOutlineColor={colors.accent}
+          textColor={colors.text}
+          placeholderTextColor={colors.textMuted}
+          theme={{
+            colors: {
+              background: colors.surface,
+              placeholder: colors.textMuted,
+            },
+          }}
+          style={styles.paperInput}
+          left={<PaperInput.Icon icon={() => <Phone color={colors.accent} size={20} />} />}
         />
-        {!isEdit ? (
-          <View style={styles.whatsappBlock}>
-            <Pressable
-              onPress={() => setSendWhatsAppInvoice((v) => !v)}
-              style={styles.whatsappRow}
-              android_ripple={{ color: colors.border }}
-            >
-              <Text style={styles.whatsappLabel}>Send WhatsApp invoice PDF after save</Text>
-              <View style={[styles.toggle, sendWhatsAppInvoice && styles.toggleOn]}>
-                <View style={[styles.knob, sendWhatsAppInvoice && styles.knobOn]} />
-              </View>
-            </Pressable>
-          </View>
-        ) : null}
+
+
+
+        {/* Device Details */}
+        <Text style={styles.sectionTitle}>DEVICE DETAILS</Text>
+
         <View style={{ position: 'relative', zIndex: 9 }}>
-          <Field
-            label="Device model *"
+          <PaperInput
+            label="Device Model"
+            placeholder="Enter device model"
             value={deviceModel}
             onChangeText={(t) => {
               setDeviceModel(t);
               setShowBrandDropdown(true);
             }}
             onFocus={() => setShowBrandDropdown(true)}
+            mode="outlined"
+            dense={true}
+            outlineColor={colors.border}
+            activeOutlineColor={colors.accent}
+            textColor={colors.text}
+            placeholderTextColor={colors.textMuted}
+            theme={{
+              colors: {
+                background: colors.surface,
+                placeholder: colors.textMuted,
+              },
+            }}
+            style={styles.paperInput}
+            left={<PaperInput.Icon icon={() => <Smartphone color={colors.accent} size={20} />} />}
           />
           {showBrandDropdown && (
             (() => {
               const q = deviceModel.trim().toLowerCase();
-              // Filter list based on query
               const matches = q.length === 0
                 ? DEVICE_BRANDS
                 : DEVICE_BRANDS.filter(b => b.toLowerCase().includes(q));
-
-              // If user already exactly typed a brand + some more, close hint.
-              // Or if no matches found.
               if (matches.length === 0) return null;
-
               return (
-                <View style={[styles.suggestionsContainer, { maxHeight: 220 }]}>
+                <View style={styles.brandSuggestContainer}>
                   <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled">
                     {matches.map((brand) => (
                       <Pressable
@@ -639,108 +1092,349 @@ export function AddRepairScreen({ navigation, route }: Props) {
             })()
           )}
         </View>
-        <Text style={styles.fieldLabel}>IMEI (max 15 digits)</Text>
-        <View style={styles.imeiRow}>
-          <TextInput
-            placeholder="IMEI digits"
-            placeholderTextColor={colors.textMuted}
+
+        {/* IMEI */}
+        <View style={{ marginHorizontal: 18, flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 10 }}>
+          <PaperInput
+            label="IMEI (max 15 digits)"
+            placeholder="Enter IMEI digits"
             value={imei}
             onChangeText={(t) => setImei(normalizeImeiInput(t))}
             keyboardType="number-pad"
             maxLength={15}
-            style={styles.imeiInput}
+            mode="outlined"
+            dense={true}
+            outlineColor={colors.border}
+            activeOutlineColor={colors.accent}
+            textColor={colors.text}
+            placeholderTextColor={colors.textMuted}
+            theme={{
+              colors: {
+                background: colors.surface,
+                placeholder: colors.textMuted,
+              },
+            }}
+            style={styles.imeiPaperInput}
           />
-          <Pressable
+          <PaperButton
+            mode="contained"
             onPress={() => navigation.navigate('ScanImei', { repairId: repairId ?? undefined })}
-            style={styles.scanBtn}
-            android_ripple={{ color: colors.border }}
+            style={[styles.scanPaperBtn, { marginTop: 3 }]}
+            contentStyle={styles.scanPaperBtnContent}
+            buttonColor={colors.accent}
+            textColor="#FFFFFF"
+            icon={() => <ScanLine color="#FFFFFF" size={18} />}
           >
-            <Text style={styles.scanBtnText}>Scan</Text>
-          </Pressable>
+            Scan
+          </PaperButton>
         </View>
 
-        <Text style={styles.section}>Accessories (received with device)</Text>
-        <Text style={styles.hint}>Tap Yes or No for each item.</Text>
-        {ACCESSORY_ITEMS.map(({ key, label }) => (
-          <YesNoRadioRow
-            key={key}
-            label={label}
-            value={accessories[key]}
-            onChange={(yes) => setAccessories((prev) => ({ ...prev, [key]: yes }))}
+        {/* Device Lock */}
+        <View style={styles.lockCard}>
+          <View style={styles.lockHeaderRow}>
+            <View style={styles.accessoryIcon}>
+              <Lock color={COLORS.primary} size={22} />
+            </View>
+            <Text style={styles.accessoryTitle}>Device security lock</Text>
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
+            <View style={{ flexDirection: 'row', gap: 4 }}>
+              {LOCK_TYPES.map((lt) => {
+                const isSelected = lockType === lt.value;
+                return (
+                  <PaperChip
+                    key={lt.value}
+                    selected={isSelected}
+                    mode="outlined"
+                    showSelectedCheck={false}
+                    onPress={() => {
+                      setLockType(lt.value);
+                      setLockValue('');
+                    }}
+                    style={{
+                      backgroundColor: isSelected ? accentAlpha(colors.accent, 0.15) : colors.surface2,
+                      borderColor: isSelected ? colors.accent : colors.border,
+                      height: 32,
+                    }}
+                    textStyle={{
+                      color: isSelected ? colors.accent : colors.textMuted,
+                      fontWeight: isSelected ? '700' : '600',
+                      fontSize: 11,
+                    }}
+                  >
+                    {lt.label}
+                  </PaperChip>
+                );
+              })}
+            </View>
+
+            {/* Dynamic input depending on type */}
+            {lockType === 'pattern' && (
+              <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <PaperButton
+                  mode="contained"
+                  onPress={() => setIsPatternModalVisible(true)}
+                  style={[styles.scanPaperBtn, { flex: 1 }]}
+                  contentStyle={{ height: 32, paddingHorizontal: 4 }}
+                  labelStyle={{ fontSize: 11 }}
+                  buttonColor={colors.accent}
+                  textColor="#FFFFFF"
+                  icon={() => <Lock color="#FFFFFF" size={12} />}
+                >
+                  {lockValue ? 'Redraw' : 'Draw'}
+                </PaperButton>
+                {lockValue ? (
+                  <View style={{ padding: 2, backgroundColor: colors.surface2, borderRadius: 8, borderWidth: 1, borderColor: colors.border }}>
+                    <PatternPreview path={lockValue} size={28} />
+                  </View>
+                ) : null}
+              </View>
+            )}
+
+            {lockType === 'password' && (
+              <View style={{ flex: 1 }}>
+                <PaperInput
+                  label="Password / PIN"
+                  placeholder="Enter Password or PIN"
+                  value={lockValue}
+                  onChangeText={setLockValue}
+                  keyboardType="default"
+                  mode="outlined"
+                  dense={true}
+                  outlineColor={colors.border}
+                  activeOutlineColor={colors.accent}
+                  textColor={colors.text}
+                  placeholderTextColor={colors.textMuted}
+                  theme={{
+                    colors: {
+                      background: colors.surface,
+                      placeholder: colors.textMuted,
+                    },
+                  }}
+                  style={[styles.lockPaperInput, { marginTop: 0 }]}
+                />
+              </View>
+            )}
+          </View>
+        </View>
+
+        <PatternDrawingModal
+          visible={isPatternModalVisible}
+          onClose={() => setIsPatternModalVisible(false)}
+          onSave={setLockValue}
+          initialPattern={lockValue}
+        />
+
+        {/* Problem */}
+        <Text style={styles.sectionTitle}>PROBLEM / NOTES</Text>
+
+        <View style={styles.problemCard}>
+          <PaperInput
+            label="Describe the issue..."
+            placeholder="Describe the issue..."
+            value={problem}
+            onChangeText={setProblem}
+            multiline
+            numberOfLines={4}
+            mode="outlined"
+            outlineColor={colors.border}
+            activeOutlineColor={colors.accent}
+            textColor={colors.text}
+            placeholderTextColor={colors.textMuted}
+            theme={{
+              colors: {
+                background: colors.surface,
+                placeholder: colors.textMuted,
+              },
+            }}
+            style={styles.problemPaperInput}
           />
+          <View style={styles.problemSuggestions}>
+            {COMMON_PROBLEMS.map((item) => (
+              <PaperChip
+                key={item}
+                mode="outlined"
+                onPress={() => {
+                  setProblem(prev => {
+                    const trimmed = prev.trim();
+                    if (!trimmed) return item;
+                    if (trimmed.toLowerCase().includes(item.toLowerCase())) return prev;
+                    return `${trimmed}, ${item}`;
+                  });
+                }}
+                style={{
+                  backgroundColor: colors.surface2,
+                  borderColor: colors.border,
+                  marginRight: 2,
+                  marginBottom: 2,
+                }}
+                textStyle={{
+                  color: colors.textMuted,
+                  fontSize: 11,
+                  fontWeight: '600',
+                }}
+              >
+                {item}
+              </PaperChip>
+            ))}
+          </View>
+        </View>
+
+        {/* Accessories */}
+        <Text style={styles.sectionTitle}>ACCESSORIES (RECEIVED WITH DEVICE)</Text>
+
+        {ACCESSORY_UI.map(({ icon: AccIcon, title, key }) => (
+          <View key={key} style={styles.accessoryCard}>
+            <View style={styles.accessoryLeft}>
+              <View style={styles.accessoryIcon}>
+                <AccIcon color={colors.accent} size={22} />
+              </View>
+              <Text style={styles.accessoryTitle}>{title}</Text>
+            </View>
+            <View style={styles.accessoryToggle}>
+              <Pressable
+                onPress={() => setAccessories((prev) => ({ ...prev, [key]: true }))}
+                style={[styles.toggleBtn, accessories[key] && styles.toggleBtnActive]}
+              >
+                <Text style={[styles.toggleText, accessories[key] && styles.toggleTextActive]}>Yes</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => setAccessories((prev) => ({ ...prev, [key]: false }))}
+                style={[styles.toggleBtn, !accessories[key] && styles.toggleBtnActive]}
+              >
+                <Text style={[styles.toggleText, !accessories[key] && styles.toggleTextActive]}>No</Text>
+              </Pressable>
+            </View>
+          </View>
         ))}
 
-        <Text style={styles.section}>Device photos</Text>
-        <Text style={styles.hint}>Phone front, back, and thumbnail are required.</Text>
-        <RepairImagePairRow>
-          <RepairImageSlotCell
-            label="Phone — front *"
-            uri={images.front}
-            onChange={(uri) => setImageSlot('front', uri)}
-          />
-          <RepairImageSlotCell
-            label="Phone — back *"
-            uri={images.back}
-            onChange={(uri) => setImageSlot('back', uri)}
-          />
-        </RepairImagePairRow>
-        <RepairImagePairRow>
-          <RepairImageSlotCell
-            label="Thumbnail *"
-            uri={images.thumb}
-            onChange={(uri) => setImageSlot('thumb', uri)}
-          />
-          <RepairImagePairSpacer />
-        </RepairImagePairRow>
-        <RepairImagePairRow>
-          <RepairImageSlotCell
-            label="ID / proof 1"
-            uri={images.id1}
-            onChange={(uri) => setImageSlot('id1', uri)}
-          />
-          <RepairImageSlotCell
-            label="ID / proof 2"
-            uri={images.id2}
-            onChange={(uri) => setImageSlot('id2', uri)}
-          />
-        </RepairImagePairRow>
+        {/* Warranty */}
+        <Text style={styles.sectionTitle}>WARRANTY PERIOD</Text>
+        <View style={styles.lockCard}>
+          <View style={styles.lockHeaderRow}>
+            <View style={styles.accessoryIcon}>
+              <Shield color={colors.accent} size={22} />
+            </View>
+            <Text style={styles.accessoryTitle}>Warranty coverage</Text>
+          </View>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
+            {[
+              { label: 'None', type: 'none' as const, value: 'No Warranty' },
+              { label: '30 Days', type: '30' as const, value: '30 Days' },
+              { label: '90 Days', type: '90' as const, value: '90 Days' },
+              { label: '180 Days', type: '180' as const, value: '180 Days' },
+              { label: 'Custom', type: 'custom' as const, value: '' },
+            ].map((opt) => {
+              const isSelected = warrantyType === opt.type;
+              return (
+                <PaperChip
+                  key={opt.type}
+                  selected={isSelected}
+                  mode="outlined"
+                  showSelectedCheck={false}
+                  onPress={() => {
+                    setWarrantyType(opt.type);
+                    if (opt.type !== 'custom') {
+                      setWarranty(opt.value);
+                    } else {
+                      setWarranty(customWarranty);
+                    }
+                  }}
+                  style={{
+                    backgroundColor: isSelected ? accentAlpha(colors.accent, 0.15) : colors.surface2,
+                    borderColor: isSelected ? colors.accent : colors.border,
+                  }}
+                  textStyle={{
+                    color: isSelected ? colors.accent : colors.textMuted,
+                    fontWeight: isSelected ? '700' : '600',
+                    fontSize: 12,
+                  }}
+                >
+                  {opt.label}
+                </PaperChip>
+              );
+            })}
+          </View>
 
-        <Text style={styles.section}>Job</Text>
-        <Field
-          label="Problem / notes *"
-          value={problem}
-          onChangeText={setProblem}
-          multiline
-          numberOfLines={4}
-          style={styles.multiline}
-        />
-        <View style={styles.problemSuggestions}>
-          {COMMON_PROBLEMS.map((item) => (
-            <Pressable
-              key={item}
-              onPress={() => {
-                setProblem(prev => {
-                  const trimmed = prev.trim();
-                  if (!trimmed) return item;
-                  if (trimmed.toLowerCase().includes(item.toLowerCase())) return prev; // avoid dupes
-                  return `${trimmed}, ${item}`;
-                });
-              }}
-              style={styles.problemSuggestionChip}
-              android_ripple={{ color: colors.border }}
-            >
-              <Text style={styles.problemSuggestionText}>{item}</Text>
-            </Pressable>
-          ))}
+          {warrantyType === 'custom' && (
+            <View style={styles.lockInputContainer}>
+              <PaperInput
+                label="Custom warranty description"
+                placeholder="e.g. 1 Year, 6 Months, Lifetime"
+                value={customWarranty}
+                onChangeText={(text) => {
+                  setCustomWarranty(text);
+                  setWarranty(text);
+                }}
+                mode="outlined"
+                dense={true}
+                outlineColor={colors.border}
+                activeOutlineColor={colors.accent}
+                textColor={colors.text}
+                placeholderTextColor={colors.textMuted}
+                theme={{
+                  colors: {
+                    background: colors.surface,
+                    placeholder: colors.textMuted,
+                  },
+                }}
+                style={styles.lockPaperInput}
+              />
+            </View>
+          )}
         </View>
 
-        <Text style={styles.fieldLabel}>Date received</Text>
-        <Pressable
-          onPress={() => setShowDate(true)}
-          style={styles.dateBtn}
-          android_ripple={{ color: colors.border }}
-        >
-          <Text style={styles.dateBtnText}>{dateReceived}</Text>
+        {/* Photos */}
+        <Text style={styles.sectionTitle}>DEVICE PHOTOS</Text>
+        <View style={styles.photosCard}>
+          <RepairImagePairRow>
+            <RepairImageSlotCell
+              label="Front *"
+              uri={images.front}
+              onChange={(uri) => setImageSlot('front', uri)}
+            />
+            <RepairImageSlotCell
+              label="Back *"
+              uri={images.back}
+              onChange={(uri) => setImageSlot('back', uri)}
+            />
+            <RepairImageSlotCell
+              label="ID 1"
+              uri={images.id1}
+              onChange={(uri) => setImageSlot('id1', uri)}
+            />
+            <RepairImageSlotCell
+              label="ID 2"
+              uri={images.id2}
+              onChange={(uri) => setImageSlot('id2', uri)}
+            />
+          </RepairImagePairRow>
+        </View>
+
+        {/* Date */}
+        <Text style={styles.sectionTitle}>DATE</Text>
+        <Pressable onPress={() => setShowDate(true)}>
+          <View pointerEvents="none">
+            <PaperInput
+              label="Date Received"
+              value={dateReceived}
+              editable={false}
+              mode="outlined"
+              dense={true}
+              outlineColor={colors.border}
+              activeOutlineColor={colors.accent}
+              textColor={colors.text}
+              placeholderTextColor={colors.textMuted}
+              theme={{
+                colors: {
+                  background: colors.surface,
+                  placeholder: colors.textMuted,
+                },
+              }}
+              style={styles.paperInput}
+              right={<PaperInput.Icon icon={() => <Calendar color={colors.accent} size={20} />} />}
+            />
+          </View>
         </Pressable>
         {showDate && (
           <DateTimePicker
@@ -764,60 +1458,154 @@ export function AddRepairScreen({ navigation, route }: Props) {
           </Pressable>
         )}
 
-        <Text style={styles.section}>Status</Text>
-        <View style={styles.statusRow}>
-          {REPAIR_STATUSES.map((s) => (
-            <Pressable
-              key={s.value}
-              onPress={() => setStatus(s.value)}
-              style={[styles.statusChip, status === s.value && styles.statusChipActive]}
-            >
-              <Text style={[styles.statusChipText, status === s.value && styles.statusChipTextActive]}>
-                {s.label}
-              </Text>
-            </Pressable>
-          ))}
+        {/* Status */}
+        <Text style={styles.sectionTitle}>STATUS</Text>
+        <View style={styles.statusCard}>
+          <View style={styles.statusRow}>
+            {REPAIR_STATUSES.map((s) => {
+              const isSelected = status === s.value;
+              return (
+                <PaperChip
+                  key={s.value}
+                  selected={isSelected}
+                  mode="outlined"
+                  showSelectedCheck={false}
+                  onPress={() => setStatus(s.value)}
+                  style={{
+                    backgroundColor: isSelected ? accentAlpha(colors.accent, 0.15) : colors.surface2,
+                    borderColor: isSelected ? colors.accent : colors.border,
+                  }}
+                  textStyle={{
+                    color: isSelected ? colors.accent : colors.textMuted,
+                    fontWeight: isSelected ? '700' : '600',
+                    fontSize: 12,
+                  }}
+                >
+                  {s.label}
+                </PaperChip>
+              );
+            })}
+          </View>
         </View>
 
-        <Text style={styles.section}>Payment</Text>
-        <Field
-          label="Repair cost"
-          value={repairCost}
-          onChangeText={setRepairCost}
-          keyboardType="decimal-pad"
-          placeholder="0"
-        />
-        <Field
-          label="Advance amount"
-          value={advanceAmount}
-          onChangeText={setAdvanceAmount}
-          keyboardType="decimal-pad"
-          placeholder="0"
-        />
-        <Pressable
-          onPress={() => setIsPaid(!isPaid)}
-          style={styles.paidRow}
-          android_ripple={{ color: colors.border }}
-        >
-          <Text style={styles.paidLabel}>Marked as paid</Text>
-          <View style={[styles.toggle, isPaid && styles.toggleOn]}>
-            <View style={[styles.knob, isPaid && styles.knobOn]} />
+        {/* Payment */}
+        <Text style={styles.sectionTitle}>PAYMENT</Text>
+        <View style={styles.paymentCard}>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <PaperInput
+              label="Repair cost (₹)"
+              placeholder="0"
+              value={repairCost}
+              onChangeText={setRepairCost}
+              keyboardType="decimal-pad"
+              mode="outlined"
+              dense={true}
+              outlineColor={colors.border}
+              activeOutlineColor={colors.accent}
+              textColor={colors.text}
+              placeholderTextColor={colors.textMuted}
+              theme={{
+                colors: {
+                  background: colors.surface,
+                  placeholder: colors.textMuted,
+                },
+              }}
+              style={[styles.paymentPaperInput, { flex: 1 }]}
+            />
+            <PaperInput
+              label="Expense (₹)"
+              placeholder="0"
+              value={expense}
+              onChangeText={setExpense}
+              keyboardType="decimal-pad"
+              mode="outlined"
+              dense={true}
+              outlineColor={colors.border}
+              activeOutlineColor={colors.accent}
+              textColor={colors.text}
+              placeholderTextColor={colors.textMuted}
+              theme={{
+                colors: {
+                  background: colors.surface,
+                  placeholder: colors.textMuted,
+                },
+              }}
+              style={[styles.paymentPaperInput, { flex: 1 }]}
+            />
           </View>
-        </Pressable>
-
-        <Pressable
-          onPress={() => void onSave()}
-          disabled={saving}
-          style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
-          android_ripple={{ color: '#fff' }}
-        >
-          {saving ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.saveBtnText}>{isEdit ? 'Save changes' : 'Save job'}</Text>
+          <View style={{ flexDirection: 'row', gap: 10, marginTop: spacing.md }}>
+            <PaperInput
+              label="Advance amount (₹)"
+              placeholder="0"
+              value={advanceAmount}
+              onChangeText={setAdvanceAmount}
+              keyboardType="decimal-pad"
+              mode="outlined"
+              dense={true}
+              outlineColor={colors.border}
+              activeOutlineColor={colors.accent}
+              textColor={colors.text}
+              placeholderTextColor={colors.textMuted}
+              theme={{
+                colors: {
+                  background: colors.surface,
+                  placeholder: colors.textMuted,
+                },
+              }}
+              style={[styles.paymentPaperInput, { flex: 1 }]}
+            />
+          </View>
+          {isEdit && (
+            <Pressable
+              onPress={() => setIsPaid(!isPaid)}
+              style={[styles.paidRow, { marginTop: 12 }]}
+              android_ripple={{ color: colors.border }}
+            >
+              <Text style={styles.paidLabel}>Marked as paid</Text>
+              <PaperSwitch
+                value={isPaid}
+                onValueChange={setIsPaid}
+                color={colors.success}
+              />
+            </Pressable>
           )}
-        </Pressable>
+        </View>
+
+        {!isEdit ? (
+          <Pressable
+            onPress={() => setSendWhatsAppInvoice((v) => !v)}
+            style={styles.whatsappCard}
+            android_ripple={{ color: colors.border }}
+          >
+            <Text style={styles.whatsappLabel}>Send WhatsApp invoice PDF after save</Text>
+            <PaperSwitch
+              value={sendWhatsAppInvoice}
+              onValueChange={setSendWhatsAppInvoice}
+              color={colors.accent}
+            />
+          </Pressable>
+        ) : null}
       </ScrollView>
+
+      {/* Bottom save button */}
+      <View style={styles.bottomBtn}>
+        <PaperButton
+          mode="contained"
+          onPress={() => {
+            if (saving) return;
+            void onSave();
+          }}
+          loading={saving}
+          style={styles.savePaperBtn}
+          contentStyle={styles.savePaperBtnContent}
+          labelStyle={styles.savePaperBtnLabel}
+          buttonColor={colors.accent}
+          textColor="#FFFFFF"
+          icon={saving ? undefined : () => <Plus color="#FFFFFF" size={20} />}
+        >
+          {saving ? 'Saving...' : (isEdit ? 'Save changes' : 'Create job')}
+        </PaperButton>
+      </View>
     </SafeAreaView>
   );
 }

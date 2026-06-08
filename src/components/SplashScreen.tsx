@@ -1,29 +1,47 @@
-import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { Animated, Easing, StyleSheet, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { spacing } from '../theme';
 
 export function SplashScreen() {
     const { colors } = useTheme();
-    const [fadeAnim, setFadeAnim] = useState(0);
+    const opacity = useRef(new Animated.Value(0)).current;
+    const scale = useRef(new Animated.Value(0.4)).current;
+    const translateY = useRef(new Animated.Value(40)).current;
 
     useEffect(() => {
-        const fadeIn = setTimeout(() => setFadeAnim(1), 100);
-        return () => clearTimeout(fadeIn);
-    }, []);
+        Animated.parallel([
+            Animated.timing(opacity, {
+                toValue: 1,
+                duration: 600,
+                easing: Easing.out(Easing.ease),
+                useNativeDriver: true,
+            }),
+            Animated.spring(scale, {
+                toValue: 1,
+                friction: 5,
+                tension: 60,
+                useNativeDriver: true,
+            }),
+            Animated.spring(translateY, {
+                toValue: 0,
+                friction: 6,
+                tension: 50,
+                useNativeDriver: true,
+            })
+        ]).start();
+    }, [opacity, scale, translateY]);
 
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: colors.accent }]} edges={['top', 'bottom']}>
-            <View style={styles.content}>
-                <View style={[styles.iconContainer, { opacity: fadeAnim }]}>
-                    <Text style={styles.icon}>📱</Text>
-                </View>
-                <Text style={[styles.title, { color: '#fff', opacity: fadeAnim }]}>MCA Phone Wala</Text>
-                <Text style={[styles.subtitle, { color: 'rgba(255,255,255,0.8)', opacity: fadeAnim }]}>
+            <Animated.View style={[styles.content, { opacity, transform: [{ scale }, { translateY }] }]}>
+                <Text style={styles.icon}>📱</Text>
+                <Text style={[styles.title, { color: '#fff' }]}>MCA Phone Wala</Text>
+                <Text style={[styles.subtitle, { color: 'rgba(255,255,255,0.8)' }]}>
                     Repair Management Made Easy
                 </Text>
-            </View>
+            </Animated.View>
         </SafeAreaView>
     );
 }
@@ -38,11 +56,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: spacing.md,
     },
-    iconContainer: {
-        marginBottom: spacing.lg,
-    },
     icon: {
         fontSize: 80,
+        marginBottom: spacing.lg,
     },
     title: {
         fontSize: 32,

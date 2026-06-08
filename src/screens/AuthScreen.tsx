@@ -115,15 +115,20 @@ export function AuthScreen() {
   const [busy, setBusy] = useState(false);
 
   async function onSubmit() {
-    const e = normalizeEmail(email);
+    let rawInput = email.trim();
+    // If input doesn't contain '@', treat it as a username and append '@shop.com'
+    if (rawInput && !rawInput.includes('@')) {
+      rawInput = `${rawInput.toLowerCase()}@shop.com`;
+    }
+    const e = normalizeEmail(rawInput);
     if (!e || !password) {
-      Alert.alert('Missing fields', 'Enter email and password.');
+      Alert.alert('Missing fields', 'Enter username/email and password.');
       return;
     }
     if (!isValidEmail(e)) {
       Alert.alert(
-        'Email',
-        'Use a full address with @ and a domain (example: you@gmail.com). No spaces.'
+        'Credentials',
+        'Use a valid username or email address.'
       );
       return;
     }
@@ -180,14 +185,14 @@ export function AuthScreen() {
           <Text style={styles.brand}>MCA Phone Wala</Text>
           <Text style={styles.subtitle}>Sign in to sync jobs in the cloud</Text>
 
-          <Text style={styles.label}>Email</Text>
+          <Text style={styles.label}>Username or Email</Text>
           <TextInput
             value={email}
             onChangeText={setEmail}
             autoCapitalize="none"
             autoComplete="email"
             keyboardType="email-address"
-            placeholder="you@example.com"
+            placeholder="e.g. rahul123 or you@example.com"
             placeholderTextColor={colors.textMuted}
             style={styles.input}
           />

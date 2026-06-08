@@ -28,16 +28,16 @@ export function normalizeStoredImeiForDisplay(raw: string): string {
 
 /** Strip invalid characters while typing — letters (Unicode), spaces, . ' - */
 export function sanitizeCustomerNameInput(input: string): string {
-  return input.replace(/[^\p{L}\s'.-]/gu, '');
+  return input.replace(/[^\p{L}\d\s'.-]/gu, '');
 }
 
 function validateCustomerName(name: string): string | null {
   const t = name.trim();
   if (!t) return 'Customer name is required.';
-  if (!/^[\p{L}\s'.-]+$/u.test(t)) {
-    return 'Name should use only letters and spaces (and . \' -).';
+  if (!/^[\p{L}\d\s'.-]+$/u.test(t)) {
+    return 'Name should use only letters, numbers and spaces (and . \' -).';
   }
-  if (!/\p{L}/u.test(t)) return 'Name must include at least one letter.';
+  if (!/[\p{L}\d]/u.test(t)) return 'Name must include at least one letter or number.';
   return null;
 }
 

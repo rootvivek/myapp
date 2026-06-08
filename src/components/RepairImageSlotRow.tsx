@@ -70,27 +70,18 @@ function createCellStyles(colors: AppColors) {
     },
     placeholderText: {
       color: colors.textMuted,
-      fontSize: 13,
+      fontSize: 11,
       fontWeight: '600',
       textAlign: 'center',
-      paddingHorizontal: 8,
+      paddingHorizontal: 4,
     },
     placeholderHint: {
       color: colors.textMuted,
-      fontSize: 11,
+      fontSize: 9,
       marginTop: 4,
       textAlign: 'center',
-      paddingHorizontal: 8,
+      paddingHorizontal: 4,
       opacity: 0.85,
-    },
-    changeBtn: {
-      paddingVertical: 8,
-      paddingTop: 10,
-    },
-    changeText: {
-      color: colors.accent,
-      fontWeight: '600',
-      fontSize: 14,
     },
   });
 
@@ -131,7 +122,7 @@ export function RepairImageSlotCell({ label, uri, onChange, fullWidth, style }: 
 
   return (
     <View style={[styles.cell, fullWidth && styles.cellFull, style]}>
-      <Text style={styles.label}>{label}</Text>
+      <Text style={styles.label} numberOfLines={1} ellipsizeMode="tail">{label}</Text>
       <Pressable
         onPress={openCamera}
         onLongPress={openMoreOptions}
@@ -143,21 +134,10 @@ export function RepairImageSlotCell({ label, uri, onChange, fullWidth, style }: 
           <Image source={{ uri }} style={styles.preview} resizeMode="cover" />
         ) : (
           <View style={styles.placeholder}>
-            <Text style={styles.placeholderText}>Tap for camera</Text>
-            <Text style={styles.placeholderHint}>Hold for gallery</Text>
+            <Text style={styles.placeholderText}>Tap: camera</Text>
+            <Text style={styles.placeholderHint}>Hold: gallery</Text>
           </View>
         )}
-      </Pressable>
-      <Pressable
-        onPress={openCamera}
-        onLongPress={openMoreOptions}
-        delayLongPress={380}
-        style={styles.changeBtn}
-        android_ripple={{ color: colors.border }}
-      >
-        <Text style={styles.changeText}>
-          {uri ? 'Retake · hold for gallery or remove' : 'Take photo · hold for gallery'}
-        </Text>
       </Pressable>
     </View>
   );

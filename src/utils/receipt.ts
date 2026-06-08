@@ -2,7 +2,7 @@ import { generatePDF } from 'react-native-html-to-pdf';
 import RNShare, { Social } from 'react-native-share';
 
 import type { Repair } from '../types/repair';
-import { REPAIR_STATUSES, countRepairImages, formatAccessoriesSummary } from '../types/repair';
+import { REPAIR_STATUSES, formatAccessoriesSummary } from '../types/repair';
 import type { ShopBranding } from './shopSettings';
 import { getShopBranding } from './shopSettings';
 import { formatCurrency, formatDateDisplay } from './format';
@@ -32,7 +32,7 @@ function monogramLetter(shopName: string): string {
   return '◆';
 }
 
-export function buildReceiptHtml(
+function buildReceiptHtml(
   repair: Repair,
   branding: ShopBranding,
   logoDataUrl: string | null
@@ -74,6 +74,10 @@ export function buildReceiptHtml(
     .amount-row { display: flex; justify-content: space-between; padding: 12px 14px; background: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0; margin-top: 8px; }
     .amt-label { font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; }
     .amt-value { font-size: 20px; font-weight: 800; color: #1e40af; }
+    .terms-box { margin-top: 20px; border-top: 1px dashed #e2e8f0; padding-top: 14px; }
+    .terms-title { font-size: 9px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #94a3b8; margin: 0 0 6px; }
+    .terms-list { margin: 0; padding-left: 14px; font-size: 9px; color: #64748b; line-height: 1.45; }
+    .terms-list li { margin-bottom: 4px; }
     .footer { text-align: center; font-size: 12px; color: #94a3b8; margin-top: 20px; padding-top: 16px; border-top: 1px solid #f1f5f9; }
   </style>
 </head>
@@ -100,10 +104,18 @@ export function buildReceiptHtml(
         <tr><td class="l">Phone</td><td class="r">${escapeHtml(repair.phone)}</td></tr>
         <tr><td class="l">Device</td><td class="r">${escapeHtml(repair.deviceModel)}</td></tr>
         <tr><td class="l">IMEI</td><td class="r">${escapeHtml(repair.imei || '—')}</td></tr>
+        ${repair.lockType ? `<tr><td class="l">Device lock</td><td class="r">${escapeHtml(
+          repair.lockType === 'pattern'
+            ? `Pattern (Path: ${repair.lockValue})`
+            : repair.lockType === 'pin'
+            ? `PIN: ${repair.lockValue}`
+            : `Password: ${repair.lockValue}`
+        )}</td></tr>` : ''}
         <tr><td class="l">Received</td><td class="r">${escapeHtml(formatDateDisplay(repair.dateReceived))}</td></tr>
         <tr><td class="l">Issue</td><td class="r">${escapeHtml(repair.problem)}</td></tr>
         <tr><td class="l">Accessories</td><td class="r">${escapeHtml(formatAccessoriesSummary(repair))}</td></tr>
         <tr><td class="l">Status</td><td class="r">${escapeHtml(statusLabel(repair.status))}</td></tr>
+        ${repair.warranty ? `<tr><td class="l">Warranty</td><td class="r">${escapeHtml(repair.warranty)}</td></tr>` : ''}
       </table>
       <p class="section-title">Payment</p>
       <table class="meta" role="presentation">
@@ -114,6 +126,15 @@ export function buildReceiptHtml(
       <div class="amount-row">
         <span class="amt-label">Total job</span>
         <span class="amt-value">${formatCurrency(repair.repairCost)}</span>
+      </div>
+      <div class="terms-box">
+        <p class="terms-title">Terms & Conditions</p>
+        <ul class="terms-list">
+          <li>No warranty on physical, liquid, or accidental damage.</li>
+          <li>All repaired devices must be claimed within 30 days of notification, otherwise they are subject to disposal.</li>
+          <li>Please back up all device data. The service center is not responsible for any data loss.</li>
+          <li>Estimated repair times and costs may vary depending on spare parts availability.</li>
+        </ul>
       </div>
       <p class="footer">Thank you for your business.</p>
     </div>
@@ -130,7 +151,7 @@ async function generateInvoicePdf(repair: Repair): Promise<string> {
   const file = await generatePDF({
     html,
     fileName: `Invoice_${repair.orderCode.replace(/[^a-zA-Z0-9]/g, '_')}`,
-    directory: 'Documents',
+    forceReset: true,
   });
 
   if (!file.filePath) {
@@ -146,21 +167,18 @@ function normalizeWhatsAppPhone(raw: string): string {
   return digits;
 }
 
-/** Generate a PDF invoice and open the system share sheet. */
+/** Generate a PDF invoice and open the system share sheet.
+ *  Throws on failure so callers can surface the error to the user. */
 export async function shareReceiptPdf(repair: Repair): Promise<void> {
-  try {
-    const filePath = await generateInvoicePdf(repair);
-    await RNShare.open({
-      title: `Invoice ${repair.orderCode}`,
-      subject: `Invoice for repair ${repair.orderCode}`,
-      message: 'Attached is the invoice for your repair.',
-      url: `file://${filePath}`,
-      type: 'application/pdf',
-      failOnCancel: false,
-    });
-  } catch (err) {
-    console.error('PDF share failed:', err);
-  }
+  const filePath = await generateInvoicePdf(repair);
+  await RNShare.open({
+    title: `Invoice ${repair.orderCode}`,
+    subject: `Invoice for repair ${repair.orderCode}`,
+    message: 'Attached is the invoice for your repair.',
+    url: `file://${filePath}`,
+    type: 'application/pdf',
+    failOnCancel: false,
+  });
 }
 
 /** Generate a PDF invoice and share directly to a WhatsApp contact. */
@@ -180,24 +198,4 @@ export async function shareReceiptPdfToWhatsAppContact(repair: Repair, customerP
     console.warn('Direct WhatsApp share error, falling back to general share:', err);
     await shareReceiptPdf(repair);
   }
-}
-
-/** Plain-text receipt summary (used in RepairDetailScreen). */
-export async function receiptSummaryText(repair: Repair): Promise<string> {
-  const branding = await getShopBranding();
-  const n = countRepairImages(repair);
-  const lines = [
-    `*${branding.shopName}* — ${repair.orderCode}`,
-    `Record #: ${repair.id}`,
-    `Customer: ${repair.customerName}`,
-    `Phone: ${repair.phone}`,
-    `Device: ${repair.deviceModel}`,
-    `Issue: ${repair.problem}`,
-    `Accessories: ${formatAccessoriesSummary(repair)}`,
-    `Status: ${statusLabel(repair.status)}`,
-    `Cost: ${formatCurrency(repair.repairCost)} | Advance: ${formatCurrency(repair.advanceAmount)}`,
-    repair.isPaid ? 'Paid' : 'Unpaid',
-  ];
-  if (n > 0) lines.push(`Photos on file: ${n}`);
-  return lines.join('\n');
 }

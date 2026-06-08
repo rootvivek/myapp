@@ -1,6 +1,8 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { FlatList, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { Searchbar } from 'react-native-paper';
+import LinearGradient from 'react-native-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { RepairCard } from '../components/RepairCard';
@@ -17,20 +19,16 @@ function createStyles(colors: AppColors): ReturnType<typeof StyleSheet.create> {
   return StyleSheet.create({
     safe: {
       flex: 1,
-      backgroundColor: colors.bg,
+      backgroundColor: colors.bgGradient[0] || colors.bg,
     },
-    input: {
-      marginHorizontal: 0,
+    searchbar: {
+      marginHorizontal: 16,
+      marginTop: 8,
       marginBottom: spacing.sm,
       backgroundColor: colors.surface2,
-      borderWidth: 0,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: colors.border,
-      borderRadius: 0,
-      paddingHorizontal: spacing.md,
-      paddingVertical: 14,
-      color: colors.text,
-      fontSize: 16,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
     },
     list: {
       paddingHorizontal: 0,
@@ -72,14 +70,24 @@ export function SearchScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <TextInput
-        style={styles.input}
+      <LinearGradient
+        colors={colors.bgGradient}
+        style={{
+          position: 'absolute',
+          width: '100%',
+          height: '100%',
+        }}
+      />
+      <Searchbar
         placeholder="Search name, phone, or IMEI"
         placeholderTextColor={colors.textMuted}
-        value={query}
         onChangeText={setQuery}
+        value={query}
+        style={styles.searchbar}
+        iconColor={colors.accent}
+        inputStyle={{ color: colors.text }}
+        theme={{ colors: { elevation: { level3: colors.surface } } }}
         autoFocus
-        autoCorrect={false}
       />
       <FlatList
         data={results}

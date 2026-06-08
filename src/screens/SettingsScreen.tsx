@@ -10,7 +10,9 @@ import {
   Text,
   TextInput,
   View,
+  Switch,
 } from 'react-native';
+import { Moon, Sun } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '../context/AuthContext';
@@ -37,14 +39,9 @@ function createStyles(colors: AppColors) {
     },
     content: {
       padding: spacing.md,
-      paddingBottom: spacing.xl,
+      paddingBottom: 100,
     },
-    lead: {
-      color: colors.textMuted,
-      fontSize: 14,
-      lineHeight: 20,
-      marginBottom: spacing.lg,
-    },
+
     label: {
       color: colors.textMuted,
       fontSize: 12,
@@ -163,29 +160,25 @@ function createStyles(colors: AppColors) {
     },
     themeRow: {
       flexDirection: 'row',
-      gap: spacing.sm,
-      marginBottom: spacing.md,
-    },
-    themeChip: {
-      flex: 1,
-      paddingVertical: 12,
-      borderRadius: radius.sm,
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: colors.surface2,
       borderWidth: 1,
       borderColor: colors.border,
-      backgroundColor: colors.surface2,
+      borderRadius: radius.sm,
+      paddingHorizontal: spacing.md,
+      paddingVertical: 12,
+      marginBottom: spacing.md,
+    },
+    themeRowLeft: {
+      flexDirection: 'row',
       alignItems: 'center',
+      gap: spacing.sm,
     },
-    themeChipActive: {
-      borderColor: colors.accent,
-      backgroundColor: accentAlpha(colors.accent, 0.12),
-    },
-    themeChipText: {
-      color: colors.textMuted,
-      fontWeight: '700',
-      fontSize: 15,
-    },
-    themeChipTextActive: {
-      color: colors.accent,
+    themeRowText: {
+      color: colors.text,
+      fontSize: 16,
+      fontWeight: '600',
     },
   });
 
@@ -195,7 +188,7 @@ function createStyles(colors: AppColors) {
 }
 
 export function SettingsScreen(_props: Props) {
-  const { user, signOut } = useAuth();
+  const { user, signOut, isOwner, profile } = useAuth();
   const { colors, mode, setMode } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [shopName, setShopName] = useState('');
@@ -277,86 +270,140 @@ export function SettingsScreen(_props: Props) {
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Text style={styles.lead}>
-          This name and logo appear at the top of shared PDF invoices. Without a logo, invoices show your shop initial in a
-          badge.
-        </Text>
+
 
         <Text style={[styles.label, styles.labelSpaced]}>Appearance</Text>
         <View style={styles.themeRow}>
-          <Pressable
-            onPress={() => onThemeChoice('light')}
-            style={[styles.themeChip, mode === 'light' && styles.themeChipActive]}
-            android_ripple={{ color: colors.border }}
-          >
-            <Text style={[styles.themeChipText, mode === 'light' && styles.themeChipTextActive]}>Light</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => onThemeChoice('dark')}
-            style={[styles.themeChip, mode === 'dark' && styles.themeChipActive]}
-            android_ripple={{ color: colors.border }}
-          >
-            <Text style={[styles.themeChipText, mode === 'dark' && styles.themeChipTextActive]}>Dark</Text>
-          </Pressable>
+          <View style={styles.themeRowLeft}>
+            {mode === 'dark' ? <Moon size={20} color={colors.accent} /> : <Sun size={20} color={colors.accent} />}
+            <Text style={styles.themeRowText}>Dark Mode</Text>
+          </View>
+          <Switch
+            value={mode === 'dark'}
+            onValueChange={(val) => onThemeChoice(val ? 'dark' : 'light')}
+            trackColor={{ false: colors.border, true: accentAlpha(colors.accent, 0.5) }}
+            thumbColor={mode === 'dark' ? colors.accent : '#f4f3f4'}
+          />
         </View>
 
-        <Text style={styles.label}>Shop name</Text>
-        <TextInput
-          value={shopName}
-          onChangeText={setShopName}
-          placeholder="MCA Phone Wala"
-          placeholderTextColor={colors.textMuted}
-          style={styles.input}
-          autoCapitalize="words"
-        />
-        <Pressable
-          onPress={() => void onSaveName()}
-          disabled={saving}
-          style={[styles.primaryBtn, saving && styles.btnDisabled]}
-          android_ripple={{ color: '#fff' }}
-        >
-          {saving ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.primaryBtnText}>Save shop name</Text>
-          )}
-        </Pressable>
+        {/* Owner-only: Shop Branding */}
+        {isOwner && (
+          <>
+            <Text style={[styles.label, styles.labelSpaced]}>Shop Branding</Text>
+            <View style={styles.logoCard}>
+              {/* Shop Logo */}
+              <Text style={styles.label}>Shop Logo</Text>
+              {logoUri ? (
+                <>
+                  <Image source={{ uri: logoUri }} style={styles.logoPreview} resizeMode="contain" />
+                  <View style={styles.logoActions}>
+                    <Pressable
+                      onPress={() => void onPickLogo()}
+                      disabled={logoBusy}
+                      style={[styles.secondaryBtn, logoBusy && styles.btnDisabled]}
+                      android_ripple={{ color: colors.border }}
+                    >
+                      <Text style={styles.secondaryBtnText}>Change logo</Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => void onRemoveLogo()}
+                      disabled={logoBusy}
+                      style={[styles.dangerBtn, logoBusy && styles.btnDisabled]}
+                      android_ripple={{ color: colors.border }}
+                    >
+                      <Text style={styles.dangerBtnText}>Remove</Text>
+                    </Pressable>
+                  </View>
+                </>
+              ) : (
+                <Pressable
+                  onPress={() => void onPickLogo()}
+                  disabled={logoBusy}
+                  style={({ pressed }) => [
+                    styles.logoPlaceholder,
+                    pressed && { opacity: 0.7 }
+                  ]}
+                  android_ripple={{ color: colors.border }}
+                >
+                  <Text style={styles.logoPlaceholderText}>Choose logo</Text>
+                </Pressable>
+              )}
 
-        <Text style={[styles.label, styles.labelSpaced]}>Shop logo</Text>
-        <View style={styles.logoCard}>
-          {logoUri ? (
-            <Image source={{ uri: logoUri }} style={styles.logoPreview} resizeMode="contain" />
-          ) : (
-            <View style={styles.logoPlaceholder}>
-              <Text style={styles.logoPlaceholderText}>No logo</Text>
+              <View style={{ height: spacing.lg }} />
+
+              {/* Shop Name */}
+              <Text style={styles.label}>Shop Name</Text>
+              <TextInput
+                value={shopName}
+                onChangeText={setShopName}
+                placeholder="MCA Phone Wala"
+                placeholderTextColor={colors.textMuted}
+                style={[styles.input, { marginBottom: 12 }]}
+                autoCapitalize="words"
+              />
+              <Pressable
+                onPress={() => void onSaveName()}
+                disabled={saving}
+                style={[styles.primaryBtn, saving && styles.btnDisabled]}
+                android_ripple={{ color: '#fff' }}
+              >
+                {saving ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.primaryBtnText}>Save shop name</Text>
+                )}
+              </Pressable>
             </View>
-          )}
-          <View style={styles.logoActions}>
+          </>
+        )}
+
+        {/* Owner-only: Customers & Team */}
+        {isOwner && (
+          <>
+            <Text style={[styles.label, styles.labelSpaced]}>Customers</Text>
             <Pressable
-              onPress={() => void onPickLogo()}
-              disabled={logoBusy}
-              style={[styles.secondaryBtn, logoBusy && styles.btnDisabled]}
+              onPress={() => _props.navigation.navigate('CustomerDirectory')}
+              style={styles.signOutBtn}
               android_ripple={{ color: colors.border }}
             >
-              <Text style={styles.secondaryBtnText}>{logoUri ? 'Change logo' : 'Choose logo'}</Text>
+              <Text style={[styles.signOutText, { color: colors.accent }]}>Manage Customers</Text>
             </Pressable>
-            {logoUri ? (
-              <Pressable
-                onPress={() => void onRemoveLogo()}
-                disabled={logoBusy}
-                style={[styles.dangerBtn, logoBusy && styles.btnDisabled]}
-                android_ripple={{ color: colors.border }}
-              >
-                <Text style={styles.dangerBtnText}>Remove</Text>
-              </Pressable>
-            ) : null}
-          </View>
-        </View>
+
+            <Text style={[styles.label, styles.labelSpaced]}>Team</Text>
+            <Pressable
+              onPress={() => _props.navigation.navigate('ManageLabour')}
+              style={styles.signOutBtn}
+              android_ripple={{ color: colors.border }}
+            >
+              <Text style={[styles.signOutText, { color: colors.accent }]}>Manage Team</Text>
+            </Pressable>
+          </>
+        )}
 
         <Text style={[styles.label, styles.labelSpaced]}>Account</Text>
         <Text style={styles.accountEmail} selectable>
           {user?.email ?? '—'}
         </Text>
+        {profile && (
+          <View style={{
+            alignSelf: 'flex-start',
+            paddingHorizontal: 12,
+            paddingVertical: 5,
+            borderRadius: 12,
+            backgroundColor: isOwner ? accentAlpha(colors.accent, 0.15) : accentAlpha(colors.success, 0.15),
+            marginBottom: spacing.md,
+          }}>
+            <Text style={{
+              fontSize: 12,
+              fontWeight: '800',
+              color: isOwner ? colors.accent : colors.success,
+              textTransform: 'uppercase',
+              letterSpacing: 0.5,
+            }}>
+              {isOwner ? '👑 Owner' : '🔧 Team'}
+            </Text>
+          </View>
+        )}
         <Pressable
           onPress={() => void signOut()}
           style={styles.signOutBtn}
