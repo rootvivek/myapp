@@ -1,5 +1,3 @@
-import * as FileSystem from 'expo-file-system/legacy';
-
 import { supabase } from '../lib/supabase';
 import type { Repair, RepairImageSlot } from '../types/repair';
 import { isPersistedAppPath, pathForSlot } from './repairImages';
@@ -30,21 +28,11 @@ function rethrowStorageError(err: unknown): never {
 }
 
 async function readUriAsBytes(uri: string): Promise<{ bytes: Uint8Array; contentType: string }> {
-  try {
-    const res = await fetch(uri);
-    if (res.ok) {
-      const buf = await res.arrayBuffer();
-      const ct = res.headers.get('content-type') ?? 'image/jpeg';
-      return { bytes: new Uint8Array(buf), contentType: ct.startsWith('image/') ? ct : 'image/jpeg' };
-    }
-  } catch {
-    /* use file read */
-  }
-  const b64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
-  const raw = atob(b64);
-  const bytes = new Uint8Array(raw.length);
-  for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
-  return { bytes, contentType: 'image/jpeg' };
+  const res = await fetch(uri);
+  if (!res.ok) throw new Error(`Failed to fetch image: ${res.status}`);
+  const buf = await res.arrayBuffer();
+  const ct = res.headers.get('content-type') ?? 'image/jpeg';
+  return { bytes: new Uint8Array(buf), contentType: ct.startsWith('image/') ? ct : 'image/jpeg' };
 }
 
 async function uploadSlot(userId: string, repairId: number, slot: RepairImageSlot, uri: string): Promise<string> {
@@ -103,11 +91,6 @@ export async function resolveImagesForSaveCloud(
 
     if (cur.startsWith('http')) {
       out[slot] = cur;
-      continue;
-    }
-
-    if (isPersistedAppPath(cur) && cur === pathForSlot(repairId, slot)) {
-      out[slot] = await uploadSlot(uid, repairId, slot, cur);
       continue;
     }
 

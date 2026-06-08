@@ -35,7 +35,7 @@ function telUri(phone: string): string | null {
   return d.length > 0 ? `tel:${d}` : null;
 }
 
-function createStyles(colors: AppColors) {
+function createStyles(colors: AppColors): ReturnType<typeof StyleSheet.create> {
   return StyleSheet.create({
     safe: {
       flex: 1,
@@ -86,8 +86,7 @@ function createStyles(colors: AppColors) {
       alignItems: 'center',
       minWidth: 0,
       paddingVertical: spacing.sm,
-      paddingLeft: spacing.sm,
-      paddingRight: spacing.xs,
+      paddingHorizontal: spacing.sm,
     },
     avatar: {
       width: 44,
@@ -147,7 +146,7 @@ export function CustomerDirectoryScreen({ navigation }: Props) {
   const [customers, setCustomers] = useState<DirectoryCustomer[]>([]);
   const [query, setQuery] = useState('');
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (): Promise<void> => {
     try {
       const list = await getDirectoryCustomers();
       setCustomers(sortCustomers(list));

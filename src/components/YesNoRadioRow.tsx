@@ -11,7 +11,7 @@ type Props = {
   onChange: (yes: boolean) => void;
 };
 
-function createStyles(colors: AppColors) {
+function createStyles(colors: AppColors): ReturnType<typeof StyleSheet.create> {
   return StyleSheet.create({
     wrap: {
       marginBottom: spacing.md,

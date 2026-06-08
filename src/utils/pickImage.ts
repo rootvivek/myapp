@@ -1,23 +1,19 @@
-import * as ImagePicker from 'expo-image-picker';
+import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 
 export async function launchCameraForImage(): Promise<string | null> {
-  const perm = await ImagePicker.requestCameraPermissionsAsync();
-  if (!perm.granted) return null;
-  const res = await ImagePicker.launchCameraAsync({
-    mediaTypes: ['images'],
-    quality: 0.85,
+  const result = await launchCamera({
+    mediaType: 'photo',
+    quality: 0.8,
   });
-  if (res.canceled || !res.assets?.[0]) return null;
-  return res.assets[0].uri;
+  if (result.didCancel || !result.assets?.[0]?.uri) return null;
+  return result.assets[0].uri;
 }
 
 export async function launchLibraryForImage(): Promise<string | null> {
-  const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-  if (!perm.granted) return null;
-  const res = await ImagePicker.launchImageLibraryAsync({
-    mediaTypes: ['images'],
-    quality: 0.85,
+  const result = await launchImageLibrary({
+    mediaType: 'photo',
+    quality: 0.8,
   });
-  if (res.canceled || !res.assets?.[0]) return null;
-  return res.assets[0].uri;
+  if (result.didCancel || !result.assets?.[0]?.uri) return null;
+  return result.assets[0].uri;
 }

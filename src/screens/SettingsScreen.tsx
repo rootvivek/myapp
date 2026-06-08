@@ -1,5 +1,5 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Image } from 'expo-image';
+import { Image } from 'react-native';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -18,14 +18,14 @@ import { useTheme } from '../context/ThemeContext';
 import type { RootStackParamList } from '../navigation/types';
 import type { AppColors } from '../theme';
 import { accentAlpha, radius, spacing } from '../theme';
-import type { ThemePreference } from '../utils/themeStorage';
+import type { ThemePreference } from '../context/ThemeContext';
 import { launchLibraryForImage } from '../utils/pickImage';
 import { clearShopLogo, getShopBranding, saveShopBranding, setShopLogoFromPickerUri } from '../utils/shopSettings';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
 
 function createStyles(colors: AppColors) {
-  return StyleSheet.create({
+  const styles = StyleSheet.create({
     safe: {
       flex: 1,
       backgroundColor: colors.bg,
@@ -188,6 +188,10 @@ function createStyles(colors: AppColors) {
       color: colors.accent,
     },
   });
+
+  return styles as typeof styles & {
+    logoPreview: import('react-native').ImageStyle;
+  };
 }
 
 export function SettingsScreen(_props: Props) {
@@ -321,7 +325,7 @@ export function SettingsScreen(_props: Props) {
         <Text style={[styles.label, styles.labelSpaced]}>Shop logo</Text>
         <View style={styles.logoCard}>
           {logoUri ? (
-            <Image source={{ uri: logoUri }} style={styles.logoPreview} contentFit="contain" />
+            <Image source={{ uri: logoUri }} style={styles.logoPreview} resizeMode="contain" />
           ) : (
             <View style={styles.logoPlaceholder}>
               <Text style={styles.logoPlaceholderText}>No logo</Text>

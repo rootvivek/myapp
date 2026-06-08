@@ -1,7 +1,5 @@
 import type { RepairImageSlot } from '../types/repair';
 
-const REQUIRED_IMAGE_SLOTS: RepairImageSlot[] = ['front', 'back', 'thumb'];
-
 function digitsOnlyPhone(raw: string): string {
   return raw.replace(/\D/g, '');
 }
@@ -62,10 +60,5 @@ export function validateRepairFormFields(params: {
   if (phoneErr) return phoneErr;
   if (!params.deviceModel.trim()) return 'Device model is required.';
   if (!params.problem.trim()) return 'Problem / notes is required.';
-  for (const slot of REQUIRED_IMAGE_SLOTS) {
-    if (!params.images[slot]?.trim()) {
-      return 'Add photos: phone front, phone back, and thumbnail.';
-    }
-  }
   return null;
 }

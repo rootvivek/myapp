@@ -5,12 +5,39 @@ export const spacing = {
   md: 16,
   lg: 24,
   xl: 32,
+  xxl: 48,
 };
 
 export const radius = {
   sm: 8,
   md: 12,
   lg: 16,
+  xl: 20,
+  full: 999,
+};
+
+export const elevation = {
+  sm: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  md: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  lg: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 8,
+  },
 };
 
 export type AppColors = {
@@ -29,30 +56,30 @@ export type AppColors = {
 
 /** Default app look (existing dark UI). */
 export const darkColors: AppColors = {
-  bg: '#0f1419',
-  surface: '#1a222d',
-  surface2: '#232d3b',
-  border: '#2d3a4a',
-  text: '#e8eef4',
-  textMuted: '#8b9aaf',
-  accent: '#3b82f6',
-  success: '#22c55e',
-  warning: '#eab308',
-  danger: '#ef4444',
-  chipBg: '#2a3544',
+  bg: '#0f172a',
+  surface: '#1e293b',
+  surface2: '#334155',
+  border: '#475569',
+  text: '#f8fafc',
+  textMuted: '#94a3b8',
+  accent: '#818cf8',
+  success: '#34d399',
+  warning: '#fbbf24',
+  danger: '#f87171',
+  chipBg: '#334155',
 };
 
 export const lightColors: AppColors = {
   bg: '#f1f5f9',
   surface: '#ffffff',
-  surface2: '#f8fafc',
-  border: '#e2e8f0',
+  surface2: '#e2e8f0',
+  border: '#cbd5e1',
   text: '#0f172a',
   textMuted: '#64748b',
-  accent: '#2563eb',
-  success: '#16a34a',
-  warning: '#ca8a04',
-  danger: '#dc2626',
+  accent: '#6366f1',
+  success: '#10b981',
+  warning: '#f59e0b',
+  danger: '#ef4444',
   chipBg: '#e2e8f0',
 };
 

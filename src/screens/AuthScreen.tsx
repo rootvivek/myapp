@@ -19,7 +19,7 @@ import type { AppColors } from '../theme';
 import { radius, spacing } from '../theme';
 import { isValidEmail, normalizeEmail } from '../utils/email';
 
-function createStyles(colors: AppColors) {
+function createStyles(colors: AppColors): ReturnType<typeof StyleSheet.create> {
   return StyleSheet.create({
     safe: {
       flex: 1,

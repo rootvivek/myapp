@@ -27,7 +27,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     let cancelled = false;
-    void supabase.auth.getSession().then(({ data: { session: s } }) => {
+    void supabase.auth.getSession().then(({ data: { session: s } }: any) => {
       if (!cancelled) {
         setSession(s);
         setLoading(false);
@@ -35,7 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, s) => {
+    } = supabase.auth.onAuthStateChange((_event: any, s: any) => {
       setSession(s);
     });
     return () => {

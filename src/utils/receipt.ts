@@ -1,7 +1,5 @@
-import * as FileSystem from 'expo-file-system/legacy';
-import * as Print from 'expo-print';
-import * as Sharing from 'expo-sharing';
-import { Linking } from 'react-native';
+import { generatePDF } from 'react-native-html-to-pdf';
+import RNShare, { Social } from 'react-native-share';
 
 import type { Repair } from '../types/repair';
 import { REPAIR_STATUSES, countRepairImages, formatAccessoriesSummary } from '../types/repair';
@@ -19,19 +17,6 @@ function escapeHtml(s: string): string {
 
 function statusLabel(status: Repair['status']): string {
   return REPAIR_STATUSES.find((x) => x.value === status)?.label ?? status;
-}
-
-async function fileUriToDataUrl(uri: string): Promise<string | null> {
-  try {
-    const base64 = await FileSystem.readAsStringAsync(uri, {
-      encoding: FileSystem.EncodingType.Base64,
-    });
-    const lower = uri.toLowerCase();
-    const mime = lower.endsWith('.png') ? 'image/png' : 'image/jpeg';
-    return `data:${mime};base64,${base64}`;
-  } catch {
-    return null;
-  }
 }
 
 function monogramLetter(shopName: string): string {
@@ -67,129 +52,29 @@ export function buildReceiptHtml(
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      padding: 28px 20px 36px;
-      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      color: #0f172a;
-      background: #f1f5f9;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
-    }
-    .sheet {
-      max-width: 440px;
-      margin: 0 auto;
-      background: #fff;
-      border-radius: 14px;
-      overflow: hidden;
-      box-shadow: 0 4px 24px rgba(15, 23, 42, 0.08);
-      border: 1px solid #e2e8f0;
-    }
-    .hero {
-      background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 55%, #172554 100%);
-      color: #f8fafc;
-      padding: 22px 22px 20px;
-    }
-    .hero-top {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-    }
-    .logo-img {
-      width: 72px;
-      height: 72px;
-      object-fit: contain;
-      border-radius: 12px;
-      background: rgba(255,255,255,0.12);
-      flex-shrink: 0;
-    }
-    .logo-fallback {
-      width: 72px;
-      height: 72px;
-      border-radius: 12px;
-      background: linear-gradient(145deg, #3b82f6, #1d4ed8);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 28px;
-      font-weight: 800;
-      color: #fff;
-      letter-spacing: -0.02em;
-      flex-shrink: 0;
-    }
-    .shop-block { min-width: 0; }
-    .shop-name {
-      font-size: 22px;
-      font-weight: 800;
-      letter-spacing: -0.03em;
-      line-height: 1.2;
-      margin: 0;
-    }
-    .invoice-tag {
-      margin: 6px 0 0;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      color: #94a3b8;
-    }
-    .shop-phone {
-      margin: 6px 0 0;
-      font-size: 13px;
-      font-weight: 700;
-      color: #cbd5e1;
-      letter-spacing: 0.01em;
-    }
-    .order-strip {
-      margin-top: 18px;
-      padding: 12px 14px;
-      background: rgba(255,255,255,0.08);
-      border-radius: 10px;
-      border: 1px solid rgba(255,255,255,0.12);
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-    .order-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; }
-    .order-value { font-size: 18px; font-weight: 800; letter-spacing: 0.02em; color: #fff; }
+    body { margin: 0; padding: 28px 20px 36px; font-family: system-ui, sans-serif; color: #0f172a; background: #f1f5f9; }
+    .sheet { max-width: 440px; margin: 0 auto; background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 4px 24px rgba(15, 23, 42, 0.08); border: 1px solid #e2e8f0; }
+    .hero { background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 55%, #172554 100%); color: #f8fafc; padding: 22px; }
+    .hero-top { display: flex; align-items: center; gap: 16px; }
+    .logo-img { width: 72px; height: 72px; object-fit: contain; border-radius: 12px; background: rgba(255,255,255,0.12); flex-shrink: 0; }
+    .logo-fallback { width: 72px; height: 72px; border-radius: 12px; background: linear-gradient(145deg, #3b82f6, #1d4ed8); display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 800; color: #fff; flex-shrink: 0; }
+    .shop-name { font-size: 22px; font-weight: 800; margin: 0; }
+    .invoice-tag { margin: 6px 0 0; font-size: 11px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: #94a3b8; }
+    .shop-phone { margin: 6px 0 0; font-size: 13px; color: #cbd5e1; }
+    .order-strip { margin-top: 18px; padding: 12px 14px; background: rgba(255,255,255,0.08); border-radius: 10px; display: flex; justify-content: space-between; }
+    .order-label { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #94a3b8; }
+    .order-value { font-size: 18px; font-weight: 800; color: #fff; }
     .body { padding: 20px 22px 24px; }
     table.meta { width: 100%; border-collapse: collapse; font-size: 13px; }
     table.meta tr { border-bottom: 1px solid #f1f5f9; }
-    table.meta tr:last-child { border-bottom: none; }
     table.meta td { padding: 10px 0; vertical-align: top; }
-    table.meta td.l { color: #64748b; font-weight: 600; width: 38%; padding-right: 10px; }
+    table.meta td.l { color: #64748b; font-weight: 600; width: 38%; }
     table.meta td.r { color: #0f172a; font-weight: 500; text-align: right; }
-    .section-title {
-      font-size: 10px;
-      font-weight: 800;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      color: #94a3b8;
-      margin: 18px 0 8px;
-    }
-    .section-title:first-child { margin-top: 0; }
-    .amount-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px 14px;
-      background: #f8fafc;
-      border-radius: 10px;
-      border: 1px solid #e2e8f0;
-      margin-top: 8px;
-    }
-    .amount-row .amt-label { font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.06em; }
-    .amount-row .amt-value { font-size: 20px; font-weight: 800; color: #1e40af; }
-    .footer {
-      text-align: center;
-      font-size: 12px;
-      color: #94a3b8;
-      margin-top: 20px;
-      padding-top: 16px;
-      border-top: 1px solid #f1f5f9;
-    }
+    .section-title { font-size: 10px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #94a3b8; margin: 18px 0 8px; }
+    .amount-row { display: flex; justify-content: space-between; padding: 12px 14px; background: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0; margin-top: 8px; }
+    .amt-label { font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; }
+    .amt-value { font-size: 20px; font-weight: 800; color: #1e40af; }
+    .footer { text-align: center; font-size: 12px; color: #94a3b8; margin-top: 20px; padding-top: 16px; border-top: 1px solid #f1f5f9; }
   </style>
 </head>
 <body>
@@ -197,7 +82,7 @@ export function buildReceiptHtml(
     <header class="hero">
       <div class="hero-top">
         ${logoBlock}
-        <div class="shop-block">
+        <div>
           <p class="shop-name">${shop}</p>
           <p class="shop-phone">${shopPhone}</p>
           <p class="invoice-tag">Service invoice</p>
@@ -237,21 +122,22 @@ export function buildReceiptHtml(
 </html>`;
 }
 
-export async function shareReceiptPdf(repair: Repair): Promise<void> {
+/** Shared helper: generate a PDF file from a repair and return its file path. */
+async function generateInvoicePdf(repair: Repair): Promise<string> {
   const branding = await getShopBranding();
-  let logoDataUrl: string | null = null;
-  if (branding.logoUri) {
-    logoDataUrl = await fileUriToDataUrl(branding.logoUri);
-  }
-  const html = buildReceiptHtml(repair, branding, logoDataUrl);
-  const { uri } = await Print.printToFileAsync({ html, base64: false });
-  const canShare = await Sharing.isAvailableAsync();
-  if (!canShare) return;
-  await Sharing.shareAsync(uri, {
-    mimeType: 'application/pdf',
-    dialogTitle: 'Share receipt',
-    UTI: 'com.adobe.pdf',
+  const html = buildReceiptHtml(repair, branding, null);
+
+  const file = await generatePDF({
+    html,
+    fileName: `Invoice_${repair.orderCode.replace(/[^a-zA-Z0-9]/g, '_')}`,
+    directory: 'Documents',
   });
+
+  if (!file.filePath) {
+    throw new Error('Failed to generate PDF file path.');
+  }
+
+  return file.filePath;
 }
 
 function normalizeWhatsAppPhone(raw: string): string {
@@ -260,67 +146,43 @@ function normalizeWhatsAppPhone(raw: string): string {
   return digits;
 }
 
-async function createReceiptPdfUri(repair: Repair): Promise<string> {
-  const branding = await getShopBranding();
-  let logoDataUrl: string | null = null;
-  if (branding.logoUri) logoDataUrl = await fileUriToDataUrl(branding.logoUri);
-  const html = buildReceiptHtml(repair, branding, logoDataUrl);
-  const { uri } = await Print.printToFileAsync({ html, base64: false });
-  return uri;
-}
-
-function invoiceCaption(repair: Repair): string {
-  return `Invoice ${repair.orderCode}`;
-}
-
-/**
- * Open a WhatsApp chat for this number. Tries several URL forms — iOS often
- * fails `canOpenURL(whatsapp://)` unless LSApplicationQueriesSchemes includes whatsapp
- * (see app.config.js); we always attempt openURL and fall back to wa.me.
- */
-async function openWhatsAppToNumber(phoneDigits: string, message: string): Promise<void> {
-  const text = encodeURIComponent(message);
-  const candidates = [
-    `whatsapp://send?phone=${phoneDigits}&text=${text}`,
-    `https://wa.me/${phoneDigits}?text=${text}`,
-    `https://api.whatsapp.com/send?phone=${phoneDigits}&text=${text}`,
-  ];
-  for (const url of candidates) {
-    try {
-      await Linking.openURL(url);
-      return;
-    } catch {
-      // try next
-    }
+/** Generate a PDF invoice and open the system share sheet. */
+export async function shareReceiptPdf(repair: Repair): Promise<void> {
+  try {
+    const filePath = await generateInvoicePdf(repair);
+    await RNShare.open({
+      title: `Invoice ${repair.orderCode}`,
+      subject: `Invoice for repair ${repair.orderCode}`,
+      message: 'Attached is the invoice for your repair.',
+      url: `file://${filePath}`,
+      type: 'application/pdf',
+      failOnCancel: false,
+    });
+  } catch (err) {
+    console.error('PDF share failed:', err);
   }
 }
 
-/**
- * Best-effort WhatsApp handoff:
- * 1) Open the PDF share sheet so the user can send the file
- * 2) After the sheet closes, open that customer's WhatsApp chat (short delay so the OS finishes dismissing the share UI)
- *
- * Note: Fully automatic, silent sending is not allowed by mobile OS + WhatsApp APIs.
- */
+/** Generate a PDF invoice and share directly to a WhatsApp contact. */
 export async function shareReceiptPdfToWhatsAppContact(repair: Repair, customerPhone: string): Promise<void> {
-  const pdfUri = await createReceiptPdfUri(repair);
-  const canShare = await Sharing.isAvailableAsync();
-  if (!canShare) return;
+  try {
+    const filePath = await generateInvoicePdf(repair);
+    const phone = normalizeWhatsAppPhone(customerPhone);
 
-  await Sharing.shareAsync(pdfUri, {
-    mimeType: 'application/pdf',
-    dialogTitle: 'Send invoice PDF',
-    UTI: 'com.adobe.pdf',
-  });
-
-  const phone = normalizeWhatsAppPhone(customerPhone);
-  if (phone.length < 10) return;
-
-  const caption = invoiceCaption(repair);
-  await new Promise<void>((r) => setTimeout(r, 450));
-  await openWhatsAppToNumber(phone, caption);
+    await RNShare.shareSingle({
+      social: Social.Whatsapp,
+      url: `file://${filePath}`,
+      type: 'application/pdf',
+      // @ts-ignore - whatsAppNumber is valid at runtime but missing from types
+      whatsAppNumber: phone,
+    });
+  } catch (err) {
+    console.warn('Direct WhatsApp share error, falling back to general share:', err);
+    await shareReceiptPdf(repair);
+  }
 }
 
+/** Plain-text receipt summary (used in RepairDetailScreen). */
 export async function receiptSummaryText(repair: Repair): Promise<string> {
   const branding = await getShopBranding();
   const n = countRepairImages(repair);

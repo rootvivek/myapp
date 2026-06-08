@@ -1,16 +1,17 @@
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Image } from 'expo-image';
+import { Image } from 'react-native';
 import { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useRepairs } from '../context/RepairsContext';
 import { StatusBadge } from '../components/StatusBadge';
 import { useTheme } from '../context/ThemeContext';
 import { getRepairById } from '../db/database';
 import type { RootStackParamList } from '../navigation/types';
 import type { AppColors } from '../theme';
-import { spacing } from '../theme';
+import { radius, spacing } from '../theme';
 import type { Repair } from '../types/repair';
 import { ACCESSORY_ITEMS, REPAIR_STATUSES } from '../types/repair';
 import { formatCurrency, formatDateDisplay } from '../utils/format';
@@ -21,14 +22,14 @@ type Props = NativeStackScreenProps<RootStackParamList, 'RepairDetail'>;
 type DetailStyles = ReturnType<typeof createStyles>;
 
 function createStyles(colors: AppColors) {
-  return StyleSheet.create({
+  const styles = StyleSheet.create({
     safe: {
       flex: 1,
       backgroundColor: colors.bg,
     },
     content: {
-      paddingHorizontal: spacing.sm,
-      paddingTop: spacing.xs,
+      paddingHorizontal: spacing.md,
+      paddingTop: spacing.sm,
       paddingBottom: spacing.lg,
     },
     centered: {
@@ -38,6 +39,24 @@ function createStyles(colors: AppColors) {
     },
     muted: {
       color: colors.textMuted,
+    },
+    pressed: {
+      opacity: 0.8,
+    },
+    disabled: {
+      opacity: 0.5,
+    },
+    deleteButton: {
+      backgroundColor: colors.danger,
+      paddingVertical: 14,
+      borderRadius: 12,
+      alignItems: 'center',
+      marginTop: spacing.lg,
+    },
+    deleteButtonText: {
+      color: '#fff',
+      fontWeight: '700',
+      fontSize: 16,
     },
     headRow: {
       flexDirection: 'row',
@@ -129,7 +148,7 @@ function createStyles(colors: AppColors) {
     photoPairRow: {
       flexDirection: 'row',
       gap: spacing.sm,
-      marginBottom: spacing.md,
+      marginBottom: spacing.sm,
     },
     photoPairSpacer: {
       flex: 1,
@@ -142,7 +161,7 @@ function createStyles(colors: AppColors) {
     photoThumb: {
       width: '100%',
       aspectRatio: 1,
-      borderRadius: 12,
+      borderRadius: radius.sm,
       backgroundColor: colors.surface,
     },
     photoCaption: {
@@ -152,6 +171,10 @@ function createStyles(colors: AppColors) {
       marginBottom: 6,
     },
   });
+
+  return styles as typeof styles & {
+    photoThumb: import('react-native').ImageStyle;
+  };
 }
 
 function PhotoGrid({ repair, styles }: { repair: Repair; styles: DetailStyles }) {
@@ -173,13 +196,13 @@ function PhotoGrid({ repair, styles }: { repair: Repair; styles: DetailStyles })
           {front ? (
             <View style={styles.photoCell}>
               <Text style={styles.photoCaption}>Phone — front</Text>
-              <Image source={{ uri: front }} style={styles.photoThumb} contentFit="cover" transition={150} />
+              <Image source={{ uri: front }} style={styles.photoThumb} resizeMode="cover" />
             </View>
           ) : null}
           {back ? (
             <View style={styles.photoCell}>
               <Text style={styles.photoCaption}>Phone — back</Text>
-              <Image source={{ uri: back }} style={styles.photoThumb} contentFit="cover" transition={150} />
+              <Image source={{ uri: back }} style={styles.photoThumb} resizeMode="cover" />
             </View>
           ) : null}
         </View>
@@ -188,7 +211,7 @@ function PhotoGrid({ repair, styles }: { repair: Repair; styles: DetailStyles })
         <View style={styles.photoPairRow}>
           <View style={styles.photoCell}>
             <Text style={styles.photoCaption}>Thumbnail</Text>
-            <Image source={{ uri: thumb }} style={styles.photoThumb} contentFit="cover" transition={150} />
+            <Image source={{ uri: thumb }} style={styles.photoThumb} resizeMode="cover" />
           </View>
           <View style={styles.photoPairSpacer} />
         </View>
@@ -198,13 +221,13 @@ function PhotoGrid({ repair, styles }: { repair: Repair; styles: DetailStyles })
           {id1 ? (
             <View style={styles.photoCell}>
               <Text style={styles.photoCaption}>ID / proof 1</Text>
-              <Image source={{ uri: id1 }} style={styles.photoThumb} contentFit="cover" transition={150} />
+              <Image source={{ uri: id1 }} style={styles.photoThumb} resizeMode="cover" />
             </View>
           ) : null}
           {id2 ? (
             <View style={styles.photoCell}>
               <Text style={styles.photoCaption}>ID / proof 2</Text>
-              <Image source={{ uri: id2 }} style={styles.photoThumb} contentFit="cover" transition={150} />
+              <Image source={{ uri: id2 }} style={styles.photoThumb} resizeMode="cover" />
             </View>
           ) : null}
         </View>
@@ -236,12 +259,14 @@ function Row({
 
 export function RepairDetailScreen({ navigation, route }: Props) {
   const { colors } = useTheme();
+  const { deleteRepair } = useRepairs();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { repairId } = route.params;
   const [repair, setRepair] = useState<Repair | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (): Promise<void> => {
     setLoading(true);
     const r = await getRepairById(repairId);
     setRepair(r);
@@ -254,7 +279,7 @@ export function RepairDetailScreen({ navigation, route }: Props) {
     }, [load])
   );
 
-  async function onSharePdf() {
+  async function onSharePdf(): Promise<void> {
     if (!repair) return;
     try {
       await shareReceiptPdf(repair);
@@ -263,13 +288,25 @@ export function RepairDetailScreen({ navigation, route }: Props) {
     }
   }
 
-  async function onShareText() {
+  async function onShareText(): Promise<void> {
     if (!repair) return;
     try {
       const message = await receiptSummaryText(repair);
       await Share.share({ message });
     } catch {
       // ignore
+    }
+  }
+
+  async function handleDelete(): Promise<void> {
+    setIsDeleting(true);
+    try {
+      await deleteRepair(repairId);
+      navigation.goBack();
+    } catch {
+      Alert.alert('Error', 'Failed to delete repair. Please try again.');
+    } finally {
+      setIsDeleting(false);
     }
   }
 
@@ -317,6 +354,31 @@ export function RepairDetailScreen({ navigation, route }: Props) {
         <Row label="Advance" value={formatCurrency(repair.advanceAmount)} styles={styles} />
         <Row label="Balance" value={repair.isPaid ? '—' : formatCurrency(balance)} styles={styles} />
         <Row label="Payment" value={repair.isPaid ? 'Paid' : 'Unpaid'} styles={styles} />
+
+        <Pressable
+          onPress={() => {
+            Alert.alert(
+              'Delete Repair',
+              'Are you sure you want to delete this repair? This cannot be undone.',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Delete', style: 'destructive', onPress: handleDelete },
+              ]
+            );
+          }}
+          disabled={isDeleting}
+          style={({ pressed }) => [
+            styles.deleteButton,
+            pressed && styles.pressed,
+            isDeleting && styles.disabled,
+          ]}
+        >
+          {isDeleting ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.deleteButtonText}>Delete Repair</Text>
+          )}
+        </Pressable>
 
         <View style={styles.actions}>
           <Pressable onPress={() => navigation.navigate('AddRepair', { repairId: repair.id })} style={styles.primary}>

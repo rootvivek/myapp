@@ -12,52 +12,31 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { HamburgerIcon } from '../components/HamburgerIcon';
 import { HomeSideMenu } from '../components/HomeSideMenu';
 import { RepairCard } from '../components/RepairCard';
+
 import { useRepairs } from '../context/RepairsContext';
 import { useTheme } from '../context/ThemeContext';
 import { updateRepairStatus } from '../db/database';
 import type { RootStackParamList } from '../navigation/types';
 import type { AppColors } from '../theme';
-import { accentAlpha, spacing } from '../theme';
+import { accentAlpha, radius, spacing } from '../theme';
 import { REPAIR_STATUSES, type RepairStatus } from '../types/repair';
 
 type StatusFilter = 'all' | RepairStatus;
 
-const FILTER_CHIPS: { key: StatusFilter; label: string }[] = [
+const FILTER_CHIPS: readonly { key: StatusFilter; label: string }[] = [
   { key: 'all', label: 'All' },
   ...REPAIR_STATUSES.map((s) => ({
     key: s.value as StatusFilter,
     label: s.value === 'completed' ? 'Repaired' : s.label,
   })),
-];
+] as const;
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
-function HamburgerIcon({ lineColor }: { lineColor: string }) {
-  return (
-    <View style={hamburgerStyles.icon} accessibilityLabel="Open menu">
-      <View style={[hamburgerStyles.line, { backgroundColor: lineColor }]} />
-      <View style={[hamburgerStyles.line, { backgroundColor: lineColor }]} />
-      <View style={[hamburgerStyles.line, { backgroundColor: lineColor }]} />
-    </View>
-  );
-}
-
-const hamburgerStyles = StyleSheet.create({
-  icon: {
-    width: 22,
-    height: 16,
-    justifyContent: 'space-between',
-  },
-  line: {
-    height: 2,
-    borderRadius: 1,
-    width: '100%',
-  },
-});
-
-function createStyles(colors: AppColors) {
+function createStyles(colors: AppColors): ReturnType<typeof StyleSheet.create> {
   return StyleSheet.create({
     safe: {
       flex: 1,
@@ -70,7 +49,6 @@ function createStyles(colors: AppColors) {
     topContainer: {
       marginBottom: spacing.sm,
       backgroundColor: colors.surface,
-      borderRadius: 0,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.border,
       overflow: 'hidden',
@@ -78,7 +56,7 @@ function createStyles(colors: AppColors) {
     headerRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingHorizontal: spacing.sm,
+      paddingHorizontal: spacing.md,
       paddingTop: spacing.md,
       paddingBottom: spacing.sm,
       gap: spacing.sm,
@@ -91,15 +69,17 @@ function createStyles(colors: AppColors) {
       gap: spacing.sm,
     },
     hamburgerBtn: {
-      paddingVertical: 6,
+      paddingVertical: 8,
+      paddingHorizontal: 4,
       justifyContent: 'center',
+      borderRadius: radius.sm,
     },
     filterSection: {
       borderTopWidth: StyleSheet.hairlineWidth,
       borderTopColor: colors.border,
-      paddingHorizontal: spacing.md,
-      paddingTop: spacing.sm,
-      paddingBottom: spacing.md,
+      paddingHorizontal: spacing.sm,
+      paddingTop: spacing.xs,
+      paddingBottom: spacing.xs,
       backgroundColor: colors.surface2,
     },
     filterScroll: {
@@ -108,25 +88,31 @@ function createStyles(colors: AppColors) {
     filterChipsContent: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: spacing.sm,
+      gap: spacing.xs,
       paddingBottom: 2,
     },
     filterChip: {
-      paddingHorizontal: 14,
-      paddingVertical: 7,
-      borderRadius: 999,
-      borderWidth: 1,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xs,
+      borderRadius: 4,
+      borderWidth: 1.5,
       borderColor: colors.border,
       backgroundColor: colors.surface,
     },
     filterChipActive: {
       borderColor: colors.accent,
       backgroundColor: accentAlpha(colors.accent, 0.2),
+      shadowColor: colors.accent,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.3,
+      shadowRadius: 4,
+      elevation: 3,
     },
     filterChipText: {
       color: colors.textMuted,
       fontWeight: '700',
-      fontSize: 13,
+      fontSize: 14,
+      letterSpacing: 0.2,
     },
     filterChipTextActive: {
       color: colors.accent,
@@ -135,20 +121,22 @@ function createStyles(colors: AppColors) {
       flex: 1,
       minWidth: 0,
       color: colors.text,
-      fontSize: 22,
+      fontSize: 24,
       fontWeight: '800',
       textAlign: 'left',
+      letterSpacing: -0.5,
     },
     iconBtn: {
-      paddingHorizontal: spacing.sm,
-      paddingVertical: 8,
-      borderRadius: 8,
+      paddingHorizontal: spacing.md,
+      paddingVertical: 10,
+      borderRadius: radius.md,
       borderWidth: 1,
       borderColor: colors.border,
+      backgroundColor: colors.surface,
     },
     iconBtnText: {
       color: colors.text,
-      fontWeight: '600',
+      fontWeight: '700',
       fontSize: 14,
     },
     fab: {
@@ -156,30 +144,31 @@ function createStyles(colors: AppColors) {
       right: spacing.md,
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 6,
-      paddingHorizontal: 18,
-      paddingVertical: 14,
-      borderRadius: 28,
+      gap: 10,
+      paddingHorizontal: 24,
+      paddingVertical: 18,
+      borderRadius: radius.full,
       backgroundColor: colors.accent,
-      elevation: 6,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowRadius: 8,
+      shadowColor: colors.accent,
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.5,
+      shadowRadius: 16,
+      elevation: 10,
     },
     fabPlus: {
       color: '#fff',
-      fontSize: 22,
-      fontWeight: '600',
-      lineHeight: 24,
+      fontSize: 28,
+      fontWeight: '700',
+      lineHeight: 28,
     },
     fabNew: {
       color: '#fff',
-      fontSize: 16,
+      fontSize: 17,
       fontWeight: '800',
-      letterSpacing: 0.2,
+      letterSpacing: 0.4,
     },
     list: {
-      paddingHorizontal: 0,
+      paddingHorizontal: spacing.md,
       paddingBottom: 100,
     },
     centered: {
@@ -190,9 +179,10 @@ function createStyles(colors: AppColors) {
     empty: {
       color: colors.textMuted,
       textAlign: 'center',
-      marginTop: spacing.xl,
+      marginTop: spacing.xxl,
       paddingHorizontal: spacing.lg,
-      fontSize: 15,
+      fontSize: 16,
+      lineHeight: 24,
     },
   });
 }
@@ -202,7 +192,7 @@ export function HomeScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { repairs, loading, refresh } = useRepairs();
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('pending');
   const [menuOpen, setMenuOpen] = useState(false);
 
   const filteredRepairs = useMemo(() => {
@@ -217,18 +207,30 @@ export function HomeScreen({ navigation }: Props) {
   );
 
   const handleStatusChange = useCallback(
-    async (repairId: number, status: RepairStatus) => {
+    async (repairId: number, status: RepairStatus): Promise<void> => {
       await updateRepairStatus(repairId, status);
       await refresh();
     },
     [refresh]
   );
 
+  const handleMenuClose = useCallback(() => {
+    setMenuOpen(false);
+  }, []);
+
+  const handleMenuOpen = useCallback(() => {
+    setMenuOpen(true);
+  }, []);
+
+  const handleFilterChange = useCallback((filter: StatusFilter) => {
+    setStatusFilter(filter);
+  }, []);
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <HomeSideMenu
         open={menuOpen}
-        onClose={() => setMenuOpen(false)}
+        onClose={handleMenuClose}
         onPressShop={() => navigation.navigate('Settings')}
         onPressCustomers={() => navigation.navigate('CustomerDirectory')}
         topInset={insets.top}
@@ -238,7 +240,7 @@ export function HomeScreen({ navigation }: Props) {
           <View style={styles.headerRow}>
             <View style={styles.headerLeft}>
               <Pressable
-                onPress={() => setMenuOpen(true)}
+                onPress={handleMenuOpen}
                 style={styles.hamburgerBtn}
                 android_ripple={{ color: colors.border }}
                 hitSlop={8}
@@ -270,7 +272,7 @@ export function HomeScreen({ navigation }: Props) {
                 return (
                   <Pressable
                     key={key}
-                    onPress={() => setStatusFilter(key)}
+                    onPress={() => handleFilterChange(key)}
                     style={[styles.filterChip, active && styles.filterChipActive]}
                     android_ripple={{ color: colors.border }}
                   >
@@ -293,9 +295,7 @@ export function HomeScreen({ navigation }: Props) {
             contentContainerStyle={styles.list}
             ListEmptyComponent={
               <Text style={styles.empty}>
-                {repairs.length === 0
-                  ? 'No repairs yet. Tap + below to add a job.'
-                  : 'No jobs with this status.'}
+                {repairs.length === 0 ? 'No repairs yet.' : 'No jobs with this status.'}
               </Text>
             }
             renderItem={({ item }) => (
@@ -312,14 +312,7 @@ export function HomeScreen({ navigation }: Props) {
           accessibilityRole="button"
           accessibilityLabel="New job"
           onPress={() => navigation.navigate('AddRepair', {})}
-          style={[
-            styles.fab,
-            {
-              bottom: spacing.md + insets.bottom,
-              shadowOpacity: 0.35,
-            },
-          ]}
-          android_ripple={{ color: '#fff' }}
+          style={[styles.fab, { bottom: spacing.md + insets.bottom }]}
         >
           <Text style={styles.fabPlus}>+</Text>
           <Text style={styles.fabNew}>New</Text>

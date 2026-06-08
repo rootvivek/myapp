@@ -1,10 +1,11 @@
-export type RepairStatus = 'pending' | 'in_progress' | 'completed' | 'delivered';
+export type RepairStatus = 'pending' | 'in_progress' | 'completed' | 'delivered' | 'cancelled';
 
 export const REPAIR_STATUSES: { value: RepairStatus; label: string }[] = [
   { value: 'pending', label: 'Pending' },
   { value: 'in_progress', label: 'In Progress' },
   { value: 'completed', label: 'Completed' },
   { value: 'delivered', label: 'Delivered' },
+  { value: 'cancelled', label: 'Cancelled' },
 ];
 
 /** Photo URLs: `https://…` from cloud storage, or local `file://` while picking before upload. */

@@ -13,7 +13,7 @@ import type { Repair, RepairStatus } from '../types/repair';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Search'>;
 
-function createStyles(colors: AppColors) {
+function createStyles(colors: AppColors): ReturnType<typeof StyleSheet.create> {
   return StyleSheet.create({
     safe: {
       flex: 1,
@@ -50,7 +50,7 @@ export function SearchScreen({ navigation }: Props) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Repair[]>([]);
 
-  const runSearch = useCallback(async (q: string) => {
+  const runSearch = useCallback(async (q: string): Promise<void> => {
     const list = await searchRepairs(q);
     setResults(list);
   }, []);
@@ -63,7 +63,7 @@ export function SearchScreen({ navigation }: Props) {
   }, [query, runSearch]);
 
   const handleStatusChange = useCallback(
-    async (repairId: number, status: RepairStatus) => {
+    async (repairId: number, status: RepairStatus): Promise<void> => {
       await updateRepairStatus(repairId, status);
       await runSearch(query);
     },

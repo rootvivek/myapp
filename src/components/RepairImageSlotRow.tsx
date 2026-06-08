@@ -1,4 +1,4 @@
-import { Image } from 'expo-image';
+import { Image } from 'react-native';
 import type { ReactNode } from 'react';
 import { useMemo } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
@@ -31,7 +31,7 @@ const layoutStyles = StyleSheet.create({
 });
 
 function createCellStyles(colors: AppColors) {
-  return StyleSheet.create({
+  const styles = StyleSheet.create({
     cell: {
       flex: 1,
       minWidth: 0,
@@ -93,6 +93,10 @@ function createCellStyles(colors: AppColors) {
       fontSize: 14,
     },
   });
+
+  return styles as typeof styles & {
+    preview: import('react-native').ImageStyle;
+  };
 }
 
 export function RepairImageSlotCell({ label, uri, onChange, fullWidth, style }: Props) {
@@ -109,11 +113,11 @@ export function RepairImageSlotCell({ label, uri, onChange, fullWidth, style }: 
       style?: 'destructive' | 'cancel';
       onPress?: () => void;
     }[] = [
-      {
-        text: 'Photo library',
-        onPress: () => void launchLibraryForImage().then((u) => u && onChange(u)),
-      },
-    ];
+        {
+          text: 'Photo library',
+          onPress: () => void launchLibraryForImage().then((u) => u && onChange(u)),
+        },
+      ];
     if (uri) {
       buttons.push({
         text: 'Remove',
@@ -136,7 +140,7 @@ export function RepairImageSlotCell({ label, uri, onChange, fullWidth, style }: 
         android_ripple={{ color: colors.border }}
       >
         {uri ? (
-          <Image source={{ uri }} style={styles.preview} contentFit="cover" transition={120} />
+          <Image source={{ uri }} style={styles.preview} resizeMode="cover" />
         ) : (
           <View style={styles.placeholder}>
             <Text style={styles.placeholderText}>Tap for camera</Text>

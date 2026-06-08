@@ -48,14 +48,25 @@ import { shareReceiptPdfToWhatsAppContact } from '../utils/receipt';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AddRepair'>;
 
-type CustomerEntryMode = 'new' | 'existing';
+
+
+const COMMON_PROBLEMS = [
+  'Folder replace', 'Battery change', 'Charging issue', 'Network repair',
+  'FRP lock', 'Software', 'Touch change', 'Speaker issue'
+];
+
+const DEVICE_BRANDS = [
+  'Samsung', 'Apple', 'Xiaomi', 'Redmi', 'POCO', 'Realme', 'Oppo', 'Vivo',
+  'OnePlus', 'Motorola', 'Nothing', 'Google Pixel', 'Nokia', 'IQOO',
+  'Infinix', 'Tecno', 'Lava', 'Micromax', 'Asus', 'Sony', 'Huawei', 'Honor'
+];
 
 function parseMoney(s: string): number {
   const n = parseFloat(s.replace(/[^0-9.]/g, ''));
   return Number.isFinite(n) ? n : 0;
 }
 
-function createStyles(colors: AppColors) {
+function createStyles(colors: AppColors): ReturnType<typeof StyleSheet.create> {
   return StyleSheet.create({
     safe: {
       flex: 1,
@@ -109,38 +120,7 @@ function createStyles(colors: AppColors) {
       fontWeight: '800',
       letterSpacing: 0.3,
     },
-    orderHint: {
-      color: colors.textMuted,
-      fontSize: 13,
-      marginBottom: spacing.md,
-      fontStyle: 'italic',
-    },
-    modeRow: {
-      flexDirection: 'row',
-      gap: spacing.sm,
-      marginBottom: spacing.md,
-    },
-    modeChip: {
-      flex: 1,
-      paddingVertical: 12,
-      borderRadius: radius.sm,
-      borderWidth: 1,
-      borderColor: colors.border,
-      backgroundColor: colors.surface2,
-      alignItems: 'center',
-    },
-    modeChipOn: {
-      borderColor: colors.accent,
-      backgroundColor: accentAlpha(colors.accent, 0.12),
-    },
-    modeChipText: {
-      color: colors.textMuted,
-      fontWeight: '700',
-      fontSize: 14,
-    },
-    modeChipTextOn: {
-      color: colors.accent,
-    },
+
     whatsappBlock: {
       marginBottom: spacing.md,
     },
@@ -163,60 +143,32 @@ function createStyles(colors: AppColors) {
       flex: 1,
       marginRight: spacing.sm,
     },
-    directoryBlock: {
-      marginBottom: spacing.md,
-    },
-    directoryHint: {
-      color: colors.textMuted,
-      fontSize: 13,
-      marginBottom: spacing.sm,
-      lineHeight: 18,
-    },
-    directorySearch: {
-      backgroundColor: colors.surface2,
+
+    suggestionsContainer: {
+      backgroundColor: colors.surface,
       borderWidth: 1,
       borderColor: colors.border,
       borderRadius: radius.sm,
-      paddingHorizontal: spacing.md,
-      paddingVertical: 12,
-      color: colors.text,
-      fontSize: 16,
-      marginBottom: spacing.sm,
-    },
-    directoryEmpty: {
-      color: colors.textMuted,
-      fontSize: 14,
-      paddingVertical: spacing.sm,
-    },
-    directoryList: {
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: radius.md,
+      marginTop: -spacing.sm,
+      marginBottom: spacing.md,
       overflow: 'hidden',
-      maxHeight: 280,
     },
-    directoryRow: {
-      paddingHorizontal: spacing.md,
-      paddingVertical: 12,
-      borderBottomWidth: 1,
+    suggestionItem: {
+      padding: spacing.md,
+      borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.border,
-      backgroundColor: colors.surface,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
     },
-    directoryName: {
+    suggestionName: {
       color: colors.text,
-      fontSize: 16,
-      fontWeight: '700',
-    },
-    directoryPhone: {
-      color: colors.accent,
-      fontSize: 14,
-      marginTop: 2,
       fontWeight: '600',
+      fontSize: 15,
     },
-    directoryDevice: {
+    suggestionPhone: {
       color: colors.textMuted,
-      fontSize: 12,
-      marginTop: 4,
+      fontSize: 13,
     },
     fieldLabel: {
       color: colors.textMuted,
@@ -243,7 +195,7 @@ function createStyles(colors: AppColors) {
     },
     scanBtn: {
       paddingHorizontal: spacing.md,
-      paddingVertical: 12,
+      paddingVertical: spacing.sm + 4,
       borderRadius: radius.sm,
       borderWidth: 1,
       borderColor: colors.accent,
@@ -253,6 +205,26 @@ function createStyles(colors: AppColors) {
       color: colors.accent,
       fontWeight: '700',
       fontSize: 15,
+    },
+    problemSuggestions: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: spacing.sm,
+      marginBottom: spacing.md,
+      marginTop: -4,
+    },
+    problemSuggestionChip: {
+      paddingHorizontal: spacing.sm + 2,
+      paddingVertical: 6,
+      backgroundColor: colors.surface2,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 4,
+    },
+    problemSuggestionText: {
+      fontSize: 12,
+      color: colors.textMuted,
+      fontWeight: '600',
     },
     dateBtn: {
       backgroundColor: colors.surface2,
@@ -286,8 +258,8 @@ function createStyles(colors: AppColors) {
       marginBottom: spacing.md,
     },
     statusChip: {
-      paddingHorizontal: 12,
-      paddingVertical: 8,
+      paddingHorizontal: spacing.sm + 4,
+      paddingVertical: spacing.sm,
       borderRadius: radius.sm,
       borderWidth: 1,
       borderColor: colors.border,
@@ -381,10 +353,12 @@ export function AddRepairScreen({ navigation, route }: Props) {
     accBackCover: false,
   });
   const [orderCode, setOrderCode] = useState('');
-  const [customerEntryMode, setCustomerEntryMode] = useState<CustomerEntryMode>('new');
+
   const [directoryCustomers, setDirectoryCustomers] = useState<DirectoryCustomer[]>([]);
-  const [customerSearch, setCustomerSearch] = useState('');
+
   const [sendWhatsAppInvoice, setSendWhatsAppInvoice] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [showBrandDropdown, setShowBrandDropdown] = useState(false);
 
   const loadDirectory = useCallback(async () => {
     try {
@@ -412,13 +386,11 @@ export function AddRepairScreen({ navigation, route }: Props) {
   useEffect(() => {
     const c = route.params?.prefillCustomer;
     if (!c || repairId != null) return;
-    setCustomerEntryMode('existing');
     setCustomerName(sanitizeCustomerNameInput(c.customerName));
     setPhone(normalizeStoredPhoneForDisplay(c.phone));
     setDeviceModel(c.deviceModel);
     setImei('');
     setProblem('');
-    setCustomerSearch('');
     void loadDirectory();
     navigation.setParams({ prefillCustomer: undefined });
   }, [route.params?.prefillCustomer, repairId, navigation, loadDirectory]);
@@ -474,7 +446,7 @@ export function AddRepairScreen({ navigation, route }: Props) {
     }
     const name = customerName.trim();
     const ph = normalizePhoneInput(phone);
-    const shouldAutoSendWhatsApp = !isEdit && customerEntryMode === 'new' && sendWhatsAppInvoice;
+    const shouldAutoSendWhatsApp = !isEdit && sendWhatsAppInvoice;
     if (shouldAutoSendWhatsApp && ph.length !== 10) {
       Alert.alert('WhatsApp number', 'Enter a valid 10-digit WhatsApp number.');
       return;
@@ -535,25 +507,6 @@ export function AddRepairScreen({ navigation, route }: Props) {
     setImages((prev) => ({ ...prev, [slot]: uri }));
   }
 
-  function applyExistingCustomer(c: DirectoryCustomer) {
-    setCustomerName(sanitizeCustomerNameInput(c.customerName));
-    setPhone(normalizeStoredPhoneForDisplay(c.phone));
-    setDeviceModel(c.deviceModel);
-    setImei('');
-    setProblem('');
-    setCustomerSearch('');
-    setSendWhatsAppInvoice(false);
-  }
-
-  const searchQ = customerSearch.trim().toLowerCase();
-  const filteredDirectory =
-    searchQ.length === 0
-      ? directoryCustomers
-      : directoryCustomers.filter(
-          (c) =>
-            c.customerName.toLowerCase().includes(searchQ) ||
-            c.phone.replace(/\s/g, '').includes(searchQ.replace(/\s/g, ''))
-        );
 
   if (loading) {
     return (
@@ -579,92 +532,48 @@ export function AddRepairScreen({ navigation, route }: Props) {
               {orderCode}
             </Text>
           </View>
-        ) : !isEdit ? (
-          <Text style={styles.orderHint}>A unique order ID is assigned when you save this job.</Text>
         ) : null}
 
-        {!isEdit ? (
-          <>
-            <Text style={styles.section}>Customer</Text>
-            <View style={styles.modeRow}>
-              <Pressable
-                onPress={() => {
-                  setCustomerEntryMode('new');
-                  setCustomerSearch('');
-                }}
-                style={[styles.modeChip, customerEntryMode === 'new' && styles.modeChipOn]}
-                android_ripple={{ color: colors.border }}
-              >
-                <Text style={[styles.modeChipText, customerEntryMode === 'new' && styles.modeChipTextOn]}>
-                  New customer
-                </Text>
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  setCustomerEntryMode('existing');
-                  void loadDirectory();
-                  setSendWhatsAppInvoice(false);
-                }}
-                style={[styles.modeChip, customerEntryMode === 'existing' && styles.modeChipOn]}
-                android_ripple={{ color: colors.border }}
-              >
-                <Text style={[styles.modeChipText, customerEntryMode === 'existing' && styles.modeChipTextOn]}>
-                  Existing customer
-                </Text>
-              </Pressable>
-            </View>
-            {customerEntryMode === 'existing' ? (
-              <View style={styles.directoryBlock}>
-                <Text style={styles.directoryHint}>Choose a past customer. We fill name, phone, and last device; IMEI and problem start empty for this job.</Text>
-                <TextInput
-                  placeholder="Search name or phone…"
-                  placeholderTextColor={colors.textMuted}
-                  value={customerSearch}
-                  onChangeText={setCustomerSearch}
-                  style={styles.directorySearch}
-                  autoCorrect={false}
-                />
-                {directoryCustomers.length === 0 ? (
-                  <Text style={styles.directoryEmpty}>No saved customers yet. Use &quot;New customer&quot; first.</Text>
-                ) : filteredDirectory.length === 0 ? (
-                  <Text style={styles.directoryEmpty}>No matches. Try another search or add a new customer.</Text>
-                ) : (
-                  <ScrollView
-                    style={styles.directoryList}
-                    nestedScrollEnabled
-                    keyboardShouldPersistTaps="handled"
-                  >
-                    {filteredDirectory.slice(0, 50).map((c) => (
-                      <Pressable
-                        key={c.phone}
-                        onPress={() => applyExistingCustomer(c)}
-                        style={styles.directoryRow}
-                        android_ripple={{ color: colors.border }}
-                      >
-                        <Text style={styles.directoryName} numberOfLines={1}>
-                          {c.customerName}
-                        </Text>
-                        <Text style={styles.directoryPhone}>{c.phone}</Text>
-                        {c.deviceModel ? (
-                          <Text style={styles.directoryDevice} numberOfLines={1}>
-                            Last device: {c.deviceModel}
-                          </Text>
-                        ) : null}
-                      </Pressable>
-                    ))}
-                  </ScrollView>
-                )}
-              </View>
-            ) : null}
-          </>
-        ) : null}
 
         <Text style={styles.section}>Customer & device</Text>
-        <Field
-          label="Customer name *"
-          value={customerName}
-          onChangeText={(t) => setCustomerName(sanitizeCustomerNameInput(t))}
-        />
+        <View style={{ zIndex: 10 }}>
+          <Field
+            label="Customer name *"
+            value={customerName}
+            onChangeText={(t) => {
+              setCustomerName(sanitizeCustomerNameInput(t));
+              setShowSuggestions(true);
+            }}
+          />
+          {(!isEdit && showSuggestions && customerName.trim().length > 1) && (
+            (() => {
+              const q = customerName.trim().toLowerCase();
+              const matches = directoryCustomers.filter(
+                (c) => c.customerName.toLowerCase().includes(q) && c.customerName.toLowerCase() !== q
+              );
+              if (matches.length === 0) return null;
+              return (
+                <View style={styles.suggestionsContainer}>
+                  {matches.slice(0, 3).map((c) => (
+                    <Pressable
+                      key={c.phone}
+                      style={styles.suggestionItem}
+                      android_ripple={{ color: colors.border }}
+                      onPress={() => {
+                        setCustomerName(sanitizeCustomerNameInput(c.customerName));
+                        setPhone(normalizeStoredPhoneForDisplay(c.phone));
+                        setShowSuggestions(false);
+                      }}
+                    >
+                      <Text style={styles.suggestionName}>{c.customerName}</Text>
+                      <Text style={styles.suggestionPhone}>{c.phone}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              );
+            })()
+          )}
+        </View>
         <Field
           label="Phone number * (10 digits)"
           value={phone}
@@ -672,7 +581,7 @@ export function AddRepairScreen({ navigation, route }: Props) {
           keyboardType="number-pad"
           maxLength={10}
         />
-        {!isEdit && customerEntryMode === 'new' ? (
+        {!isEdit ? (
           <View style={styles.whatsappBlock}>
             <Pressable
               onPress={() => setSendWhatsAppInvoice((v) => !v)}
@@ -686,7 +595,50 @@ export function AddRepairScreen({ navigation, route }: Props) {
             </Pressable>
           </View>
         ) : null}
-        <Field label="Device model *" value={deviceModel} onChangeText={setDeviceModel} />
+        <View style={{ position: 'relative', zIndex: 9 }}>
+          <Field
+            label="Device model *"
+            value={deviceModel}
+            onChangeText={(t) => {
+              setDeviceModel(t);
+              setShowBrandDropdown(true);
+            }}
+            onFocus={() => setShowBrandDropdown(true)}
+          />
+          {showBrandDropdown && (
+            (() => {
+              const q = deviceModel.trim().toLowerCase();
+              // Filter list based on query
+              const matches = q.length === 0
+                ? DEVICE_BRANDS
+                : DEVICE_BRANDS.filter(b => b.toLowerCase().includes(q));
+
+              // If user already exactly typed a brand + some more, close hint.
+              // Or if no matches found.
+              if (matches.length === 0) return null;
+
+              return (
+                <View style={[styles.suggestionsContainer, { maxHeight: 220 }]}>
+                  <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled">
+                    {matches.map((brand) => (
+                      <Pressable
+                        key={brand}
+                        style={styles.suggestionItem}
+                        android_ripple={{ color: colors.border }}
+                        onPress={() => {
+                          setDeviceModel(brand + ' ');
+                          setShowBrandDropdown(false);
+                        }}
+                      >
+                        <Text style={styles.suggestionName}>{brand}</Text>
+                      </Pressable>
+                    ))}
+                  </ScrollView>
+                </View>
+              );
+            })()
+          )}
+        </View>
         <Text style={styles.fieldLabel}>IMEI (max 15 digits)</Text>
         <View style={styles.imeiRow}>
           <TextInput
@@ -762,6 +714,25 @@ export function AddRepairScreen({ navigation, route }: Props) {
           numberOfLines={4}
           style={styles.multiline}
         />
+        <View style={styles.problemSuggestions}>
+          {COMMON_PROBLEMS.map((item) => (
+            <Pressable
+              key={item}
+              onPress={() => {
+                setProblem(prev => {
+                  const trimmed = prev.trim();
+                  if (!trimmed) return item;
+                  if (trimmed.toLowerCase().includes(item.toLowerCase())) return prev; // avoid dupes
+                  return `${trimmed}, ${item}`;
+                });
+              }}
+              style={styles.problemSuggestionChip}
+              android_ripple={{ color: colors.border }}
+            >
+              <Text style={styles.problemSuggestionText}>{item}</Text>
+            </Pressable>
+          ))}
+        </View>
 
         <Text style={styles.fieldLabel}>Date received</Text>
         <Pressable

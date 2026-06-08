@@ -1,26 +1,21 @@
-import * as FileSystem from 'expo-file-system/legacy';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const FILE = 'app_theme.json';
+const THEME_STORAGE_KEY = '@myapp_theme_mode';
 
-export type ThemePreference = 'light' | 'dark';
-
-export async function getThemePreference(): Promise<ThemePreference> {
-  const root = FileSystem.documentDirectory;
-  if (!root) return 'dark';
-  const path = `${root}${FILE}`;
-  const info = await FileSystem.getInfoAsync(path);
-  if (!info.exists) return 'dark';
+export async function loadThemeMode(): Promise<'light' | 'dark' | null> {
   try {
-    const raw = await FileSystem.readAsStringAsync(path);
-    const parsed = JSON.parse(raw) as { mode?: string };
-    return parsed.mode === 'light' ? 'light' : 'dark';
+    const value = await AsyncStorage.getItem(THEME_STORAGE_KEY);
+    if (value === 'light' || value === 'dark') return value;
+    return null;
   } catch {
-    return 'dark';
+    return null;
   }
 }
 
-export async function saveThemePreference(mode: ThemePreference): Promise<void> {
-  const root = FileSystem.documentDirectory;
-  if (!root) throw new Error('Document directory unavailable');
-  await FileSystem.writeAsStringAsync(`${root}${FILE}`, JSON.stringify({ mode }));
+export async function saveThemeMode(mode: 'light' | 'dark'): Promise<void> {
+  try {
+    await AsyncStorage.setItem(THEME_STORAGE_KEY, mode);
+  } catch {
+    // ignore
+  }
 }

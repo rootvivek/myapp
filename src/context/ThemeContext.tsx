@@ -9,7 +9,9 @@ import {
 } from 'react';
 
 import { colorsForMode, type AppColors } from '../theme';
-import { getThemePreference, saveThemePreference, type ThemePreference } from '../utils/themeStorage';
+import { loadThemeMode, saveThemeMode } from '../utils/themeStorage';
+
+export type ThemePreference = 'light' | 'dark';
 
 type ThemeContextValue = {
   colors: AppColors;
@@ -24,8 +26,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
-    void getThemePreference().then((m) => {
-      if (!cancelled) setModeState(m);
+    void loadThemeMode().then((m) => {
+      if (!cancelled && m) setModeState(m);
     });
     return () => {
       cancelled = true;
@@ -34,7 +36,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const setMode = useCallback(async (next: ThemePreference) => {
     setModeState(next);
-    await saveThemePreference(next);
+    await saveThemeMode(next);
   }, []);
 
   const colors = useMemo(() => colorsForMode(mode), [mode]);

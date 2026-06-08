@@ -23,15 +23,19 @@ type Props = {
   topInset: number;
 };
 
-function createStyles(colors: AppColors) {
+function createStyles(colors: AppColors): ReturnType<typeof StyleSheet.create> {
   return StyleSheet.create({
     root: {
       flex: 1,
       flexDirection: 'row',
     },
     backdrop: {
-      ...StyleSheet.absoluteFillObject,
-      backgroundColor: 'rgba(0,0,0,0.45)',
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0,0,0,0.5)',
     },
     drawer: {
       position: 'absolute',
@@ -41,33 +45,38 @@ function createStyles(colors: AppColors) {
       backgroundColor: colors.surface,
       borderRightWidth: 1,
       borderRightColor: colors.border,
-      paddingHorizontal: spacing.md,
+      paddingHorizontal: spacing.lg,
       paddingBottom: spacing.xl,
       zIndex: 1,
-      elevation: 16,
+      elevation: 20,
       shadowColor: '#000',
-      shadowOffset: { width: 4, height: 0 },
-      shadowOpacity: 0.25,
-      shadowRadius: 12,
+      shadowOffset: { width: 6, height: 0 },
+      shadowOpacity: 0.3,
+      shadowRadius: 16,
     },
     drawerTitle: {
       color: colors.textMuted,
-      fontSize: 12,
+      fontSize: 11,
       fontWeight: '800',
-      letterSpacing: 0.8,
+      letterSpacing: 1,
       textTransform: 'uppercase',
-      marginBottom: spacing.md,
+      marginBottom: spacing.lg,
     },
     menuRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingVertical: 14,
+      paddingVertical: 16,
       paddingHorizontal: spacing.md,
-      borderRadius: radius.md,
+      borderRadius: radius.lg,
       backgroundColor: colors.surface2,
       borderWidth: 1,
       borderColor: colors.border,
-      marginBottom: spacing.sm,
+      marginBottom: spacing.md,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.08,
+      shadowRadius: 3,
+      elevation: 2,
     },
     menuTextBlock: {
       flex: 1,
@@ -75,17 +84,19 @@ function createStyles(colors: AppColors) {
     },
     menuLabel: {
       color: colors.text,
-      fontSize: 17,
+      fontSize: 18,
       fontWeight: '700',
+      letterSpacing: -0.2,
     },
     menuHint: {
       color: colors.textMuted,
-      fontSize: 12,
-      marginTop: 2,
+      fontSize: 13,
+      marginTop: 3,
+      fontWeight: '500',
     },
     chev: {
-      color: colors.textMuted,
-      fontSize: 22,
+      color: colors.accent,
+      fontSize: 26,
       fontWeight: '300',
       marginLeft: spacing.sm,
     },
@@ -109,7 +120,7 @@ export function HomeSideMenu({ open, onClose, onPressShop, onPressCustomers, top
     }
   }, [open, translateX]);
 
-  function closeAnimated() {
+  function closeAnimated(): void {
     Animated.timing(translateX, {
       toValue: -DRAWER_WIDTH,
       duration: 220,
@@ -119,7 +130,7 @@ export function HomeSideMenu({ open, onClose, onPressShop, onPressCustomers, top
     });
   }
 
-  function navigateAndClose(action: () => void) {
+  function navigateAndClose(action: () => void): void {
     Animated.timing(translateX, {
       toValue: -DRAWER_WIDTH,
       duration: 180,
@@ -169,7 +180,7 @@ export function HomeSideMenu({ open, onClose, onPressShop, onPressCustomers, top
             android_ripple={{ color: colors.border }}
           >
             <View style={styles.menuTextBlock}>
-              <Text style={styles.menuLabel}>Customers</Text>
+              <Text style={styles.menuLabel}>List of Customers</Text>
               <Text style={styles.menuHint}>Names & numbers from jobs</Text>
             </View>
             <Text style={styles.chev}>›</Text>

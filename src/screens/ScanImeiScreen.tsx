@@ -1,31 +1,17 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { BarcodeScanningResult } from 'expo-camera';
-import { CameraView, useCameraPermissions } from 'expo-camera';
-import { useCallback, useMemo, useRef } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useMemo } from 'react';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useState } from 'react';
 
 import { useTheme } from '../context/ThemeContext';
 import type { RootStackParamList } from '../navigation/types';
 import type { AppColors } from '../theme';
 import { radius, spacing } from '../theme';
-import { imeiDigitsFromBarcodeData } from '../utils/imeiFromBarcode';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ScanImei'>;
 
-const BARCODE_TYPES = [
-  'code128',
-  'code39',
-  'ean13',
-  'ean8',
-  'upc_a',
-  'upc_e',
-  'qr',
-  'datamatrix',
-  'pdf417',
-] as const;
-
-function createStyles(colors: AppColors) {
+function createStyles(colors: AppColors): ReturnType<typeof StyleSheet.create> {
   return StyleSheet.create({
     safe: {
       flex: 1,
@@ -36,16 +22,32 @@ function createStyles(colors: AppColors) {
       justifyContent: 'center',
       padding: spacing.lg,
     },
-    muted: {
-      color: colors.textMuted,
+    title: {
+      color: colors.text,
+      fontSize: 22,
+      fontWeight: '800',
       textAlign: 'center',
+      marginBottom: 8,
     },
     info: {
-      color: colors.text,
-      fontSize: 16,
+      color: colors.textMuted,
+      fontSize: 14,
       textAlign: 'center',
       marginBottom: spacing.lg,
-      lineHeight: 22,
+      lineHeight: 20,
+    },
+    input: {
+      backgroundColor: colors.surface2,
+      borderWidth: 1.5,
+      borderColor: colors.border,
+      borderRadius: radius.md,
+      paddingHorizontal: spacing.md,
+      paddingVertical: 14,
+      color: colors.text,
+      fontSize: 18,
+      letterSpacing: 1.5,
+      textAlign: 'center',
+      marginBottom: spacing.md,
     },
     primaryBtn: {
       backgroundColor: colors.accent,
@@ -53,116 +55,68 @@ function createStyles(colors: AppColors) {
       borderRadius: radius.md,
       alignItems: 'center',
     },
+    primaryBtnDisabled: {
+      opacity: 0.5,
+    },
     primaryText: {
       color: '#fff',
       fontWeight: '700',
       fontSize: 16,
     },
-    linkBtn: {
-      marginTop: spacing.md,
-      alignItems: 'center',
-      padding: spacing.sm,
-    },
-    linkText: {
-      color: colors.accent,
-      fontWeight: '600',
-    },
-    banner: {
-      paddingHorizontal: spacing.md,
-      paddingBottom: spacing.sm,
-    },
-    bannerTitle: {
-      color: colors.text,
-      fontSize: 18,
-      fontWeight: '700',
-    },
-    bannerSub: {
-      color: colors.textMuted,
-      fontSize: 14,
-      marginTop: 4,
-    },
-    camera: {
-      flex: 1,
-      marginHorizontal: spacing.md,
-      marginBottom: spacing.sm,
-      borderRadius: radius.lg,
-      overflow: 'hidden',
-    },
-    cancelFooter: {
-      padding: spacing.md,
+    cancelBtn: {
+      marginTop: 12,
+      paddingVertical: 14,
       alignItems: 'center',
     },
     cancelText: {
-      color: colors.textMuted,
+      color: colors.accent,
       fontWeight: '600',
       fontSize: 16,
     },
   });
 }
 
-export function ScanImeiScreen({ navigation, route }: Props) {
+export function ScanImeiScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const [permission, requestPermission] = useCameraPermissions();
-  const doneRef = useRef(false);
+  const [imeiText, setImeiText] = useState('');
 
-  const onBarcodeScanned = useCallback(
-    (result: BarcodeScanningResult) => {
-      if (doneRef.current) return;
-      const imei = imeiDigitsFromBarcodeData(result.data ?? '');
-      if (!imei) return;
-      doneRef.current = true;
-      navigation.navigate('AddRepair', {
-        repairId: route.params?.repairId,
-        scannedImei: imei,
-      });
-    },
-    [navigation, route.params?.repairId]
-  );
+  const digits = imeiText.replace(/\D/g, '').slice(0, 15);
+  const isValid = digits.length >= 8;
 
-  if (!permission) {
-    return (
-      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-        <View style={styles.centered}>
-          <Text style={styles.muted}>Checking camera…</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (!permission.granted) {
-    return (
-      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-        <View style={styles.centered}>
-          <Text style={styles.info}>Camera access is needed to scan IMEI barcodes.</Text>
-          <Pressable onPress={() => void requestPermission()} style={styles.primaryBtn}>
-            <Text style={styles.primaryText}>Allow camera</Text>
-          </Pressable>
-          <Pressable onPress={() => navigation.goBack()} style={styles.linkBtn}>
-            <Text style={styles.linkText}>Cancel</Text>
-          </Pressable>
-        </View>
-      </SafeAreaView>
-    );
+  function handleSubmit() {
+    if (!isValid) return;
+    navigation.navigate('AddRepair', { scannedImei: digits });
   }
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <View style={styles.banner}>
-        <Text style={styles.bannerTitle}>Scan IMEI barcode</Text>
-        <Text style={styles.bannerSub}>Aim at the sticker or box barcode. We read digits only (8–15).</Text>
+      <View style={styles.centered}>
+        <Text style={styles.title}>Enter IMEI</Text>
+        <Text style={styles.info}>
+          Type the IMEI number from the device box label (8–15 digits).
+        </Text>
+        <TextInput
+          placeholder="IMEI digits"
+          placeholderTextColor={colors.textMuted}
+          value={digits}
+          onChangeText={setImeiText}
+          keyboardType="number-pad"
+          maxLength={15}
+          style={styles.input}
+          autoFocus
+        />
+        <Pressable
+          onPress={handleSubmit}
+          style={[styles.primaryBtn, !isValid && styles.primaryBtnDisabled]}
+          disabled={!isValid}
+        >
+          <Text style={styles.primaryText}>Use This IMEI</Text>
+        </Pressable>
+        <Pressable onPress={() => navigation.goBack()} style={styles.cancelBtn}>
+          <Text style={styles.cancelText}>Cancel</Text>
+        </Pressable>
       </View>
-      <CameraView
-        style={styles.camera}
-        facing="back"
-        barcodeScannerSettings={{
-          barcodeTypes: [...BARCODE_TYPES],
-        }}
-        onBarcodeScanned={onBarcodeScanned}
-      />
-      <Pressable onPress={() => navigation.goBack()} style={styles.cancelFooter} android_ripple={{ color: colors.border }}>
-        <Text style={styles.cancelText}>Cancel</Text>
-      </Pressable>
     </SafeAreaView>
   );
 }

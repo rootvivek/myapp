@@ -1,4 +1,5 @@
 {
+  "name": "myapp",
   "expo": {
     "name": "MCA Phone Wala",
     "slug": "myapp",
@@ -9,10 +10,7 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
-    "ios": {
-      "supportsTablet": true
+      "backgroundColor": "#6366f1"
     },
     "android": {
       "package": "com.myapp",
@@ -22,25 +20,24 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "splash": {
+        "backgroundColor": "#6366f1",
+        "image": "./assets/splash-icon.png",
+        "resizeMode": "contain"
+      }
+    },
+    "ios": {
+      "supportsTablet": true,
+      "splash": {
+        "backgroundColor": "#6366f1",
+        "image": "./assets/splash-icon.png",
+        "resizeMode": "contain"
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": [
-      [
-        "expo-image-picker",
-        {
-          "photosPermission": "Allow MCA Phone Wala to access photos to attach device images.",
-          "cameraPermission": "Allow MCA Phone Wala to use the camera for device photos."
-        }
-      ],
-      [
-        "expo-camera",
-        {
-          "cameraPermission": "Allow MCA Phone Wala to use the camera to scan IMEI barcodes."
-        }
-      ]
-    ]
+    "plugins": []
   }
 }

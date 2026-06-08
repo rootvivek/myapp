@@ -83,7 +83,7 @@ export async function getAllRepairs(): Promise<Repair[]> {
     .order('date_received', { ascending: false })
     .order('id', { ascending: false });
   if (error) throw error;
-  return (data ?? []).map((r) => rowToRepair(r as Record<string, unknown>));
+  return (data ?? []).map((r: any) => rowToRepair(r as Record<string, unknown>));
 }
 
 export async function searchRepairs(query: string): Promise<Repair[]> {

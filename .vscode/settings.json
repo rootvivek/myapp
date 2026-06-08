@@ -1,0 +1,7 @@
+{
+    "java.configuration.updateBuildConfiguration": "interactive",
+    "java.compile.nullAnalysis.mode": "automatic",
+    "java.project.importExclusions": [
+        "**/node_modules/@react-native/gradle-plugin"
+    ]
+}

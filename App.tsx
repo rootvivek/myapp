@@ -1,5 +1,4 @@
-import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { StatusBar } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider, useAuth } from './src/context/AuthContext';
@@ -7,6 +6,7 @@ import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { RepairsProvider } from './src/context/RepairsContext';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { AuthScreen } from './src/screens/AuthScreen';
+import { SplashScreen } from './src/components/SplashScreen';
 
 function AuthenticatedApp() {
   const { configured, loading, session } = useAuth();
@@ -17,11 +17,7 @@ function AuthenticatedApp() {
   }
 
   if (loading) {
-    return (
-      <View style={[styles.boot, { backgroundColor: colors.bg }]}>
-        <ActivityIndicator size="large" color={colors.accent} />
-      </View>
-    );
+    return <SplashScreen />;
   }
 
   if (!session) {
@@ -30,7 +26,7 @@ function AuthenticatedApp() {
 
   return (
     <RepairsProvider>
-      <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
+      <StatusBar barStyle={mode === 'dark' ? 'light-content' : 'dark-content'} />
       <AppNavigator />
     </RepairsProvider>
   );
@@ -47,11 +43,3 @@ export default function App() {
     </SafeAreaProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  boot: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
