@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useMemo, useState, useCallback, u
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
 import { isValidEmail, normalizeEmail } from '../utils/email';
 import type { UserProfile, UserRole } from '../types/profile';
+import { saveShopBranding } from '../utils/shopSettings';
 
 type AuthContextValue = {
   configured: boolean;
@@ -14,11 +15,13 @@ type AuthContextValue = {
   isOwner: boolean;
   isLabour: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string) => Promise<{ needsEmailConfirm: boolean }>;
+  signUp: (email: string, password: string, name: string) => Promise<{ needsEmailConfirm: boolean }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   createLabourAccount: (name: string, password: string, phone: string) => Promise<void>;
   resetLabourPassword: (labourUserId: string, newPassword: string) => Promise<void>;
+  updateProfileName: (name: string) => Promise<void>;
+  updateShopName: (shopName: string) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -35,9 +38,9 @@ async function fetchProfile(userId: string): Promise<UserProfile | null> {
     const { data, error } = await withTimeout(
       supabase
         .from('profiles')
-        .select('id, name, phone, role, shop_id')
+        .select('id, name, phone, role, shop_id, shops!profiles_shop_id_fkey(shop_name)')
         .eq('id', userId)
-        .maybeSingle(),
+        .maybeSingle() as Promise<any>,
       10000,
       'profiles table select timed out'
     );
@@ -46,12 +49,24 @@ async function fetchProfile(userId: string): Promise<UserProfile | null> {
       return null;
     }
     if (!data) return null;
+
+    const shopsVal = data.shops;
+    let dbShopName = '';
+    if (shopsVal) {
+      if (Array.isArray(shopsVal)) {
+        dbShopName = shopsVal[0]?.shop_name || '';
+      } else {
+        dbShopName = (shopsVal as any).shop_name || '';
+      }
+    }
+
     return {
       id: data.id,
       name: data.name ?? '',
       phone: data.phone ?? '',
       role: (data.role as UserRole) || 'owner',
       shopId: data.shop_id ?? '',
+      shopName: dbShopName,
     };
   } catch (err) {
     console.warn('[AuthContext] fetchProfile failed:', err);
@@ -63,11 +78,22 @@ async function ensureOwnerProfile(userId: string): Promise<UserProfile> {
   const existing = await fetchProfile(userId);
   if (existing) return existing;
 
+  // Let's get the auth user metadata to see if they provided a name
+  let name = '';
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user && user.id === userId && user.user_metadata?.name) {
+      name = user.user_metadata.name;
+    }
+  } catch (e) {
+    console.warn('[AuthContext] error getting user metadata:', e);
+  }
+
   // Create a shop for this new owner
   const { data: shop, error: shopErr } = await supabase
     .from('shops')
-    .insert({ shop_name: '', owner_id: userId })
-    .select('id')
+    .insert({ shop_name: 'MCA Phone Wala', owner_id: userId })
+    .select('id, shop_name')
     .single();
   if (shopErr || !shop) {
     throw new Error('Could not create shop: ' + (shopErr?.message ?? 'unknown'));
@@ -76,7 +102,7 @@ async function ensureOwnerProfile(userId: string): Promise<UserProfile> {
   // Create owner profile
   const { error: profErr } = await supabase
     .from('profiles')
-    .insert({ id: userId, name: '', phone: '', role: 'owner', shop_id: shop.id });
+    .insert({ id: userId, name: name, phone: '', role: 'owner', shop_id: shop.id });
   if (profErr) {
     throw new Error('Could not create profile: ' + profErr.message);
   }
@@ -87,10 +113,11 @@ async function ensureOwnerProfile(userId: string): Promise<UserProfile> {
 
   return {
     id: userId,
-    name: '',
+    name: name,
     phone: '',
     role: 'owner',
     shopId: shop.id,
+    shopName: shop.shop_name,
   };
 }
 
@@ -120,6 +147,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loadProfile = useCallback(async (userId: string) => {
     const p = await loadProfileWithRetry(userId);
     setProfile(p);
+    if (p?.shopName) {
+      void saveShopBranding({ shopName: p.shopName });
+    }
   }, [loadProfileWithRetry]);
 
   const refreshProfile = useCallback(async () => {
@@ -142,7 +172,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // onAuthStateChange will also fire INITIAL_SESSION, but we skip it
         // during init to avoid a race condition.
         const { data: { session: s } } = await withTimeout(
-          supabase.auth.getSession(),
+          supabase.auth.getSession() as Promise<any>,
           10000,
           'getSession timed out'
         );
@@ -193,7 +223,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
   };
 
-  const signUp = async (email: string, password: string) => {
+  const signUp = async (email: string, password: string, name: string) => {
     const normalized = normalizeEmail(email);
     if (!isValidEmail(normalized)) {
       throw new Error('Enter a valid email address (example: you@example.com).');
@@ -201,6 +231,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data, error } = await supabase.auth.signUp({
       email: normalized,
       password,
+      options: {
+        data: {
+          name: name.trim(),
+        },
+      },
     });
     if (error) throw error;
     return { needsEmailConfirm: !data.session };
@@ -267,7 +302,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
   };
 
+  const updateProfileName = async (newName: string) => {
+    if (!session?.user?.id) {
+      throw new Error('Not authenticated.');
+    }
+    const { error } = await supabase
+      .from('profiles')
+      .update({ name: newName.trim() })
+      .eq('id', session.user.id);
+    if (error) throw error;
+    await refreshProfile();
+  };
 
+  const updateShopName = async (newShopName: string) => {
+    if (!profile?.shopId || !isOwner) {
+      throw new Error('Only the shop owner can update the shop name.');
+    }
+    const { error } = await supabase
+      .from('shops')
+      .update({ shop_name: newShopName.trim() })
+      .eq('id', profile.shopId);
+    if (error) throw error;
+    
+    // Cache it locally in AsyncStorage
+    await saveShopBranding({ shopName: newShopName.trim() });
+    
+    // Refresh the profile to update Context state
+    await refreshProfile();
+  };
 
   const value = useMemo(
     () => ({
@@ -284,6 +346,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       refreshProfile,
       createLabourAccount,
       resetLabourPassword,
+      updateProfileName,
+      updateShopName,
     }),
     [configured, loading, session, profile, isOwner, isLabour, refreshProfile]
   );

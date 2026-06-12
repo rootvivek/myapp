@@ -14,7 +14,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Phone, CheckCircle, ArrowUpRight, Square, Pencil, CheckSquare } from 'lucide-react-native';
+import { Phone, CheckCircle, ArrowUpRight, Square, Pencil, CheckSquare, MessageSquare } from 'lucide-react-native';
 
 import { useRepairs } from '../context/RepairsContext';
 import { useTheme } from '../context/ThemeContext';
@@ -36,6 +36,7 @@ export function FinanceScreen({ navigation }: Props) {
   const { isOwner } = useAuth();
   const { repairs, loading, refresh } = useRepairs();
   const [subTab, setSubTab] = useState<'dues' | 'paid'>('dues');
+  const [period, setPeriod] = useState<'today' | 'week' | 'month' | 'all'>('all');
 
   // Edit payment states
   const [editingRepair, setEditingRepair] = useState<Repair | null>(null);
@@ -65,13 +66,40 @@ export function FinanceScreen({ navigation }: Props) {
     );
   }
 
+  const filteredByPeriodRepairs = useMemo(() => {
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const currentDay = now.getDay();
+    const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - currentDay);
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    return repairs.filter((r) => {
+      if (!r.dateReceived) return false;
+      const rDate = new Date(r.dateReceived + (r.dateReceived.includes('T') ? '' : 'T12:00:00'));
+      if (Number.isNaN(rDate.getTime())) return false;
+      
+      const rDateStart = new Date(rDate.getFullYear(), rDate.getMonth(), rDate.getDate());
+
+      if (period === 'today') {
+        return rDateStart >= startOfToday;
+      }
+      if (period === 'week') {
+        return rDateStart >= startOfWeek;
+      }
+      if (period === 'month') {
+        return rDateStart >= startOfMonth;
+      }
+      return true;
+    });
+  }, [repairs, period]);
+
   const stats = useMemo(() => {
     let totalPaid = 0;
     let totalDues = 0;
     let totalValue = 0;
     let totalExpense = 0;
 
-    repairs.forEach((r) => {
+    filteredByPeriodRepairs.forEach((r) => {
       if (r.status === 'cancelled') return;
       totalValue += r.repairCost;
       totalExpense += r.expense || 0;
@@ -87,15 +115,15 @@ export function FinanceScreen({ navigation }: Props) {
     const netProfit = totalValue - totalExpense;
 
     return { totalPaid, totalDues, totalValue, totalExpense, netProfit };
-  }, [repairs]);
+  }, [filteredByPeriodRepairs]);
 
   const duesList = useMemo(() => {
-    return repairs.filter((r) => r.status !== 'cancelled' && !r.isPaid && r.repairCost > r.advanceAmount);
-  }, [repairs]);
+    return filteredByPeriodRepairs.filter((r) => r.status !== 'cancelled' && !r.isPaid && r.repairCost > r.advanceAmount);
+  }, [filteredByPeriodRepairs]);
 
   const paidList = useMemo(() => {
-    return repairs.filter((r) => r.status !== 'cancelled' && r.isPaid);
-  }, [repairs]);
+    return filteredByPeriodRepairs.filter((r) => r.status !== 'cancelled' && r.isPaid);
+  }, [filteredByPeriodRepairs]);
 
   const activeList = subTab === 'dues' ? duesList : paidList;
 
@@ -131,6 +159,25 @@ export function FinanceScreen({ navigation }: Props) {
         },
       ]
     );
+  };
+
+  const handleSendWhatsAppReminder = (item: Repair) => {
+    const rawPhone = item.phone?.trim() || '';
+    if (!rawPhone) return;
+
+    const digits = rawPhone.replace(/\D/g, '');
+    const phone = digits.length === 10 ? `91${digits}` : digits;
+
+    const dueAmount = item.repairCost - item.advanceAmount;
+    const msg = `Dear ${item.customerName},\n\nThis is a friendly reminder that a payment of ${formatCurrency(dueAmount)} is outstanding for your repair order (${item.deviceModel}).\n\nPlease clear the balance at your earliest convenience.\n\nThank you!\nMCA Phone Wala`;
+
+    const url = `whatsapp://send?phone=${phone}&text=${encodeURIComponent(msg)}`;
+    void Linking.openURL(url).catch(() => {
+      const webUrl = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+      void Linking.openURL(webUrl).catch(() => {
+        Alert.alert('WhatsApp Error', 'Could not launch WhatsApp.');
+      });
+    });
   };
 
   const startEditPayment = (item: Repair) => {
@@ -177,25 +224,46 @@ export function FinanceScreen({ navigation }: Props) {
         <Text style={[styles.title, { color: colors.text }]}>Earnings & Dues</Text>
       </View>
 
-      {/* KPI Stats Cards */}
-      <View style={styles.statsContainer}>
-        <View style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Text style={[styles.statLabel, { color: colors.textMuted }]}>Total Received</Text>
-          <Text style={[styles.statValue, { color: colors.success }]}>
-            {formatCurrency(stats.totalPaid)}
-          </Text>
-          <Text style={[styles.statSubText, { color: colors.textMuted }]}>Collected amount</Text>
-        </View>
-
-        <View style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Text style={[styles.statLabel, { color: colors.textMuted }]}>Total Dues</Text>
-          <Text style={[styles.statValue, { color: colors.danger }]}>
-            {formatCurrency(stats.totalDues)}
-          </Text>
-          <Text style={[styles.statSubText, { color: colors.textMuted }]}>Outstanding dues</Text>
-        </View>
+      {/* Time Period Filter Row */}
+      <View style={styles.periodContainer}>
+        {([
+          { key: 'today', label: 'Today' },
+          { key: 'week', label: 'This Week' },
+          { key: 'month', label: 'This Month' },
+          { key: 'all', label: 'All Time' },
+        ] as const).map((p) => {
+          const active = period === p.key;
+          return (
+            <Pressable
+              key={p.key}
+              onPress={() => setPeriod(p.key)}
+              style={[
+                styles.periodBtn,
+                { borderColor: colors.border },
+                active && { backgroundColor: colors.accent, borderColor: colors.accent }
+              ]}
+            >
+              <Text style={[
+                styles.periodText,
+                { color: active ? '#FFFFFF' : colors.textMuted }
+              ]}>
+                {p.label}
+              </Text>
+            </Pressable>
+          );
+        })}
       </View>
 
+      {/* KPI Stats Cards */}
+      <View style={[styles.fullStatCard, { backgroundColor: colors.surface, borderColor: colors.border, marginBottom: 8 }]}>
+        <View style={styles.fullStatHeader}>
+          <Text style={[styles.statLabel, { color: colors.textMuted }]}>Total Received</Text>
+          <CheckCircle size={16} color={colors.success} />
+        </View>
+        <Text style={[styles.fullStatValue, { color: colors.success }]}>
+          {formatCurrency(stats.totalPaid)}
+        </Text>
+      </View>
 
       <View style={styles.statsContainer}>
         <View style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -235,7 +303,7 @@ export function FinanceScreen({ navigation }: Props) {
           ]}
         >
           <Text style={[styles.tabText, { color: subTab === 'dues' ? colors.text : colors.textMuted, fontWeight: subTab === 'dues' ? '700' : '500' }]}>
-            Outstanding Dues ({duesList.length})
+            Unpaid Jobs ({duesList.length})
           </Text>
         </Pressable>
         <Pressable
@@ -263,7 +331,7 @@ export function FinanceScreen({ navigation }: Props) {
           contentContainerStyle={styles.list}
           ListEmptyComponent={
             <Text style={[styles.empty, { color: colors.textMuted }]}>
-              {subTab === 'dues' ? 'No outstanding dues! All paid up.' : 'No paid jobs yet.'}
+              {subTab === 'dues' ? 'No unpaid jobs! All paid up.' : 'No paid jobs yet.'}
             </Text>
           }
           renderItem={({ item }) => {
@@ -291,9 +359,32 @@ export function FinanceScreen({ navigation }: Props) {
                       Total: {formatCurrency(item.repairCost)} (Adv: {formatCurrency(item.advanceAmount)})
                     </Text>
                     {subTab === 'dues' ? (
-                      <Text style={[styles.balanceText, { color: colors.danger }]}>
-                        Due: {formatCurrency(balance)}
-                      </Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <View style={styles.unpaidBadge}>
+                          <Text style={[styles.unpaidText, { color: colors.danger }]}>Unpaid</Text>
+                        </View>
+                        {item.phone ? (
+                          <Pressable
+                            onPress={() => handleSendWhatsAppReminder(item)}
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              backgroundColor: 'rgba(34, 197, 94, 0.12)',
+                              paddingHorizontal: 8,
+                              paddingVertical: 3,
+                              borderRadius: 6,
+                              gap: 4,
+                              borderWidth: 1,
+                              borderColor: 'rgba(34, 197, 94, 0.25)',
+                            }}
+                          >
+                            <MessageSquare size={10} color="#22C55E" fill="#22C55E" />
+                            <Text style={{ fontSize: 10, fontWeight: '700', color: '#22C55E' }}>
+                              Remind
+                            </Text>
+                          </Pressable>
+                        ) : null}
+                      </View>
                     ) : (
                       <View style={styles.paidBadge}>
                         <CheckCircle size={14} color={colors.success} />
@@ -426,6 +517,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingTop: 14,
     paddingBottom: 8,
+  },
+  periodContainer: {
+    flexDirection: 'row',
+    marginHorizontal: 18,
+    marginBottom: 14,
+    gap: 8,
+  },
+  periodBtn: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1.2,
+    backgroundColor: 'transparent',
+  },
+  periodText: {
+    fontSize: 11,
+    fontWeight: '700',
   },
   title: {
     fontSize: 22,
@@ -563,6 +673,15 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   paidText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  unpaidBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  unpaidText: {
     fontSize: 11,
     fontWeight: '700',
   },

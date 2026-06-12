@@ -49,6 +49,7 @@ export function HomeScreen({ navigation }: Props) {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { repairs, loading, refresh } = useRepairs();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('pending');
+  const [refreshing, setRefreshing] = useState(false);
 
   const filteredRepairs = useMemo(() => {
     if (statusFilter === 'all') return repairs;
@@ -60,6 +61,15 @@ export function HomeScreen({ navigation }: Props) {
       void refresh();
     }, [refresh])
   );
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await refresh();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refresh]);
 
   const handleStatusChange = useCallback(
     async (repairId: number, status: RepairStatus): Promise<void> => {
@@ -96,6 +106,8 @@ export function HomeScreen({ navigation }: Props) {
             data={filteredRepairs}
             keyExtractor={(item) => String(item.id)}
             contentContainerStyle={styles.list}
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
             ListEmptyComponent={
               <Text style={styles.empty}>
                 {repairs.length === 0 ? 'No repairs yet.' : 'No jobs with this status.'}

@@ -110,11 +110,16 @@ export function AuthScreen() {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
 
   async function onSubmit() {
+    if (mode === 'signup' && !name.trim()) {
+      Alert.alert('Name required', 'Please enter your name.');
+      return;
+    }
     let rawInput = email.trim();
     // If input doesn't contain '@', treat it as a username and append '@shop.com'
     if (rawInput && !rawInput.includes('@')) {
@@ -141,7 +146,7 @@ export function AuthScreen() {
       if (mode === 'signin') {
         await signIn(e, password);
       } else {
-        const res = await signUp(e, password);
+        const res = await signUp(e, password, name.trim());
         if (res?.needsEmailConfirm) {
           Alert.alert(
             'Confirm email',
@@ -183,7 +188,23 @@ export function AuthScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <Text style={styles.brand}>MCA Phone Wala</Text>
-          <Text style={styles.subtitle}>Sign in to sync jobs in the cloud</Text>
+          <Text style={styles.subtitle}>
+            {mode === 'signin' ? 'Sign in to sync jobs in the cloud' : 'Create an account to start syncing'}
+          </Text>
+
+          {mode === 'signup' && (
+            <>
+              <Text style={styles.label}>Name</Text>
+              <TextInput
+                value={name}
+                onChangeText={setName}
+                autoCapitalize="words"
+                placeholder="e.g. Rahul Kumar"
+                placeholderTextColor={colors.textMuted}
+                style={styles.input}
+              />
+            </>
+          )}
 
           <Text style={styles.label}>Username or Email</Text>
           <TextInput

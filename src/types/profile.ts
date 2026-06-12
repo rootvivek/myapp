@@ -6,4 +6,5 @@ export interface UserProfile {
   phone: string;
   role: UserRole;
   shopId: string;
+  shopName?: string;
 }
