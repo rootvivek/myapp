@@ -100,7 +100,7 @@ export function FinanceScreen({ navigation }: Props) {
     let totalExpense = 0;
 
     filteredByPeriodRepairs.forEach((r) => {
-      if (r.status === 'cancelled') return;
+      if (r.status === 'cancelled' || r.status === 'pending' || r.status === 'completed') return;
       totalValue += r.repairCost;
       totalExpense += r.expense || 0;
       if (r.isPaid) {
@@ -118,11 +118,22 @@ export function FinanceScreen({ navigation }: Props) {
   }, [filteredByPeriodRepairs]);
 
   const duesList = useMemo(() => {
-    return filteredByPeriodRepairs.filter((r) => r.status !== 'cancelled' && !r.isPaid && r.repairCost > r.advanceAmount);
+    return filteredByPeriodRepairs.filter((r) => 
+      r.status !== 'cancelled' && 
+      r.status !== 'pending' && 
+      r.status !== 'completed' && 
+      !r.isPaid && 
+      r.repairCost > r.advanceAmount
+    );
   }, [filteredByPeriodRepairs]);
 
   const paidList = useMemo(() => {
-    return filteredByPeriodRepairs.filter((r) => r.status !== 'cancelled' && r.isPaid);
+    return filteredByPeriodRepairs.filter((r) => 
+      r.status !== 'cancelled' && 
+      r.status !== 'pending' && 
+      r.status !== 'completed' && 
+      r.isPaid
+    );
   }, [filteredByPeriodRepairs]);
 
   const activeList = subTab === 'dues' ? duesList : paidList;

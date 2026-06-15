@@ -121,9 +121,15 @@ export function AuthScreen() {
       return;
     }
     let rawInput = email.trim();
-    // If input doesn't contain '@', treat it as a username and append '@shop.com'
+    // If input doesn't contain '@', treat it as a username.
+    // Scoped usernames contain a dot '.' (e.g. rahul.a1b2c3d4) -> append @mcaphonewala.internal
+    // Legacy usernames have no dot -> append @shop.com
     if (rawInput && !rawInput.includes('@')) {
-      rawInput = `${rawInput.toLowerCase()}@shop.com`;
+      if (rawInput.includes('.')) {
+        rawInput = `${rawInput.toLowerCase()}@mcaphonewala.internal`;
+      } else {
+        rawInput = `${rawInput.toLowerCase()}@shop.com`;
+      }
     }
     const e = normalizeEmail(rawInput);
     if (!e || !password) {
@@ -199,7 +205,7 @@ export function AuthScreen() {
                 value={name}
                 onChangeText={setName}
                 autoCapitalize="words"
-                placeholder="e.g. Rahul Kumar"
+                placeholder="Enter Your Name"
                 placeholderTextColor={colors.textMuted}
                 style={styles.input}
               />
@@ -213,7 +219,7 @@ export function AuthScreen() {
             autoCapitalize="none"
             autoComplete="email"
             keyboardType="email-address"
-            placeholder="e.g. rahul123 or you@example.com"
+            placeholder="Enter Username or Email"
             placeholderTextColor={colors.textMuted}
             style={styles.input}
           />
@@ -223,7 +229,7 @@ export function AuthScreen() {
             value={password}
             onChangeText={setPassword}
             secureTextEntry
-            placeholder="••••••••"
+            placeholder="Enter Password"
             placeholderTextColor={colors.textMuted}
             style={styles.input}
           />

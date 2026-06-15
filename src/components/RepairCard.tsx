@@ -2,7 +2,6 @@ import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Image,
   Linking,
   Modal,
   Pressable,
@@ -10,6 +9,8 @@ import {
   Text,
   View,
 } from 'react-native';
+
+import { SecureImage } from './SecureImage';
 
 import { useTheme } from '../context/ThemeContext';
 import { accentAlpha } from '../theme';
@@ -171,7 +172,7 @@ export const RepairCard = React.memo(function RepairCard({ repair, onPress, onSt
       <View style={styles.body}>
         {/* ── Image ── */}
         <Pressable onPress={onPress} style={styles.imgWrap}>
-          <Image
+          <SecureImage
             source={(repair.imagePhoneFront || repair.imageThumbnail) ? { uri: repair.imagePhoneFront || repair.imageThumbnail } : require('../../assets/app-logo.jpg')}
             style={styles.img} resizeMode="cover"
           />

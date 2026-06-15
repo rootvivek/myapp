@@ -3,6 +3,7 @@
 -- 2. Storage: create bucket "repair-images" (public) — or use private bucket + signed URLs (adjust app if needed)
 
 create extension if not exists "uuid-ossp";
+create extension if not exists "pgcrypto";
 
 -- ══════════════════════════════════════════════════════
 -- Helper functions to prevent RLS infinite recursion
@@ -62,11 +63,15 @@ create policy "shops_update_owner" on public.shops
 create table if not exists public.profiles (
   id uuid primary key references auth.users (id) on delete cascade,
   name text not null default '',
+  username text,
   phone text not null default '',
   role text not null default 'owner' check (role in ('owner', 'labour')),
   shop_id uuid references public.shops (id) on delete cascade,
   created_at timestamptz not null default now()
 );
+
+alter table public.profiles add column if not exists username text;
+
 
 create index if not exists profiles_shop_id_idx on public.profiles (shop_id);
 
@@ -197,15 +202,24 @@ create policy "repairs_delete_shop" on public.repairs
   );
 
 -- Storage bucket (must exist before policies). App uses bucket id `repair-images` + getPublicUrl.
+-- ⚠️ SECURITY: This bucket is set to public. Anyone with an image URL can view customer photos/IDs.
+-- For higher security, set public=false and use createSignedUrl() in the app instead of getPublicUrl().
+-- This requires updating repairImageUpload.ts and migrating existing stored URLs.
 insert into storage.buckets (id, name, public)
-values ('repair-images', 'repair-images', true)
+values ('repair-images', 'repair-images', false)
 on conflict (id) do update set public = excluded.public;
 
--- Or: Dashboard → Storage → New bucket → id `repair-images`, Public ON.
+-- Or: Dashboard → Storage → New bucket → id `repair-images`, Public OFF.
 
 drop policy if exists "repair_images_select" on storage.objects;
 create policy "repair_images_select" on storage.objects
-  for select using (bucket_id = 'repair-images');
+  for select using (
+    bucket_id = 'repair-images'
+    and (
+      (storage.foldername(name))[1] = auth.uid()::text
+      or public.get_user_shop_id(auth.uid()) = public.get_user_shop_id((storage.foldername(name))[1]::uuid)
+    )
+  );
 
 drop policy if exists "repair_images_insert_own" on storage.objects;
 create policy "repair_images_insert_own" on storage.objects
@@ -231,21 +245,31 @@ create policy "repair_images_delete_own" on storage.objects
 -- Search (avoids fragile .or() filter strings from the client)
 create or replace function public.search_repairs_for_user(p_query text)
 returns setof public.repairs
-language sql
+language plpgsql
 stable
 security invoker
 set search_path = public
 as $$
-  select *
-  from public.repairs r
-  where r.shop_id = public.get_user_shop_id(auth.uid())
-  and (
-    r.customer_name ilike '%' || p_query || '%'
-    or r.phone ilike '%' || p_query || '%'
-    or r.imei ilike '%' || p_query || '%'
-    or r.order_code ilike '%' || p_query || '%'
-  )
-  order by r.date_received desc, r.id desc;
+declare
+  v_safe text;
+begin
+  -- Server-side sanitization: strip SQL wildcards to prevent pattern injection
+  v_safe := regexp_replace(trim(coalesce(p_query, '')), '[%_]', '', 'g');
+  if length(v_safe) = 0 then
+    return;
+  end if;
+  return query
+    select *
+    from public.repairs r
+    where r.shop_id = public.get_user_shop_id(auth.uid())
+    and (
+      r.customer_name ilike '%' || v_safe || '%'
+      or r.phone ilike '%' || v_safe || '%'
+      or r.imei ilike '%' || v_safe || '%'
+      or r.order_code ilike '%' || v_safe || '%'
+    )
+    order by r.date_received desc, r.id desc;
+end;
 $$;
 
 grant execute on function public.search_repairs_for_user(text) to authenticated;
@@ -372,3 +396,37 @@ end;
 $$;
 
 grant execute on function public.admin_reset_labour_password(uuid, text) to authenticated;
+
+-- ══════════════════════════════════════════════════════
+-- App versions table (for OTA updates)
+-- ══════════════════════════════════════════════════════
+create table if not exists public.app_versions (
+  id serial primary key,
+  version_code integer not null,
+  version_name text not null,
+  apk_url text not null,
+  changelog text not null default '',
+  is_force_update boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+-- Enable RLS and allow public read access
+alter table public.app_versions enable row level security;
+
+drop policy if exists "Allow public select on app_versions" on public.app_versions;
+create policy "Allow public select on app_versions" on public.app_versions
+  for select using (true);
+
+-- Explicitly deny all client-side writes (only manage via Supabase Dashboard or service_role API)
+drop policy if exists "Deny insert on app_versions" on public.app_versions;
+create policy "Deny insert on app_versions" on public.app_versions
+  for insert with check (false);
+
+drop policy if exists "Deny update on app_versions" on public.app_versions;
+create policy "Deny update on app_versions" on public.app_versions
+  for update using (false);
+
+drop policy if exists "Deny delete on app_versions" on public.app_versions;
+create policy "Deny delete on app_versions" on public.app_versions
+  for delete using (false);
+

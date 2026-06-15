@@ -25,3 +25,16 @@ export const supabase = isSupabaseConfigured() ? createClient(supabaseUrl, supab
     detectSessionInUrl: false,
   },
 }) : null as any;
+
+export const createTempClient = () => {
+  if (!isSupabaseConfigured()) {
+    throw new Error('Supabase is not configured');
+  }
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+  });
+};

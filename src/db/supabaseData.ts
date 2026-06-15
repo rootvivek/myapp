@@ -37,11 +37,24 @@ async function requireUserContext(): Promise<{ userId: string; shopId: string }>
 export async function getShopLabourList(): Promise<UserProfile[]> {
   const { shopId } = await requireUserContext();
   if (!shopId) return [];
-  const { data, error } = await supabase
+  
+  let { data, error } = await supabase
     .from('profiles')
-    .select('id, name, phone, role, shop_id')
+    .select('id, name, username, phone, role, shop_id')
     .eq('shop_id', shopId)
     .order('created_at', { ascending: true });
+
+  if (error && (error.message.includes('column') || error.message.includes('does not exist'))) {
+    console.warn('[getShopLabourList] Retrying without username column...');
+    const retry = await supabase
+      .from('profiles')
+      .select('id, name, phone, role, shop_id')
+      .eq('shop_id', shopId)
+      .order('created_at', { ascending: true });
+    data = retry.data;
+    error = retry.error;
+  }
+
   if (error) {
     console.error('[getShopLabourList] Error:', error);
   }
@@ -49,6 +62,7 @@ export async function getShopLabourList(): Promise<UserProfile[]> {
   return data.map((row: any) => ({
     id: String(row.id),
     name: String(row.name ?? ''),
+    username: row.username ? String(row.username) : undefined,
     phone: String(row.phone ?? ''),
     role: (row.role as UserRole) || 'owner',
     shopId: String(row.shop_id ?? ''),

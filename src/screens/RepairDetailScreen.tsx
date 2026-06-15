@@ -14,6 +14,8 @@ import {
   User,
   Shield,
   CheckCircle,
+  Eye,
+  EyeOff,
 } from 'lucide-react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { useCallback, useMemo, useState } from 'react';
@@ -353,6 +355,7 @@ export function RepairDetailScreen({ navigation, route }: Props) {
   const { repairId } = route.params;
   const [repair, setRepair] = useState<Repair | null>(null);
   const [loading, setLoading] = useState(true);
+  const [revealLock, setRevealLock] = useState(false);
 
   const canModify = useMemo(() => {
     if (isOwner) return true;
@@ -576,22 +579,33 @@ export function RepairDetailScreen({ navigation, route }: Props) {
                     repair.lockType === 'pattern'
                       ? 'Pattern'
                       : repair.lockType === 'pin'
-                        ? `PIN: ${repair.lockValue}`
-                        : `Password: ${repair.lockValue}`
+                        ? `PIN: ${revealLock ? repair.lockValue : '••••'}`
+                        : `Password: ${revealLock ? repair.lockValue : '••••••••'}`
                   }
+                  chip={revealLock ? 'Hide' : 'Show'}
+                  chipIcon={revealLock ? EyeOff : Eye}
+                  onChipPress={() => setRevealLock(!revealLock)}
                   styles={styles}
                   iconColor={mode === 'dark' ? '#FBBF24' : '#D97706'}
                 />
                 {repair.lockType === 'pattern' && repair.lockValue ? (
-                  <View style={styles.patternDetailRow}>
-                    <View style={styles.patternDetailContainer}>
-                      <PatternPreview path={repair.lockValue} size={80} />
+                  revealLock ? (
+                    <View style={styles.patternDetailRow}>
+                      <View style={styles.patternDetailContainer}>
+                        <PatternPreview path={repair.lockValue} size={80} />
+                      </View>
+                      <View style={styles.patternTextContainer}>
+                        <Text style={styles.patternLabel}>Swipe pattern</Text>
+                        <Text style={styles.patternValue}>{repair.lockValue}</Text>
+                      </View>
                     </View>
-                    <View style={styles.patternTextContainer}>
-                      <Text style={styles.patternLabel}>Swipe pattern</Text>
-                      <Text style={styles.patternValue}>{repair.lockValue}</Text>
+                  ) : (
+                    <View style={[styles.patternDetailRow, { justifyContent: 'center', paddingVertical: 12 }]}>
+                      <Text style={{ fontStyle: 'italic', fontSize: 12, color: colors.textMuted }}>
+                        Pattern hidden. Click Show to reveal.
+                      </Text>
                     </View>
-                  </View>
+                  )
                 ) : null}
               </>
             ) : null}

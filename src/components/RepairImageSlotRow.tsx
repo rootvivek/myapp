@@ -1,4 +1,4 @@
-import { Image } from 'react-native';
+import { SecureImage } from './SecureImage';
 import type { ReactNode } from 'react';
 import { useMemo } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
@@ -131,7 +131,7 @@ export function RepairImageSlotCell({ label, uri, onChange, fullWidth, style }: 
         android_ripple={{ color: colors.border }}
       >
         {uri ? (
-          <Image source={{ uri }} style={styles.preview} resizeMode="cover" />
+          <SecureImage source={{ uri }} style={styles.preview} resizeMode="cover" />
         ) : (
           <View style={styles.placeholder}>
             <Text style={styles.placeholderText}>Tap: camera</Text>

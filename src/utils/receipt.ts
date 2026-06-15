@@ -37,7 +37,7 @@ function buildReceiptHtml(
   branding: ShopBranding,
   logoDataUrl: string | null
 ): string {
-  const shopPhone = '8881765192';
+  const shopPhone = escapeHtml(branding.shopPhone);
   const balance = Math.max(0, repair.repairCost - repair.advanceAmount);
   const paidLine = repair.isPaid ? 'Paid in full' : `Balance due: ${formatCurrency(balance)}`;
   const shop = escapeHtml(branding.shopName);
@@ -106,10 +106,10 @@ function buildReceiptHtml(
         <tr><td class="l">IMEI</td><td class="r">${escapeHtml(repair.imei || '—')}</td></tr>
         ${repair.lockType ? `<tr><td class="l">Device lock</td><td class="r">${escapeHtml(
           repair.lockType === 'pattern'
-            ? `Pattern (Path: ${repair.lockValue})`
+            ? 'Set (Pattern)'
             : repair.lockType === 'pin'
-            ? `PIN: ${repair.lockValue}`
-            : `Password: ${repair.lockValue}`
+            ? 'Set (PIN)'
+            : 'Set (Password)'
         )}</td></tr>` : ''}
         <tr><td class="l">Received</td><td class="r">${escapeHtml(formatDateDisplay(repair.dateReceived))}</td></tr>
         <tr><td class="l">Issue</td><td class="r">${escapeHtml(repair.problem)}</td></tr>

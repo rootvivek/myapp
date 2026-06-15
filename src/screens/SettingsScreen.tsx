@@ -11,8 +11,9 @@ import {
   TextInput,
   View,
   Switch,
+  Linking,
 } from 'react-native';
-import { Moon, Sun, Briefcase, UploadCloud, Store, Users, User, ChevronRight, Shield, Mail, LogOut, CheckCircle, Crown } from 'lucide-react-native';
+import { Moon, Sun, Briefcase, UploadCloud, Store, Users, User, ChevronRight, Shield, Mail, LogOut, CheckCircle, Crown, RefreshCw, Phone } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '../context/AuthContext';
@@ -23,6 +24,7 @@ import { accentAlpha, radius, spacing } from '../theme';
 import type { ThemePreference } from '../context/ThemeContext';
 import { launchLibraryForImage } from '../utils/pickImage';
 import { clearShopLogo, getShopBranding, saveShopBranding, setShopLogoFromPickerUri } from '../utils/shopSettings';
+import { checkAppUpdate, CURRENT_VERSION_NAME } from '../components/AutoUpdater';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
 
@@ -325,6 +327,7 @@ export function SettingsScreen(_props: Props) {
   const { colors, mode, setMode } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [shopName, setShopName] = useState('');
+  const [shopPhone, setShopPhone] = useState('');
   const [logoUri, setLogoUri] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -332,12 +335,45 @@ export function SettingsScreen(_props: Props) {
 
   const [profileName, setProfileName] = useState(profile?.name || '');
   const [profileSaving, setProfileSaving] = useState(false);
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
 
   useEffect(() => {
     if (profile) {
       setProfileName(profile.name || '');
     }
   }, [profile]);
+
+  async function onManualCheckUpdate() {
+    setCheckingUpdate(true);
+    try {
+      const info = await checkAppUpdate();
+      if (info && info.hasUpdate) {
+        Alert.alert(
+          'New Update Available',
+          `Version v${info.versionName} is available. Download now?`,
+          [
+            { text: 'Not Now', style: 'cancel' },
+            {
+              text: 'Download',
+              onPress: () => {
+                if (!info.apkUrl.startsWith('https://')) {
+                  Alert.alert('Security Warning', 'Download URL must use HTTPS. Update rejected.');
+                  return;
+                }
+                void Linking.openURL(info.apkUrl);
+              },
+            },
+          ]
+        );
+      } else {
+        Alert.alert('Up to date', `You are on the latest version (v${CURRENT_VERSION_NAME}).`);
+      }
+    } catch {
+      Alert.alert('Error', 'Failed to check for updates. Try again later.');
+    } finally {
+      setCheckingUpdate(false);
+    }
+  }
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -350,6 +386,7 @@ export function SettingsScreen(_props: Props) {
       }
       const b = await getShopBranding();
       setLogoUri(b.logoUri);
+      setShopPhone(b.shopPhone);
     } finally {
       setLoading(false);
     }
@@ -359,19 +396,24 @@ export function SettingsScreen(_props: Props) {
     void load();
   }, [load]);
 
-  async function onSaveName() {
-    const t = shopName.trim();
-    if (!t) {
+  async function onSaveShopDetails() {
+    const nameTrimmed = shopName.trim();
+    const phoneTrimmed = shopPhone.trim();
+    if (!nameTrimmed) {
       Alert.alert('Shop name', 'Enter a shop name.');
       return;
     }
     setSaving(true);
     try {
-      await updateShopName(t);
-      setShopName(t);
-      Alert.alert('Saved', 'Shop name updated successfully.');
+      if (isOwner) {
+        await updateShopName(nameTrimmed);
+      }
+      await saveShopBranding({ shopName: nameTrimmed, shopPhone: phoneTrimmed });
+      setShopName(nameTrimmed);
+      setShopPhone(phoneTrimmed);
+      Alert.alert('Saved', 'Shop details updated successfully.');
     } catch (err: any) {
-      Alert.alert('Failed to save shop name', err.message || 'Error occurred.');
+      Alert.alert('Failed to save shop details', err.message || 'Error occurred.');
     } finally {
       setSaving(false);
     }
@@ -567,8 +609,24 @@ export function SettingsScreen(_props: Props) {
               />
             </View>
 
+            {/* Shop Phone sub-section */}
+            <Text style={styles.label}>Shop Phone Number</Text>
+            <View style={styles.inputContainer}>
+              <View style={styles.inputIconBox}>
+                <Phone size={16} color={colors.accent} />
+              </View>
+              <TextInput
+                value={shopPhone}
+                onChangeText={setShopPhone}
+                placeholder="8881765192"
+                placeholderTextColor={colors.textMuted}
+                style={styles.input}
+                keyboardType="phone-pad"
+              />
+            </View>
+
             <Pressable
-              onPress={() => void onSaveName()}
+              onPress={() => void onSaveShopDetails()}
               disabled={saving}
               style={({ pressed }) => [
                 styles.btnPrimary,
@@ -581,7 +639,7 @@ export function SettingsScreen(_props: Props) {
                 <ActivityIndicator color="#fff" />
               ) : (
                 <>
-                  <Text style={styles.btnPrimaryText}>Save Shop Name</Text>
+                  <Text style={styles.btnPrimaryText}>Save Shop Details</Text>
                   <View style={styles.btnIconRight}>
                     <CheckCircle size={18} color="#FFFFFF" />
                   </View>
@@ -723,6 +781,30 @@ export function SettingsScreen(_props: Props) {
                 <Text style={styles.btnPrimaryText}>Save Profile Name</Text>
                 <View style={styles.btnIconRight}>
                   <CheckCircle size={18} color="#FFFFFF" />
+                </View>
+              </>
+            )}
+          </Pressable>
+
+          {/* Check for Updates Button */}
+          <Pressable
+            onPress={() => void onManualCheckUpdate()}
+            disabled={checkingUpdate}
+            style={({ pressed }) => [
+              styles.btnPrimary,
+              { backgroundColor: 'transparent', borderWidth: 1.2, borderColor: colors.accent, marginTop: 16 },
+              checkingUpdate && styles.btnDisabled,
+              pressed && { opacity: 0.8 }
+            ]}
+            android_ripple={{ color: colors.accent }}
+          >
+            {checkingUpdate ? (
+              <ActivityIndicator color={colors.accent} />
+            ) : (
+              <>
+                <Text style={[styles.btnPrimaryText, { color: colors.accent }]}>Check for Updates</Text>
+                <View style={styles.btnIconRight}>
+                  <RefreshCw size={16} color={colors.accent} />
                 </View>
               </>
             )}

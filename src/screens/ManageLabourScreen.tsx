@@ -370,6 +370,13 @@ export function ManageLabourScreen({ navigation }: Props) {
               <View style={styles.cardInfo}>
                 <Text style={styles.cardName}>{item.name || '(No name)'}</Text>
                 {item.phone ? <Text style={styles.cardPhone}>{item.phone}</Text> : null}
+                {item.role === 'labour' && (
+                  <Text style={[styles.cardPhone, { marginTop: 4 }]}>
+                    Login ID: <Text style={{ color: colors.text, fontWeight: '700' }}>
+                      {item.username || item.name.toLowerCase().replace(/\s+/g, '')}
+                    </Text>
+                  </Text>
+                )}
                 <View
                   style={[
                     styles.badge,
@@ -393,7 +400,6 @@ export function ManageLabourScreen({ navigation }: Props) {
                       setEditingUser(item);
                       setEditName(item.name);
                       setEditPhone(item.phone);
-                      setShowEditModal(false);
                       setShowEditModal(true);
                     }}
                     style={styles.deleteBtn}

@@ -1,7 +1,7 @@
 import type { Session, User } from '@supabase/supabase-js';
 import { createContext, useContext, useEffect, useMemo, useState, useCallback, useRef, type ReactNode } from 'react';
 
-import { isSupabaseConfigured, supabase } from '../lib/supabase';
+import { isSupabaseConfigured, supabase, createTempClient } from '../lib/supabase';
 import { isValidEmail, normalizeEmail } from '../utils/email';
 import type { UserProfile, UserRole } from '../types/profile';
 import { saveShopBranding } from '../utils/shopSettings';
@@ -35,15 +35,35 @@ const withTimeout = <T,>(promise: Promise<T>, timeoutMs = 5000, errorMsg = 'Oper
 
 async function fetchProfile(userId: string): Promise<UserProfile | null> {
   try {
-    const { data, error } = await withTimeout(
+    let queryResult = await withTimeout(
       supabase
         .from('profiles')
-        .select('id, name, phone, role, shop_id, shops!profiles_shop_id_fkey(shop_name)')
+        .select('id, name, username, phone, role, shop_id, shops!profiles_shop_id_fkey(shop_name)')
         .eq('id', userId)
         .maybeSingle() as Promise<any>,
       10000,
       'profiles table select timed out'
     );
+
+    let data = queryResult.data;
+    let error = queryResult.error;
+
+    // Fallback if username column doesn't exist yet in the database
+    if (error && (error.message.includes('column') || error.message.includes('does not exist'))) {
+      console.warn('[AuthContext] Retrying profile fetch without username column...');
+      const retryResult = await withTimeout(
+        supabase
+          .from('profiles')
+          .select('id, name, phone, role, shop_id, shops!profiles_shop_id_fkey(shop_name)')
+          .eq('id', userId)
+          .maybeSingle() as Promise<any>,
+        10000,
+        'profiles table fallback select timed out'
+      );
+      data = retryResult.data;
+      error = retryResult.error;
+    }
+
     if (error) {
       console.warn('[AuthContext] fetchProfile error:', error);
       return null;
@@ -63,6 +83,7 @@ async function fetchProfile(userId: string): Promise<UserProfile | null> {
     return {
       id: data.id,
       name: data.name ?? '',
+      username: data.username ?? '',
       phone: data.phone ?? '',
       role: (data.role as UserRole) || 'owner',
       shopId: data.shop_id ?? '',
@@ -114,6 +135,7 @@ async function ensureOwnerProfile(userId: string): Promise<UserProfile> {
   return {
     id: userId,
     name: name,
+    username: '',
     phone: '',
     role: 'owner',
     shopId: shop.id,
@@ -246,7 +268,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
   };
 
-  const isOwner = profile?.role !== 'labour';
+  const isOwner = profile?.role === 'owner';
   const isLabour = profile?.role === 'labour';
 
   const createLabourAccount = async (username: string, password: string, phone: string) => {
@@ -259,10 +281,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new Error('Username is required for the labour account.');
     }
 
-    // Generate a shop email address from username
-    const generatedEmail = `${trimmedUsername}@shop.com`;
+    // Generate a shop email address from username, scoped by shop ID to avoid collisions
+    const shopCode = profile.shopId.substring(0, 8);
+    const loginUsername = `${trimmedUsername}.${shopCode}`;
+    const generatedEmail = `${loginUsername}@mcaphonewala.internal`;
 
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+    const tempClient = createTempClient();
+    const { data: signUpData, error: signUpError } = await tempClient.auth.signUp({
       email: generatedEmail,
       password,
       options: {
@@ -280,6 +305,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .insert({
         id: newUserId,
         name: username.trim(),
+        username: loginUsername,
         phone: phone.trim(),
         role: 'labour',
         shop_id: profile.shopId,
