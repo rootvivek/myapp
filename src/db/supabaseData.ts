@@ -151,8 +151,10 @@ function mapInputToRow(input: RepairInput): Record<string, any> {
 }
 
 function getMissingColumn(message: string): string | null {
-  const match = message.match(/Could not find the '([^']+)' column/) ||
-                message.match(/column "([^"]+)" of relation/);
+  if (!message.includes('schema cache') && !message.includes('does not exist')) {
+    return null;
+  }
+  const match = message.match(/Could not find the '([^']+)' column/);
   return match ? match[1] : null;
 }
 

@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -17,7 +17,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useFocusEffect } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Phone, CheckCircle, ArrowUpRight, Square, Pencil, CheckSquare, MessageSquare, ArrowLeft, BookOpen } from 'lucide-react-native';
+import { Phone, CheckCircle, ArrowUpRight, Square, Pencil, CheckSquare, MessageSquare, ArrowLeft } from 'lucide-react-native';
 
 import { useRepairs } from '../context/RepairsContext';
 import { useTheme } from '../context/ThemeContext';
@@ -25,19 +25,43 @@ import { useAuth } from '../context/AuthContext';
 import { updateRepair } from '../db/database';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
-import type { AppColors } from '../theme';
-import { spacing, radius } from '../theme';
 import { formatCurrency, formatDateDisplay } from '../utils/format';
 import type { Repair } from '../types/repair';
+
+// ------------------------------------------------------------------
+// REUSABLE FINANCE HELPERS
+// ------------------------------------------------------------------
+
+function parseMoney(value: string): number {
+  if (typeof value !== 'string') return 0;
+  const trimmed = value.trim();
+  if (!trimmed) return 0;
+  const parsed = parseFloat(trimmed);
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+function calculateDue(cost: number, advance: number): number {
+  const due = cost - advance;
+  return due > 0 ? due : 0;
+}
+
+function calculatePaidAmount(isPaid: boolean, cost: number, advance: number): number {
+  return isPaid ? cost : advance;
+}
+
+function calculateNetProfit(totalValue: number, totalExpense: number): number {
+  return totalValue - totalExpense;
+}
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Home'>;
 };
 
 export function FinanceScreen({ navigation }: Props) {
-  const { colors, mode } = useTheme();
+  const { colors } = useTheme();
   const { isOwner } = useAuth();
   const { repairs, loading, refresh } = useRepairs();
+
   const [subTab, setSubTab] = useState<'dues' | 'paid'>('dues');
   const [period, setPeriod] = useState<'today' | 'week' | 'month' | 'all' | 'custom'>('all');
   const [customStartDate, setCustomStartDate] = useState<Date>(new Date());
@@ -52,6 +76,17 @@ export function FinanceScreen({ navigation }: Props) {
   const [editPaid, setEditPaid] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
 
+  // Synchronous guards
+  const savingRef = useRef(false);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
       if (isOwner) {
@@ -59,6 +94,358 @@ export function FinanceScreen({ navigation }: Props) {
       }
     }, [refresh, isOwner])
   );
+
+  // ------------------------------------------------------------------
+  // MODAL & STATE RESET HELPER
+  // ------------------------------------------------------------------
+
+  const closePaymentModal = useCallback(() => {
+    setEditingRepair(null);
+    setEditCost('');
+    setEditAdvance('');
+    setEditPaid(false);
+    setSavingEdit(false);
+    savingRef.current = false;
+  }, []);
+
+  // ------------------------------------------------------------------
+  // SHARED PAYMENT UPDATE SERVICE
+  // ------------------------------------------------------------------
+
+  const updatePaymentStatus = useCallback(
+    async (
+      repair: Repair,
+      paymentType: 'cash' | 'online',
+      overrides?: { cost?: number; advance?: number; isPaid?: boolean }
+    ) => {
+      if (savingRef.current) return;
+      savingRef.current = true;
+      setSavingEdit(true);
+
+      try {
+        const { id, createdAt, updatedAt, createdByName, ...baseInput } = repair;
+        const cost = overrides?.cost ?? repair.repairCost;
+        const advance = overrides?.advance ?? repair.advanceAmount;
+        const isPaid = overrides?.isPaid ?? true;
+
+        await updateRepair({
+          ...baseInput,
+          id,
+          repairCost: cost,
+          advanceAmount: advance,
+          isPaid,
+          paymentType,
+        });
+
+        if (mountedRef.current) {
+          closePaymentModal();
+          await refresh();
+        }
+      } catch {
+        Alert.alert('Error', 'Failed to update payment details.');
+      } finally {
+        if (mountedRef.current) {
+          setSavingEdit(false);
+        }
+        savingRef.current = false;
+      }
+    },
+    [refresh, closePaymentModal]
+  );
+
+  // ------------------------------------------------------------------
+  // SINGLE PASS CALCULATION (FILTER + STATS + DUES/PAID LISTS)
+  // ------------------------------------------------------------------
+
+  const { stats, duesList, paidList } = useMemo(() => {
+    let totalPaid = 0;
+    let totalDues = 0;
+    let totalValue = 0;
+    let totalExpense = 0;
+    let cashPaid = 0;
+    let onlinePaid = 0;
+
+    const dues: Repair[] = [];
+    const paid: Repair[] = [];
+
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const currentDay = now.getDay();
+    const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - currentDay);
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const isCustomValid = period !== 'custom' || customEndDate >= customStartDate;
+
+    repairs.forEach((r) => {
+      if (!r.dateReceived) return;
+      const rDate = new Date(r.dateReceived + (r.dateReceived.includes('T') ? '' : 'T12:00:00'));
+      if (Number.isNaN(rDate.getTime())) return;
+
+      const rDateStart = new Date(rDate.getFullYear(), rDate.getMonth(), rDate.getDate());
+
+      let matchesPeriod = true;
+      if (period === 'today') {
+        matchesPeriod = rDateStart >= startOfToday;
+      } else if (period === 'week') {
+        matchesPeriod = rDateStart >= startOfWeek;
+      } else if (period === 'month') {
+        matchesPeriod = rDateStart >= startOfMonth;
+      } else if (period === 'custom' && isCustomValid) {
+        const start = new Date(customStartDate.getFullYear(), customStartDate.getMonth(), customStartDate.getDate());
+        const end = new Date(customEndDate.getFullYear(), customEndDate.getMonth(), customEndDate.getDate());
+        matchesPeriod = rDateStart >= start && rDateStart <= end;
+      }
+
+      if (!matchesPeriod) return;
+
+      if (r.status === 'cancelled') return;
+
+      const cost = Number(r.repairCost || 0);
+      const exp = Number(r.expense || 0);
+      const adv = Number(r.advanceAmount || 0);
+
+      totalValue += cost;
+      totalExpense += exp;
+
+      const paidAmt = calculatePaidAmount(r.isPaid, cost, adv);
+      if (!r.isPaid) {
+        totalDues += calculateDue(cost, adv);
+      }
+      totalPaid += paidAmt;
+
+      if (r.paymentType === 'online') {
+        onlinePaid += paidAmt;
+      } else {
+        cashPaid += paidAmt;
+      }
+
+      if (!r.isPaid && cost > adv) {
+        dues.push(r);
+      } else if (r.isPaid) {
+        paid.push(r);
+      }
+    });
+
+    const netProfit = calculateNetProfit(totalValue, totalExpense);
+
+    return {
+      stats: { totalPaid, totalDues, totalValue, totalExpense, netProfit, cashPaid, onlinePaid },
+      duesList: dues,
+      paidList: paid,
+    };
+  }, [repairs, period, customStartDate, customEndDate]);
+
+  const activeList = subTab === 'dues' ? duesList : paidList;
+
+  // ------------------------------------------------------------------
+  // ACTION HANDLERS
+  // ------------------------------------------------------------------
+
+  const handleCall = useCallback(async (phone: string) => {
+    const raw = phone.trim();
+    if (!raw) return;
+    const dial = raw.replace(/[^\d+]/g, '');
+    const url = `tel:${dial}`;
+    try {
+      const canOpen = await Linking.canOpenURL(url);
+      if (canOpen) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert('Call Error', 'Phone calls are not supported on this device.');
+      }
+    } catch {
+      Alert.alert('Call Error', 'Could not place phone call.');
+    }
+  }, []);
+
+  const handleMarkPaid = useCallback(
+    (item: Repair) => {
+      if (savingRef.current) return;
+      Alert.alert(
+        'Payment Type',
+        `Choose payment method to mark ${item.customerName}'s job as fully paid:`,
+        [
+          {
+            text: '💵 Cash',
+            onPress: () => void updatePaymentStatus(item, 'cash', { isPaid: true }),
+          },
+          {
+            text: '📱 Online',
+            onPress: () => void updatePaymentStatus(item, 'online', { isPaid: true }),
+          },
+        ],
+        { cancelable: true }
+      );
+    },
+    [updatePaymentStatus]
+  );
+
+  const handleSendWhatsAppReminder = useCallback(async (item: Repair) => {
+    const rawPhone = item.phone?.trim() || '';
+    if (!rawPhone) return;
+
+    const digits = rawPhone.replace(/\D/g, '');
+    const phone = digits.length === 10 ? `91${digits}` : digits;
+
+    const dueAmount = calculateDue(item.repairCost, item.advanceAmount);
+    const msg = `Dear ${item.customerName},\n\nThis is a friendly reminder that a payment of ${formatCurrency(dueAmount)} is outstanding for your repair order (${item.deviceModel}).\n\nPlease clear the balance at your earliest convenience.\n\nThank you!\nMCA Phone Wala`;
+
+    const url = `whatsapp://send?phone=${phone}&text=${encodeURIComponent(msg)}`;
+    const webUrl = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+
+    try {
+      const canOpen = await Linking.canOpenURL(url);
+      if (canOpen) {
+        await Linking.openURL(url);
+      } else {
+        await Linking.openURL(webUrl);
+      }
+    } catch {
+      Alert.alert('WhatsApp Error', 'Could not launch WhatsApp.');
+    }
+  }, []);
+
+  const startEditPayment = useCallback((item: Repair) => {
+    setEditingRepair(item);
+    setEditCost(String(item.repairCost));
+    setEditAdvance(String(item.advanceAmount));
+    setEditPaid(item.isPaid);
+  }, []);
+
+  const onSavePayment = useCallback(
+    async (type: 'cash' | 'online') => {
+      if (!editingRepair || savingRef.current) return;
+      const cost = parseMoney(editCost);
+      const advance = parseMoney(editAdvance);
+
+      if (advance > cost) {
+        Alert.alert('Invalid amounts', 'Advance cannot be higher than total cost.');
+        return;
+      }
+
+      const isPaid = editPaid || (advance === cost && cost > 0);
+      await updatePaymentStatus(editingRepair, type, { cost, advance, isPaid });
+    },
+    [editingRepair, editCost, editAdvance, editPaid, updatePaymentStatus]
+  );
+
+  const handleStartDateChange = useCallback((event: any, date?: Date) => {
+    setShowStartDatePicker(Platform.OS === 'ios');
+    if (date) {
+      if (date > customEndDate) {
+        Alert.alert('Invalid Date Range', 'Start date cannot be after end date.');
+        return;
+      }
+      setCustomStartDate(date);
+    }
+  }, [customEndDate]);
+
+  const handleEndDateChange = useCallback((event: any, date?: Date) => {
+    setShowEndDatePicker(Platform.OS === 'ios');
+    if (date) {
+      if (date < customStartDate) {
+        Alert.alert('Invalid Date Range', 'End date cannot be before start date.');
+        return;
+      }
+      setCustomEndDate(date);
+    }
+  }, [customStartDate]);
+
+  // ------------------------------------------------------------------
+  // LIST RENDER ITEM
+  // ------------------------------------------------------------------
+
+  const renderItem = useCallback(
+    ({ item }: { item: Repair }) => {
+      const cost = Number(item.repairCost || 0);
+      const adv = Number(item.advanceAmount || 0);
+      return (
+        <View style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Pressable
+            onPress={() => navigation.navigate('RepairDetail', { repairId: item.id })}
+            style={styles.rowMain}
+          >
+            <View style={styles.rowHeader}>
+              <Text style={[styles.custName, { color: colors.text }]} numberOfLines={1}>
+                {item.customerName}
+              </Text>
+              <Text style={[styles.date, { color: colors.textMuted }]}>
+                {formatDateDisplay(item.dateReceived)}
+              </Text>
+            </View>
+            <Text style={[styles.device, { color: colors.textMuted }]} numberOfLines={1}>
+              {item.deviceModel}
+            </Text>
+            <View style={styles.amountRow}>
+              <Text style={[styles.costBreakdown, { color: colors.textMuted }]}>
+                Total: {formatCurrency(cost)} (Adv: {formatCurrency(adv)})
+              </Text>
+              {subTab === 'dues' ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <View style={styles.unpaidBadge}>
+                    <Text style={[styles.unpaidText, { color: colors.danger }]}>Unpaid</Text>
+                  </View>
+                  {item.phone ? (
+                    <Pressable
+                      onPress={() => void handleSendWhatsAppReminder(item)}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        backgroundColor: 'rgba(34, 197, 94, 0.12)',
+                        paddingHorizontal: 8,
+                        paddingVertical: 3,
+                        borderRadius: 6,
+                        gap: 4,
+                        borderWidth: 1,
+                        borderColor: 'rgba(34, 197, 94, 0.25)',
+                      }}
+                    >
+                      <MessageSquare size={10} color="#22C55E" fill="#22C55E" />
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: '#22C55E' }}>
+                        Remind
+                      </Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+              ) : (
+                <View style={styles.paidBadge}>
+                  <CheckCircle size={14} color={colors.success} />
+                  <Text style={[styles.paidText, { color: colors.success }]}>Paid</Text>
+                </View>
+              )}
+            </View>
+          </Pressable>
+          {subTab === 'dues' ? (
+            <View style={[styles.rowActions, { borderLeftWidth: StyleSheet.hairlineWidth, borderLeftColor: colors.border }]}>
+              <Pressable
+                onPress={() => handleMarkPaid(item)}
+                style={[styles.actionIconBtn, { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}
+              >
+                <CheckCircle size={15} color={colors.success} />
+              </Pressable>
+              <Pressable
+                onPress={() => startEditPayment(item)}
+                style={[styles.actionIconBtn, item.phone ? { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border } : {}]}
+              >
+                <Pencil size={15} color={colors.textMuted} />
+              </Pressable>
+              {item.phone ? (
+                <Pressable
+                  onPress={() => void handleCall(item.phone)}
+                  style={[styles.actionIconBtn, { backgroundColor: colors.surface2 }]}
+                >
+                  <Phone size={15} color={colors.accent} />
+                </Pressable>
+              ) : null}
+            </View>
+          ) : null}
+        </View>
+      );
+    },
+    [colors, navigation, subTab, handleSendWhatsAppReminder, handleMarkPaid, startEditPayment, handleCall]
+  );
+
+  const keyExtractor = useCallback((item: Repair) => String(item.id), []);
 
   if (!isOwner) {
     return (
@@ -72,203 +459,6 @@ export function FinanceScreen({ navigation }: Props) {
       </SafeAreaView>
     );
   }
-
-  const filteredByPeriodRepairs = useMemo(() => {
-    const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const currentDay = now.getDay();
-    const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - currentDay);
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
-    return repairs.filter((r) => {
-      if (!r.dateReceived) return false;
-      const rDate = new Date(r.dateReceived + (r.dateReceived.includes('T') ? '' : 'T12:00:00'));
-      if (Number.isNaN(rDate.getTime())) return false;
-      
-      const rDateStart = new Date(rDate.getFullYear(), rDate.getMonth(), rDate.getDate());
-
-      if (period === 'today') {
-        return rDateStart >= startOfToday;
-      }
-      if (period === 'week') {
-        return rDateStart >= startOfWeek;
-      }
-      if (period === 'month') {
-        return rDateStart >= startOfMonth;
-      }
-      if (period === 'custom') {
-        const start = new Date(customStartDate.getFullYear(), customStartDate.getMonth(), customStartDate.getDate());
-        const end = new Date(customEndDate.getFullYear(), customEndDate.getMonth(), customEndDate.getDate());
-        return rDateStart >= start && rDateStart <= end;
-      }
-      return true;
-    });
-  }, [repairs, period, customStartDate, customEndDate]);
-
-  const stats = useMemo(() => {
-    let totalPaid = 0;
-    let totalDues = 0;
-    let totalValue = 0;
-    let totalExpense = 0;
-    let cashPaid = 0;
-    let onlinePaid = 0;
-
-    filteredByPeriodRepairs.forEach((r) => {
-      if (r.status === 'cancelled' || r.status === 'pending' || r.status === 'completed') return;
-      const cost = Number(r.repairCost || 0);
-      const exp = Number(r.expense || 0);
-      const adv = Number(r.advanceAmount || 0);
-
-      totalValue += cost;
-      totalExpense += exp;
-      let paidAmt = 0;
-      if (r.isPaid) {
-        paidAmt = cost;
-      } else {
-        paidAmt = adv;
-        const due = cost - adv;
-        if (due > 0) totalDues += due;
-      }
-      totalPaid += paidAmt;
-      if (r.paymentType === 'online') {
-        onlinePaid += paidAmt;
-      } else {
-        cashPaid += paidAmt;
-      }
-    });
-
-    const netProfit = totalValue - totalExpense;
-
-    return { totalPaid, totalDues, totalValue, totalExpense, netProfit, cashPaid, onlinePaid };
-  }, [filteredByPeriodRepairs]);
-
-  const duesList = useMemo(() => {
-    return filteredByPeriodRepairs.filter((r) => 
-      r.status !== 'cancelled' && 
-      r.status !== 'pending' && 
-      r.status !== 'completed' && 
-      !r.isPaid && 
-      Number(r.repairCost || 0) > Number(r.advanceAmount || 0)
-    );
-  }, [filteredByPeriodRepairs]);
-
-  const paidList = useMemo(() => {
-    return filteredByPeriodRepairs.filter((r) => 
-      r.status !== 'cancelled' && 
-      r.status !== 'pending' && 
-      r.status !== 'completed' && 
-      r.isPaid
-    );
-  }, [filteredByPeriodRepairs]);
-
-  const activeList = subTab === 'dues' ? duesList : paidList;
-
-  const handleCall = (phone: string) => {
-    const raw = phone.trim();
-    if (!raw) return;
-    const dial = raw.replace(/[^\d+]/g, '');
-    void Linking.openURL(`tel:${dial}`).catch(() => { });
-  };
-
-  const handleMarkPaid = async (item: Repair) => {
-    Alert.alert(
-      'Payment Type',
-      `Choose payment method to mark ${item.customerName}'s job as fully paid:`,
-      [
-        {
-          text: '💵 Cash',
-          onPress: async () => {
-            try {
-              const { id, createdAt, updatedAt, ...baseInput } = item;
-              await updateRepair({
-                ...baseInput,
-                id,
-                isPaid: true,
-                paymentType: 'cash',
-              });
-              await refresh();
-            } catch {
-              Alert.alert('Error', 'Failed to update payment status.');
-            }
-          },
-        },
-        {
-          text: '📱 Online',
-          onPress: async () => {
-            try {
-              const { id, createdAt, updatedAt, ...baseInput } = item;
-              await updateRepair({
-                ...baseInput,
-                id,
-                isPaid: true,
-                paymentType: 'online',
-              });
-              await refresh();
-            } catch {
-              Alert.alert('Error', 'Failed to update payment status.');
-            }
-          },
-        },
-      ],
-      { cancelable: true }
-    );
-  };
-
-  const handleSendWhatsAppReminder = (item: Repair) => {
-    const rawPhone = item.phone?.trim() || '';
-    if (!rawPhone) return;
-
-    const digits = rawPhone.replace(/\D/g, '');
-    const phone = digits.length === 10 ? `91${digits}` : digits;
-
-    const dueAmount = item.repairCost - item.advanceAmount;
-    const msg = `Dear ${item.customerName},\n\nThis is a friendly reminder that a payment of ${formatCurrency(dueAmount)} is outstanding for your repair order (${item.deviceModel}).\n\nPlease clear the balance at your earliest convenience.\n\nThank you!\nMCA Phone Wala`;
-
-    const url = `whatsapp://send?phone=${phone}&text=${encodeURIComponent(msg)}`;
-    void Linking.openURL(url).catch(() => {
-      const webUrl = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
-      void Linking.openURL(webUrl).catch(() => {
-        Alert.alert('WhatsApp Error', 'Could not launch WhatsApp.');
-      });
-    });
-  };
-
-  const startEditPayment = (item: Repair) => {
-    setEditingRepair(item);
-    setEditCost(String(item.repairCost));
-    setEditAdvance(String(item.advanceAmount));
-    setEditPaid(item.isPaid);
-  };
-
-  const onSavePayment = async (type: 'cash' | 'online') => {
-    if (!editingRepair) return;
-    const cost = parseFloat(editCost) || 0;
-    const advance = parseFloat(editAdvance) || 0;
-
-    if (advance > cost) {
-      Alert.alert('Invalid amounts', 'Advance cannot be higher than total cost.');
-      return;
-    }
-
-    setSavingEdit(true);
-    try {
-      const { id, createdAt, updatedAt, ...baseInput } = editingRepair;
-      await updateRepair({
-        ...baseInput,
-        id,
-        repairCost: cost,
-        advanceAmount: advance,
-        isPaid: editPaid || (advance === cost && cost > 0),
-        paymentType: type,
-      });
-      setEditingRepair(null);
-      await refresh();
-    } catch {
-      Alert.alert('Error', 'Failed to save payment details.');
-    } finally {
-      setSavingEdit(false);
-    }
-  };
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top']}>
@@ -356,12 +546,7 @@ export function FinanceScreen({ navigation }: Props) {
           value={customStartDate}
           mode="date"
           display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={(event, date) => {
-            setShowStartDatePicker(Platform.OS === 'ios');
-            if (date) {
-              setCustomStartDate(date);
-            }
-          }}
+          onChange={handleStartDateChange}
         />
       )}
 
@@ -370,12 +555,7 @@ export function FinanceScreen({ navigation }: Props) {
           value={customEndDate}
           mode="date"
           display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={(event, date) => {
-            setShowEndDatePicker(Platform.OS === 'ios');
-            if (date) {
-              setCustomEndDate(date);
-            }
-          }}
+          onChange={handleEndDateChange}
         />
       )}
 
@@ -460,101 +640,19 @@ export function FinanceScreen({ navigation }: Props) {
       ) : (
         <FlatList
           data={activeList}
-          keyExtractor={(item) => String(item.id)}
+          keyExtractor={keyExtractor}
           contentContainerStyle={styles.list}
+          initialNumToRender={10}
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          updateCellsBatchingPeriod={50}
+          removeClippedSubviews={Platform.OS === 'android'}
           ListEmptyComponent={
             <Text style={[styles.empty, { color: colors.textMuted }]}>
               {subTab === 'dues' ? 'No unpaid jobs! All paid up.' : 'No paid jobs yet.'}
             </Text>
           }
-          renderItem={({ item }) => {
-            const cost = Number(item.repairCost || 0);
-            const adv = Number(item.advanceAmount || 0);
-            const balance = cost - adv;
-            return (
-              <View style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-
-                <Pressable
-                  onPress={() => navigation.navigate('RepairDetail', { repairId: item.id })}
-                  style={styles.rowMain}
-                >
-                  <View style={styles.rowHeader}>
-                    <Text style={[styles.custName, { color: colors.text }]} numberOfLines={1}>
-                      {item.customerName}
-                    </Text>
-                    <Text style={[styles.date, { color: colors.textMuted }]}>
-                      {formatDateDisplay(item.dateReceived)}
-                    </Text>
-                  </View>
-                  <Text style={[styles.device, { color: colors.textMuted }]} numberOfLines={1}>
-                    {item.deviceModel}
-                  </Text>
-                  <View style={styles.amountRow}>
-                    <Text style={[styles.costBreakdown, { color: colors.textMuted }]}>
-                      Total: {formatCurrency(cost)} (Adv: {formatCurrency(adv)})
-                    </Text>
-                    {subTab === 'dues' ? (
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                        <View style={styles.unpaidBadge}>
-                          <Text style={[styles.unpaidText, { color: colors.danger }]}>Unpaid</Text>
-                        </View>
-                        {item.phone ? (
-                          <Pressable
-                            onPress={() => handleSendWhatsAppReminder(item)}
-                            style={{
-                              flexDirection: 'row',
-                              alignItems: 'center',
-                              backgroundColor: 'rgba(34, 197, 94, 0.12)',
-                              paddingHorizontal: 8,
-                              paddingVertical: 3,
-                              borderRadius: 6,
-                              gap: 4,
-                              borderWidth: 1,
-                              borderColor: 'rgba(34, 197, 94, 0.25)',
-                            }}
-                          >
-                            <MessageSquare size={10} color="#22C55E" fill="#22C55E" />
-                            <Text style={{ fontSize: 10, fontWeight: '700', color: '#22C55E' }}>
-                              Remind
-                            </Text>
-                          </Pressable>
-                        ) : null}
-                      </View>
-                    ) : (
-                      <View style={styles.paidBadge}>
-                        <CheckCircle size={14} color={colors.success} />
-                        <Text style={[styles.paidText, { color: colors.success }]}>Paid</Text>
-                      </View>
-                    )}
-                  </View>
-                </Pressable>
-                {subTab === 'dues' ? (
-                  <View style={[styles.rowActions, { borderLeftWidth: StyleSheet.hairlineWidth, borderLeftColor: colors.border }]}>
-                    <Pressable
-                      onPress={() => handleMarkPaid(item)}
-                      style={[styles.actionIconBtn, { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}
-                    >
-                      <CheckCircle size={15} color={colors.success} />
-                    </Pressable>
-                    <Pressable
-                      onPress={() => startEditPayment(item)}
-                      style={[styles.actionIconBtn, item.phone ? { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border } : {}]}
-                    >
-                      <Pencil size={15} color={colors.textMuted} />
-                    </Pressable>
-                    {item.phone ? (
-                      <Pressable
-                        onPress={() => handleCall(item.phone)}
-                        style={[styles.actionIconBtn, { backgroundColor: colors.surface2 }]}
-                      >
-                        <Phone size={15} color={colors.accent} />
-                      </Pressable>
-                    ) : null}
-                  </View>
-                ) : null}
-              </View>
-            );
-          }}
+          renderItem={renderItem}
         />
       )}
 
@@ -564,10 +662,10 @@ export function FinanceScreen({ navigation }: Props) {
           visible={!!editingRepair}
           transparent
           animationType="fade"
-          onRequestClose={() => setEditingRepair(null)}
+          onRequestClose={closePaymentModal}
         >
           <View style={styles.modalOverlay}>
-            <Pressable style={StyleSheet.absoluteFill} onPress={() => setEditingRepair(null)} />
+            <Pressable style={StyleSheet.absoluteFill} onPress={closePaymentModal} />
             <View style={[styles.modalContent, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <Text style={[styles.modalTitle, { color: colors.text }]}>Edit Payment</Text>
               <Text style={[styles.modalSub, { color: colors.textMuted }]} numberOfLines={1}>
@@ -657,6 +755,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  title: {
+    fontSize: 22,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
   periodContainer: {
     marginHorizontal: 18,
     marginBottom: 14,
@@ -686,174 +789,148 @@ const styles = StyleSheet.create({
   },
   customDateContainer: {
     flexDirection: 'row',
-    marginHorizontal: 18,
-    marginBottom: 14,
     gap: 10,
+    marginHorizontal: 18,
+    marginBottom: 12,
   },
   customDateBtn: {
     flex: 1,
-    borderWidth: 1,
+    padding: 10,
     borderRadius: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    borderWidth: 1,
     alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '800',
-    letterSpacing: -0.3,
   },
   statsContainer: {
     flexDirection: 'row',
-    paddingHorizontal: 18,
     gap: 10,
+    marginHorizontal: 18,
     marginBottom: 8,
   },
   statCard: {
     flex: 1,
+    padding: 14,
+    borderRadius: 16,
     borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.02,
-    shadowRadius: 4,
-  },
-  statLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 4,
-  },
-  statValue: {
-    fontSize: 18,
-    fontWeight: '800',
-    marginBottom: 2,
-  },
-  statSubText: {
-    fontSize: 9,
-    opacity: 0.8,
   },
   fullStatCard: {
     marginHorizontal: 18,
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
     marginBottom: 14,
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: 1,
   },
   fullStatHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  fullStatValue: {
-    fontSize: 20,
+  statLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  statValue: {
+    fontSize: 18,
     fontWeight: '800',
+    marginTop: 4,
+  },
+  fullStatValue: {
+    fontSize: 22,
+    fontWeight: '800',
+    marginTop: 4,
+  },
+  statSubText: {
+    fontSize: 10,
     marginTop: 2,
+    fontWeight: '500',
   },
   tabContainer: {
     flexDirection: 'row',
     marginHorizontal: 18,
-    borderWidth: 1,
-    borderColor: 'transparent',
-    backgroundColor: 'rgba(124, 58, 237, 0.05)',
-    borderRadius: 8,
-    padding: 2,
-    marginBottom: 10,
+    marginBottom: 12,
+    gap: 8,
   },
   tabBtn: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
-    borderRadius: 6,
+    paddingVertical: 10,
+    borderRadius: 12,
     borderWidth: 1,
+    alignItems: 'center',
   },
   tabText: {
-    fontSize: 12,
-  },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    fontSize: 13,
   },
   list: {
     paddingHorizontal: 18,
-    paddingBottom: 110,
-  },
-  empty: {
-    textAlign: 'center',
-    marginTop: spacing.xl,
-    fontSize: 14,
+    paddingBottom: 100,
   },
   row: {
-    flexDirection: 'row',
+    borderRadius: 16,
     borderWidth: 1,
-    borderRadius: 12,
-    marginBottom: 6,
+    marginBottom: 10,
+    flexDirection: 'row',
     overflow: 'hidden',
   },
   rowMain: {
     flex: 1,
-    padding: 10,
+    padding: 14,
   },
   rowHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 2,
   },
   custName: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700',
     flex: 1,
+    marginRight: 8,
   },
   date: {
-    fontSize: 10,
+    fontSize: 11,
+    fontWeight: '500',
   },
   device: {
-    fontSize: 11,
-    marginBottom: 6,
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 2,
   },
   amountRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginTop: 10,
   },
   costBreakdown: {
-    fontSize: 10,
+    fontSize: 11,
+    fontWeight: '600',
   },
-  balanceText: {
-    fontSize: 12,
+  unpaidBadge: {
+    backgroundColor: 'rgba(239, 68, 68, 0.12)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  unpaidText: {
+    fontSize: 10,
     fontWeight: '800',
+    textTransform: 'uppercase',
   },
   paidBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
+    gap: 4,
+    backgroundColor: 'rgba(34, 197, 94, 0.12)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
   paidText: {
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 10,
+    fontWeight: '800',
+    textTransform: 'uppercase',
   },
-  unpaidBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-  },
-  unpaidText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  callBtn: {
-    width: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderLeftWidth: StyleSheet.hairlineWidth,
-  },
-
   rowActions: {
     flexDirection: 'column',
     width: 44,
@@ -863,33 +940,44 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  empty: {
+    textAlign: 'center',
+    marginTop: 30,
+    fontSize: 14,
+    fontWeight: '500',
+  },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'center',
-    padding: 24,
+    alignItems: 'center',
+    padding: 20,
   },
   modalContent: {
+    width: '100%',
+    maxWidth: 380,
+    borderRadius: 20,
     borderWidth: 1,
-    borderRadius: 16,
     padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 8,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '800',
-    marginBottom: 4,
   },
   modalSub: {
     fontSize: 12,
-    marginBottom: 20,
+    fontWeight: '500',
+    marginTop: 2,
+    marginBottom: 16,
   },
   modalInputGroup: {
-    marginBottom: 16,
+    marginBottom: 14,
   },
   inputLabel: {
     fontSize: 11,
@@ -899,22 +987,22 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   modalTextInput: {
+    height: 44,
+    borderRadius: 10,
     borderWidth: 1,
-    borderRadius: 8,
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
   },
   modalActions: {
     flexDirection: 'row',
     gap: 10,
-    marginTop: 10,
+    marginTop: 4,
   },
   modalBtn: {
     flex: 1,
     height: 44,
-    borderRadius: 8,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -1,33 +1,57 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { Alert } from 'react-native';
 
 import { deleteRepair as deleteDbRepair, getAllRepairs } from '../db/database';
 import type { Repair } from '../types/repair';
 
-type RepairsContextValue = {
+type RepairsStateContextValue = {
   repairs: Repair[];
   loading: boolean;
   ready: boolean;
-  refresh: () => Promise<void>;
-  deleteRepair: (repairId: number) => Promise<void>;
 };
 
-const RepairsContext = createContext<RepairsContextValue | null>(null);
+type RepairsActionsContextValue = {
+  refresh: () => Promise<void>;
+  deleteRepair: (repairId: number) => Promise<void>;
+  addRepairToState: (repair: Repair) => void;
+  updateRepairInState: (repairId: number, updates: Partial<Repair>) => void;
+};
+
+type RepairsContextValue = RepairsStateContextValue & RepairsActionsContextValue;
+
+const RepairsStateContext = createContext<RepairsStateContextValue | null>(null);
+const RepairsActionsContext = createContext<RepairsActionsContextValue | null>(null);
 
 export function RepairsProvider({ children }: { children: React.ReactNode }) {
   const [repairs, setRepairs] = useState<Repair[]>([]);
   const [loading, setLoading] = useState(true);
   const [ready, setReady] = useState(false);
 
+  const requestIdRef = useRef(0);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
   const refresh = useCallback(async () => {
+    const currentRequestId = ++requestIdRef.current;
     setLoading(true);
     try {
       const list = await getAllRepairs();
-      setRepairs(list);
-      setReady(true);
+      if (currentRequestId === requestIdRef.current && mountedRef.current) {
+        setRepairs(list);
+        setReady(true);
+      }
     } catch (err) {
       console.warn('Error fetching repairs:', err);
     } finally {
-      setLoading(false);
+      if (currentRequestId === requestIdRef.current && mountedRef.current) {
+        setLoading(false);
+      }
     }
   }, []);
 
@@ -35,21 +59,67 @@ export function RepairsProvider({ children }: { children: React.ReactNode }) {
     void refresh();
   }, [refresh]);
 
-  const deleteRepair = useCallback(async (repairId: number) => {
-    await deleteDbRepair(repairId);
-    setRepairs(current => current.filter(r => r.id !== repairId));
+  const addRepairToState = useCallback((newRepair: Repair) => {
+    setRepairs((current) => [newRepair, ...current.filter((r) => r.id !== newRepair.id)]);
   }, []);
 
-  const value = useMemo(
-    () => ({ repairs, loading, ready, refresh, deleteRepair }),
-    [repairs, loading, ready, refresh, deleteRepair]
+  const updateRepairInState = useCallback((repairId: number, updates: Partial<Repair>) => {
+    setRepairs((current) =>
+      current.map((r) => (r.id === repairId ? { ...r, ...updates } : r))
+    );
+  }, []);
+
+  const deleteRepair = useCallback(async (repairId: number) => {
+    let backup: Repair[] = [];
+    setRepairs((current) => {
+      backup = current;
+      return current.filter((r) => r.id !== repairId);
+    });
+
+    try {
+      await deleteDbRepair(repairId);
+    } catch (err: unknown) {
+      if (mountedRef.current) {
+        setRepairs(backup);
+        const msg = err instanceof Error ? err.message : 'Could not delete repair';
+        Alert.alert('Delete Failed', msg);
+      }
+    }
+  }, []);
+
+  const stateValue = useMemo(
+    () => ({ repairs, loading, ready }),
+    [repairs, loading, ready]
   );
 
-  return <RepairsContext.Provider value={value}>{children}</RepairsContext.Provider>;
+  const actionsValue = useMemo(
+    () => ({ refresh, deleteRepair, addRepairToState, updateRepairInState }),
+    [refresh, deleteRepair, addRepairToState, updateRepairInState]
+  );
+
+  return (
+    <RepairsStateContext.Provider value={stateValue}>
+      <RepairsActionsContext.Provider value={actionsValue}>
+        {children}
+      </RepairsActionsContext.Provider>
+    </RepairsStateContext.Provider>
+  );
+}
+
+export function useRepairsState(): RepairsStateContextValue {
+  const ctx = useContext(RepairsStateContext);
+  if (!ctx) throw new Error('useRepairsState must be used within RepairsProvider');
+  return ctx;
+}
+
+export function useRepairActions(): RepairsActionsContextValue {
+  const ctx = useContext(RepairsActionsContext);
+  if (!ctx) throw new Error('useRepairActions must be used within RepairsProvider');
+  return ctx;
 }
 
 export function useRepairs(): RepairsContextValue {
-  const ctx = useContext(RepairsContext);
-  if (!ctx) throw new Error('useRepairs must be used within RepairsProvider');
-  return ctx;
+  const state = useRepairsState();
+  const actions = useRepairActions();
+  return useMemo(() => ({ ...state, ...actions }), [state, actions]);
 }

@@ -22,7 +22,7 @@ import { formatDateDisplay } from '../utils/format';
 import type { RootStackParamList } from '../navigation/types';
 import type { AppColors } from '../theme';
 import { spacing } from '../theme';
-import type { RepairStatus } from '../types/repair';
+import type { Repair, RepairStatus } from '../types/repair';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
@@ -113,6 +113,28 @@ export function HomeScreen({ navigation }: Props) {
     [refresh]
   );
 
+  const renderSectionHeader = useCallback(
+    ({ section: { title } }: { section: { title: string } }) => (
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionHeaderText}>{title}</Text>
+      </View>
+    ),
+    [styles.sectionHeader, styles.sectionHeaderText]
+  );
+
+  const renderItem = useCallback(
+    ({ item }: { item: Repair }) => (
+      <RepairCard
+        repair={item}
+        onPress={() => navigation.navigate('RepairDetail', { repairId: item.id })}
+        onStatusChange={handleStatusChange}
+      />
+    ),
+    [navigation, handleStatusChange]
+  );
+
+  const keyExtractor = useCallback((item: Repair) => String(item.id), []);
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.main}>
@@ -138,7 +160,7 @@ export function HomeScreen({ navigation }: Props) {
         ) : (
           <SectionList
             sections={sections}
-            keyExtractor={(item) => String(item.id)}
+            keyExtractor={keyExtractor}
             contentContainerStyle={styles.list}
             refreshing={refreshing}
             onRefresh={handleRefresh}
@@ -148,18 +170,8 @@ export function HomeScreen({ navigation }: Props) {
                 {repairs.length === 0 ? 'No repairs yet.' : 'No jobs with this status.'}
               </Text>
             }
-            renderSectionHeader={({ section: { title } }) => (
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionHeaderText}>{title}</Text>
-              </View>
-            )}
-            renderItem={({ item }) => (
-              <RepairCard
-                repair={item}
-                onPress={() => navigation.navigate('RepairDetail', { repairId: item.id })}
-                onStatusChange={handleStatusChange}
-              />
-            )}
+            renderSectionHeader={renderSectionHeader}
+            renderItem={renderItem}
           />
         )}
       </View>
