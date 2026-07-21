@@ -37,6 +37,8 @@ yarn-error.*
 # Local JDK path for Android builds (see jdk.home.example)
 jdk.home
 android.sdk
+*.jdk
+jdk-17.0.12.jdk/
 
 # typescript
 *.tsbuildinfo
