@@ -3,7 +3,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  FlatList,
+  SectionList,
   StyleSheet,
   Text,
   View,
@@ -18,6 +18,7 @@ import { RepairCard } from '../components/RepairCard';
 import { useRepairs } from '../context/RepairsContext';
 import { useTheme } from '../context/ThemeContext';
 import { updateRepairStatus } from '../db/database';
+import { formatDateDisplay } from '../utils/format';
 import type { RootStackParamList } from '../navigation/types';
 import type { AppColors } from '../theme';
 import { spacing } from '../theme';
@@ -40,6 +41,21 @@ function createStyles(colors: AppColors) {
       fontSize: 15,
       lineHeight: 22,
     },
+    sectionHeader: {
+      backgroundColor: colors.bgGradient[0] || colors.bg,
+      paddingVertical: 8,
+      marginHorizontal: -6,
+      paddingHorizontal: 6,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    sectionHeaderText: {
+      color: colors.accent,
+      fontSize: 13,
+      fontWeight: '700',
+      letterSpacing: 0.3,
+      textAlign: 'center',
+    },
   });
   return s;
 }
@@ -55,6 +71,20 @@ export function HomeScreen({ navigation }: Props) {
     if (statusFilter === 'all') return repairs;
     return repairs.filter((r) => r.status === statusFilter);
   }, [repairs, statusFilter]);
+
+  const sections = useMemo(() => {
+    const groups: Record<string, typeof filteredRepairs> = {};
+    for (const r of filteredRepairs) {
+      const date = r.dateReceived || 'Unknown Date';
+      if (!groups[date]) groups[date] = [];
+      groups[date].push(r);
+    }
+    const sortedDates = Object.keys(groups).sort((a, b) => b.localeCompare(a));
+    return sortedDates.map((date) => ({
+      title: formatDateDisplay(date) || date,
+      data: groups[date],
+    }));
+  }, [filteredRepairs]);
 
   useFocusEffect(
     useCallback(() => {
@@ -72,8 +102,12 @@ export function HomeScreen({ navigation }: Props) {
   }, [refresh]);
 
   const handleStatusChange = useCallback(
-    async (repairId: number, status: RepairStatus): Promise<void> => {
-      await updateRepairStatus(repairId, status);
+    async (
+      repairId: number,
+      status: RepairStatus,
+      paymentUpdate?: { isPaid: boolean; paymentType?: 'cash' | 'online' }
+    ): Promise<void> => {
+      await updateRepairStatus(repairId, status, paymentUpdate);
       await refresh();
     },
     [refresh]
@@ -102,17 +136,23 @@ export function HomeScreen({ navigation }: Props) {
             <ActivityIndicator size="large" color={colors.accent} />
           </View>
         ) : (
-          <FlatList
-            data={filteredRepairs}
+          <SectionList
+            sections={sections}
             keyExtractor={(item) => String(item.id)}
             contentContainerStyle={styles.list}
             refreshing={refreshing}
             onRefresh={handleRefresh}
+            stickySectionHeadersEnabled={true}
             ListEmptyComponent={
               <Text style={styles.empty}>
                 {repairs.length === 0 ? 'No repairs yet.' : 'No jobs with this status.'}
               </Text>
             }
+            renderSectionHeader={({ section: { title } }) => (
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionHeaderText}>{title}</Text>
+              </View>
+            )}
             renderItem={({ item }) => (
               <RepairCard
                 repair={item}

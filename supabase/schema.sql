@@ -38,6 +38,7 @@ create table if not exists public.shops (
   id uuid primary key default uuid_generate_v4(),
   shop_name text not null default '',
   owner_id uuid not null references auth.users (id) on delete cascade,
+  business_type text not null default 'repair_shop' check (business_type in ('repair_shop', 'wholesaler')),
   created_at timestamptz not null default now()
 );
 
@@ -47,6 +48,12 @@ drop policy if exists "shops_select_member" on public.shops;
 create policy "shops_select_member" on public.shops
   for select using (
     id = public.get_user_shop_id(auth.uid())
+  );
+
+drop policy if exists "shops_select_owner" on public.shops;
+create policy "shops_select_owner" on public.shops
+  for select using (
+    owner_id = auth.uid()
   );
 
 drop policy if exists "shops_insert_owner" on public.shops;
@@ -142,6 +149,7 @@ create table if not exists public.repairs (
   expense double precision not null default 0,
   advance_amount double precision not null default 0,
   is_paid boolean not null default false,
+  payment_type text not null default 'cash' check (payment_type in ('cash', 'online')),
   image_phone_front text not null default '',
   image_phone_back text not null default '',
   image_thumbnail text not null default '',
@@ -429,4 +437,7 @@ create policy "Deny update on app_versions" on public.app_versions
 drop policy if exists "Deny delete on app_versions" on public.app_versions;
 create policy "Deny delete on app_versions" on public.app_versions
   for delete using (false);
+
+
+
 

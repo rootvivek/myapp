@@ -48,6 +48,7 @@ export function MainTabScreen({ navigation, route }: Props) {
     }
   };
 
+
   return (
     <TabContext.Provider value={{ activeTab, setActiveTab }}>
       <View style={[styles.container, { backgroundColor: colors.bg }]}>

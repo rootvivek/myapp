@@ -10,11 +10,14 @@ import {
   Modal,
   TextInput,
   Alert,
+  Platform,
+  ScrollView,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useFocusEffect } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Phone, CheckCircle, ArrowUpRight, Square, Pencil, CheckSquare, MessageSquare } from 'lucide-react-native';
+import { Phone, CheckCircle, ArrowUpRight, Square, Pencil, CheckSquare, MessageSquare, ArrowLeft, BookOpen } from 'lucide-react-native';
 
 import { useRepairs } from '../context/RepairsContext';
 import { useTheme } from '../context/ThemeContext';
@@ -36,7 +39,11 @@ export function FinanceScreen({ navigation }: Props) {
   const { isOwner } = useAuth();
   const { repairs, loading, refresh } = useRepairs();
   const [subTab, setSubTab] = useState<'dues' | 'paid'>('dues');
-  const [period, setPeriod] = useState<'today' | 'week' | 'month' | 'all'>('all');
+  const [period, setPeriod] = useState<'today' | 'week' | 'month' | 'all' | 'custom'>('all');
+  const [customStartDate, setCustomStartDate] = useState<Date>(new Date());
+  const [customEndDate, setCustomEndDate] = useState<Date>(new Date());
+  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+  const [showEndDatePicker, setShowEndDatePicker] = useState(false);
 
   // Edit payment states
   const [editingRepair, setEditingRepair] = useState<Repair | null>(null);
@@ -89,32 +96,50 @@ export function FinanceScreen({ navigation }: Props) {
       if (period === 'month') {
         return rDateStart >= startOfMonth;
       }
+      if (period === 'custom') {
+        const start = new Date(customStartDate.getFullYear(), customStartDate.getMonth(), customStartDate.getDate());
+        const end = new Date(customEndDate.getFullYear(), customEndDate.getMonth(), customEndDate.getDate());
+        return rDateStart >= start && rDateStart <= end;
+      }
       return true;
     });
-  }, [repairs, period]);
+  }, [repairs, period, customStartDate, customEndDate]);
 
   const stats = useMemo(() => {
     let totalPaid = 0;
     let totalDues = 0;
     let totalValue = 0;
     let totalExpense = 0;
+    let cashPaid = 0;
+    let onlinePaid = 0;
 
     filteredByPeriodRepairs.forEach((r) => {
       if (r.status === 'cancelled' || r.status === 'pending' || r.status === 'completed') return;
-      totalValue += r.repairCost;
-      totalExpense += r.expense || 0;
+      const cost = Number(r.repairCost || 0);
+      const exp = Number(r.expense || 0);
+      const adv = Number(r.advanceAmount || 0);
+
+      totalValue += cost;
+      totalExpense += exp;
+      let paidAmt = 0;
       if (r.isPaid) {
-        totalPaid += r.repairCost;
+        paidAmt = cost;
       } else {
-        totalPaid += r.advanceAmount;
-        const due = r.repairCost - r.advanceAmount;
+        paidAmt = adv;
+        const due = cost - adv;
         if (due > 0) totalDues += due;
+      }
+      totalPaid += paidAmt;
+      if (r.paymentType === 'online') {
+        onlinePaid += paidAmt;
+      } else {
+        cashPaid += paidAmt;
       }
     });
 
     const netProfit = totalValue - totalExpense;
 
-    return { totalPaid, totalDues, totalValue, totalExpense, netProfit };
+    return { totalPaid, totalDues, totalValue, totalExpense, netProfit, cashPaid, onlinePaid };
   }, [filteredByPeriodRepairs]);
 
   const duesList = useMemo(() => {
@@ -123,7 +148,7 @@ export function FinanceScreen({ navigation }: Props) {
       r.status !== 'pending' && 
       r.status !== 'completed' && 
       !r.isPaid && 
-      r.repairCost > r.advanceAmount
+      Number(r.repairCost || 0) > Number(r.advanceAmount || 0)
     );
   }, [filteredByPeriodRepairs]);
 
@@ -147,13 +172,11 @@ export function FinanceScreen({ navigation }: Props) {
 
   const handleMarkPaid = async (item: Repair) => {
     Alert.alert(
-      'Complete Due',
-      `Mark ${item.customerName}'s job as fully paid?`,
+      'Payment Type',
+      `Choose payment method to mark ${item.customerName}'s job as fully paid:`,
       [
-        { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Mark Paid',
-          style: 'default',
+          text: '💵 Cash',
           onPress: async () => {
             try {
               const { id, createdAt, updatedAt, ...baseInput } = item;
@@ -161,6 +184,7 @@ export function FinanceScreen({ navigation }: Props) {
                 ...baseInput,
                 id,
                 isPaid: true,
+                paymentType: 'cash',
               });
               await refresh();
             } catch {
@@ -168,7 +192,25 @@ export function FinanceScreen({ navigation }: Props) {
             }
           },
         },
-      ]
+        {
+          text: '📱 Online',
+          onPress: async () => {
+            try {
+              const { id, createdAt, updatedAt, ...baseInput } = item;
+              await updateRepair({
+                ...baseInput,
+                id,
+                isPaid: true,
+                paymentType: 'online',
+              });
+              await refresh();
+            } catch {
+              Alert.alert('Error', 'Failed to update payment status.');
+            }
+          },
+        },
+      ],
+      { cancelable: true }
     );
   };
 
@@ -198,7 +240,7 @@ export function FinanceScreen({ navigation }: Props) {
     setEditPaid(item.isPaid);
   };
 
-  const onSavePayment = async () => {
+  const onSavePayment = async (type: 'cash' | 'online') => {
     if (!editingRepair) return;
     const cost = parseFloat(editCost) || 0;
     const advance = parseFloat(editAdvance) || 0;
@@ -217,6 +259,7 @@ export function FinanceScreen({ navigation }: Props) {
         repairCost: cost,
         advanceAmount: advance,
         isPaid: editPaid || (advance === cost && cost > 0),
+        paymentType: type,
       });
       setEditingRepair(null);
       await refresh();
@@ -232,38 +275,109 @@ export function FinanceScreen({ navigation }: Props) {
       <LinearGradient colors={colors.bgGradient} style={StyleSheet.absoluteFillObject} />
 
       <View style={styles.header}>
+        {navigation && typeof navigation.canGoBack === 'function' && navigation.canGoBack() && (
+          <Pressable
+            onPress={() => navigation.goBack()}
+            style={{ marginRight: 12, padding: 4 }}
+          >
+            <ArrowLeft size={22} color={colors.text} />
+          </Pressable>
+        )}
         <Text style={[styles.title, { color: colors.text }]}>Earnings & Dues</Text>
       </View>
 
       {/* Time Period Filter Row */}
       <View style={styles.periodContainer}>
-        {([
-          { key: 'today', label: 'Today' },
-          { key: 'week', label: 'This Week' },
-          { key: 'month', label: 'This Month' },
-          { key: 'all', label: 'All Time' },
-        ] as const).map((p) => {
-          const active = period === p.key;
-          return (
-            <Pressable
-              key={p.key}
-              onPress={() => setPeriod(p.key)}
-              style={[
-                styles.periodBtn,
-                { borderColor: colors.border },
-                active && { backgroundColor: colors.accent, borderColor: colors.accent }
-              ]}
-            >
-              <Text style={[
-                styles.periodText,
-                { color: active ? '#FFFFFF' : colors.textMuted }
-              ]}>
-                {p.label}
-              </Text>
-            </Pressable>
-          );
-        })}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.periodScrollContent}
+          style={styles.periodScroll}
+        >
+          {([
+            { key: 'today', label: 'Today' },
+            { key: 'week', label: 'This Week' },
+            { key: 'month', label: 'This Month' },
+            { key: 'all', label: 'All Time' },
+            { key: 'custom', label: 'Custom' },
+          ] as const).map((p) => {
+            const active = period === p.key;
+            return (
+              <Pressable
+                key={p.key}
+                onPress={() => setPeriod(p.key)}
+                style={[
+                  styles.periodBtn,
+                  { borderColor: colors.border },
+                  active && { backgroundColor: colors.accent, borderColor: colors.accent }
+                ]}
+              >
+                <Text style={[
+                  styles.periodText,
+                  { color: active ? '#FFFFFF' : colors.textMuted }
+                ]}>
+                  {p.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
       </View>
+
+      {/* Custom Date Pickers */}
+      {period === 'custom' && (
+        <View style={styles.customDateContainer}>
+          <Pressable
+            onPress={() => setShowStartDatePicker(true)}
+            style={[styles.customDateBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
+            android_ripple={{ color: colors.border }}
+          >
+            <Text style={{ color: colors.textMuted, fontSize: 10, fontWeight: '700' }}>FROM DATE</Text>
+            <Text style={{ color: colors.text, fontSize: 13, fontWeight: '700', marginTop: 2 }}>
+              {customStartDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+            </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => setShowEndDatePicker(true)}
+            style={[styles.customDateBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
+            android_ripple={{ color: colors.border }}
+          >
+            <Text style={{ color: colors.textMuted, fontSize: 10, fontWeight: '700' }}>TO DATE</Text>
+            <Text style={{ color: colors.text, fontSize: 13, fontWeight: '700', marginTop: 2 }}>
+              {customEndDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+            </Text>
+          </Pressable>
+        </View>
+      )}
+
+      {showStartDatePicker && (
+        <DateTimePicker
+          value={customStartDate}
+          mode="date"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={(event, date) => {
+            setShowStartDatePicker(Platform.OS === 'ios');
+            if (date) {
+              setCustomStartDate(date);
+            }
+          }}
+        />
+      )}
+
+      {showEndDatePicker && (
+        <DateTimePicker
+          value={customEndDate}
+          mode="date"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={(event, date) => {
+            setShowEndDatePicker(Platform.OS === 'ios');
+            if (date) {
+              setCustomEndDate(date);
+            }
+          }}
+        />
+      )}
 
       {/* KPI Stats Cards */}
       <View style={[styles.fullStatCard, { backgroundColor: colors.surface, borderColor: colors.border, marginBottom: 8 }]}>
@@ -274,6 +388,14 @@ export function FinanceScreen({ navigation }: Props) {
         <Text style={[styles.fullStatValue, { color: colors.success }]}>
           {formatCurrency(stats.totalPaid)}
         </Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 6 }}>
+          <Text style={{ fontSize: 11, color: colors.textMuted, fontWeight: '600' }}>
+            💵 Cash: <Text style={{ color: colors.text, fontWeight: '700' }}>{formatCurrency(stats.cashPaid)}</Text>
+          </Text>
+          <Text style={{ fontSize: 11, color: colors.textMuted, fontWeight: '600' }}>
+            📱 Online: <Text style={{ color: colors.text, fontWeight: '700' }}>{formatCurrency(stats.onlinePaid)}</Text>
+          </Text>
+        </View>
       </View>
 
       <View style={styles.statsContainer}>
@@ -346,7 +468,9 @@ export function FinanceScreen({ navigation }: Props) {
             </Text>
           }
           renderItem={({ item }) => {
-            const balance = item.repairCost - item.advanceAmount;
+            const cost = Number(item.repairCost || 0);
+            const adv = Number(item.advanceAmount || 0);
+            const balance = cost - adv;
             return (
               <View style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}>
 
@@ -367,7 +491,7 @@ export function FinanceScreen({ navigation }: Props) {
                   </Text>
                   <View style={styles.amountRow}>
                     <Text style={[styles.costBreakdown, { color: colors.textMuted }]}>
-                      Total: {formatCurrency(item.repairCost)} (Adv: {formatCurrency(item.advanceAmount)})
+                      Total: {formatCurrency(cost)} (Adv: {formatCurrency(adv)})
                     </Text>
                     {subTab === 'dues' ? (
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -443,6 +567,7 @@ export function FinanceScreen({ navigation }: Props) {
           onRequestClose={() => setEditingRepair(null)}
         >
           <View style={styles.modalOverlay}>
+            <Pressable style={StyleSheet.absoluteFill} onPress={() => setEditingRepair(null)} />
             <View style={[styles.modalContent, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <Text style={[styles.modalTitle, { color: colors.text }]}>Edit Payment</Text>
               <Text style={[styles.modalSub, { color: colors.textMuted }]} numberOfLines={1}>
@@ -495,20 +620,21 @@ export function FinanceScreen({ navigation }: Props) {
 
               <View style={styles.modalActions}>
                 <Pressable
-                  onPress={() => setEditingRepair(null)}
-                  style={[styles.modalBtn, styles.cancelBtn, { borderColor: colors.border }]}
+                  onPress={() => void onSavePayment('cash')}
+                  disabled={savingEdit}
+                  style={[styles.modalBtn, { backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border }]}
                 >
-                  <Text style={[styles.modalBtnText, { color: colors.textMuted }]}>Cancel</Text>
+                  <Text style={[styles.modalBtnText, { color: colors.text, fontWeight: '700' }]}>💵 Cash</Text>
                 </Pressable>
                 <Pressable
-                  onPress={() => void onSavePayment()}
+                  onPress={() => void onSavePayment('online')}
                   disabled={savingEdit}
-                  style={[styles.modalBtn, savingEdit && { opacity: 0.7 }, { backgroundColor: colors.accent }]}
+                  style={[styles.modalBtn, { backgroundColor: colors.accent }]}
                 >
                   {savingEdit ? (
                     <ActivityIndicator size="small" color="#fff" />
                   ) : (
-                    <Text style={[styles.modalBtnText, { color: '#fff' }]}>Save</Text>
+                    <Text style={[styles.modalBtnText, { color: '#fff', fontWeight: '700' }]}>📱 Online</Text>
                   )}
                 </Pressable>
               </View>
@@ -528,25 +654,50 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingTop: 14,
     paddingBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   periodContainer: {
-    flexDirection: 'row',
     marginHorizontal: 18,
     marginBottom: 14,
+    height: 38,
+  },
+  periodScroll: {
+    flex: 1,
+  },
+  periodScrollContent: {
+    flexDirection: 'row',
     gap: 8,
+    paddingRight: 18,
+    alignItems: 'center',
   },
   periodBtn: {
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 6,
+    paddingHorizontal: 16,
     borderRadius: 20,
     borderWidth: 1.2,
     backgroundColor: 'transparent',
+    height: 32,
   },
   periodText: {
     fontSize: 11,
     fontWeight: '700',
+  },
+  customDateContainer: {
+    flexDirection: 'row',
+    marginHorizontal: 18,
+    marginBottom: 14,
+    gap: 10,
+  },
+  customDateBtn: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   title: {
     fontSize: 22,

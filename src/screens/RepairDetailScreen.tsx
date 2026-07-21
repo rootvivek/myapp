@@ -687,6 +687,12 @@ export function RepairDetailScreen({ navigation, route }: Props) {
                 {formatCurrency(repair.advanceAmount)}
               </Text>
             </View>
+            <View style={styles.paymentRow}>
+              <Text style={styles.paymentLabel}>Payment method</Text>
+              <Text style={styles.paymentValue}>
+                {repair.paymentType === 'online' ? 'Online' : 'Cash'}
+              </Text>
+            </View>
             <View style={styles.paymentDivider} />
             <View style={styles.paymentRow}>
               <Text style={styles.paymentLabel}>Balance</Text>
@@ -721,18 +727,6 @@ export function RepairDetailScreen({ navigation, route }: Props) {
 
         {/* Actions */}
         <View style={styles.actions}>
-          {/* Mark as Paid */}
-          {!repair.isPaid && (
-            <Pressable onPress={() => void handleMarkAsPaid()} style={styles.actionBtn}>
-              <LinearGradient colors={['#10B981', '#059669']} start={{ x: 0, y: 1 }} end={{ x: 1, y: 0 }}>
-                <View style={styles.actionBtnInner}>
-                  <CheckCircle size={18} color="#fff" strokeWidth={1.8} />
-                  <Text style={styles.actionBtnText}>Mark as Paid</Text>
-                </View>
-              </LinearGradient>
-            </Pressable>
-          )}
-
           {/* Invoice */}
           <Pressable onPress={() => void handlePdf()} style={styles.actionBtn}>
             <LinearGradient colors={['#7C3AED', '#4F46E5']} start={{ x: 0, y: 1 }} end={{ x: 1, y: 0 }}>
@@ -743,29 +737,27 @@ export function RepairDetailScreen({ navigation, route }: Props) {
             </LinearGradient>
           </Pressable>
 
-          {/* Edit job */}
+          {/* Edit & Delete */}
           {canModify && (
-            <Pressable
-              onPress={() => navigation.navigate('AddRepair', { repairId: repair.id })}
-              style={styles.actionBtnSecondary}
-            >
-              <Text style={styles.actionBtnSecondaryText}>Edit job</Text>
-            </Pressable>
-          )}
-
-          {/* Delete */}
-          {canModify && (
-            <Pressable
-              onPress={() => {
-                Alert.alert('Delete Repair', 'Are you sure? This cannot be undone.', [
-                  { text: 'Cancel', style: 'cancel' },
-                  { text: 'Delete', style: 'destructive', onPress: handleDelete },
-                ]);
-              }}
-              style={[styles.actionBtnSecondary, { borderColor: 'rgba(239,68,68,0.2)' }]}
-            >
-              <Text style={[styles.actionBtnSecondaryText, { color: '#EF4444' }]}>Delete</Text>
-            </Pressable>
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <Pressable
+                onPress={() => navigation.navigate('AddRepair', { repairId: repair.id })}
+                style={[styles.actionBtnSecondary, { flex: 1 }]}
+              >
+                <Text style={styles.actionBtnSecondaryText}>Edit job</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  Alert.alert('Delete Repair', 'Are you sure? This cannot be undone.', [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Delete', style: 'destructive', onPress: handleDelete },
+                  ]);
+                }}
+                style={[styles.actionBtnSecondary, { flex: 1, borderColor: 'rgba(239,68,68,0.2)' }]}
+              >
+                <Text style={[styles.actionBtnSecondaryText, { color: '#EF4444' }]}>Delete</Text>
+              </Pressable>
+            </View>
           )}
         </View>
       </ScrollView>

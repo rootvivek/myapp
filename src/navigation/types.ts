@@ -11,4 +11,5 @@ export type RootStackParamList = {
   ScanImei: { repairId?: number } | undefined;
   Settings: undefined;
   ManageLabour: undefined;
+  Finance: undefined;
 };

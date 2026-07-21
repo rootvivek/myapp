@@ -42,6 +42,7 @@ export interface Repair {
   /** Customer handed in with device (accessories checklist). */
   accSimTray: boolean;
   accBackCover: boolean;
+  paymentType: 'cash' | 'online';
   createdBy: string;
   createdByName: string;
   createdAt: string;

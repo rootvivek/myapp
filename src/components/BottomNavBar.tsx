@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { StyleSheet, View, Text, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ClipboardList, IndianRupee, PlusCircle, Package, User } from 'lucide-react-native';
+import { ClipboardList, IndianRupee, PlusCircle, Package, User, BookOpen } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -22,7 +22,6 @@ export function BottomNavBar() {
       { key: 'jobs', label: 'Jobs', icon: ClipboardList },
       { key: 'inventory', label: 'Inventory', icon: Package },
     ];
-    // Finance is owner-only
     if (!isLabour) {
       base.push({ key: 'finance', label: 'Finance', icon: IndianRupee });
     }

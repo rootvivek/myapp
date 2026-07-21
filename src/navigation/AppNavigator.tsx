@@ -10,6 +10,8 @@ import { CustomerDirectoryScreen } from '../screens/CustomerDirectoryScreen';
 import { SearchScreen } from '../screens/SearchScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { ManageLabourScreen } from '../screens/ManageLabourScreen';
+import { FinanceScreen } from '../screens/FinanceScreen';
+
 import type { RootStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -55,6 +57,7 @@ export function AppNavigator() {
         <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Shop & invoice' }} />
         <Stack.Screen name="ManageLabour" component={ManageLabourScreen} options={{ headerShown: false }} />
         <Stack.Screen name="ScanImei" component={ScanImeiScreen} options={{ title: 'Scan IMEI' }} />
+        <Stack.Screen name="Finance" component={FinanceScreen} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

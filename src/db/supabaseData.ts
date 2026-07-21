@@ -115,6 +115,7 @@ function rowToRepair(row: Record<string, unknown>): Repair {
     imageId2: String(row.image_id_2 ?? ''),
     accSimTray: Boolean(row.acc_sim_tray),
     accBackCover: Boolean(row.acc_back_cover),
+    paymentType: (row.payment_type as 'cash' | 'online') || 'cash',
     createdBy: String(row.created_by ?? ''),
     createdByName: '', // populated separately if needed
     createdAt: String(row.created_at ?? ''),
@@ -145,6 +146,7 @@ function mapInputToRow(input: RepairInput): Record<string, any> {
     image_id_2: input.imageId2,
     acc_sim_tray: input.accSimTray,
     acc_back_cover: input.accBackCover,
+    payment_type: input.paymentType,
   };
 }
 
@@ -336,16 +338,31 @@ export async function insertRepair(input: RepairInput): Promise<number> {
   return newId;
 }
 
-export async function updateRepairStatus(id: number, status: RepairStatus): Promise<void> {
+
+export async function updateRepairStatus(
+  id: number,
+  status: RepairStatus,
+  paymentUpdate?: { isPaid: boolean; paymentType?: 'cash' | 'online' }
+): Promise<void> {
+
   const now = new Date().toISOString();
+  const updatePayload: Record<string, any> = { status, updated_at: now };
+  if (paymentUpdate) {
+    updatePayload.is_paid = paymentUpdate.isPaid;
+    if (paymentUpdate.paymentType) {
+      updatePayload.payment_type = paymentUpdate.paymentType;
+    }
+  }
+
   const { error } = await supabase
     .from('repairs')
-    .update({ status, updated_at: now })
+    .update(updatePayload)
     .eq('id', id);
   if (error) throw error;
 }
 
 export async function updateRepair(input: RepairInput & { id: number }): Promise<void> {
+
   const now = new Date().toISOString();
 
   const payload = {

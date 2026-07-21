@@ -1,6 +1,6 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { SectionList, StyleSheet, Text, View } from 'react-native';
 import { Searchbar } from 'react-native-paper';
 import LinearGradient from 'react-native-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -12,6 +12,7 @@ import type { RootStackParamList } from '../navigation/types';
 import type { AppColors } from '../theme';
 import { spacing } from '../theme';
 import type { Repair, RepairStatus } from '../types/repair';
+import { formatDateDisplay } from '../utils/format';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Search'>;
 
@@ -39,6 +40,19 @@ function createStyles(colors: AppColors): ReturnType<typeof StyleSheet.create> {
       textAlign: 'center',
       marginTop: spacing.lg,
     },
+    sectionHeader: {
+      backgroundColor: colors.bgGradient[0] || colors.bg,
+      paddingVertical: 8,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    sectionHeaderText: {
+      color: colors.accent,
+      fontSize: 13,
+      fontWeight: '700',
+      letterSpacing: 0.3,
+      textAlign: 'center',
+    },
   });
 }
 
@@ -61,12 +75,30 @@ export function SearchScreen({ navigation }: Props) {
   }, [query, runSearch]);
 
   const handleStatusChange = useCallback(
-    async (repairId: number, status: RepairStatus): Promise<void> => {
-      await updateRepairStatus(repairId, status);
+    async (
+      repairId: number,
+      status: RepairStatus,
+      paymentUpdate?: { isPaid: boolean; paymentType?: 'cash' | 'online' }
+    ): Promise<void> => {
+      await updateRepairStatus(repairId, status, paymentUpdate);
       await runSearch(query);
     },
     [query, runSearch]
   );
+
+  const sections = useMemo(() => {
+    const groups: Record<string, Repair[]> = {};
+    for (const r of results) {
+      const date = r.dateReceived || 'Unknown Date';
+      if (!groups[date]) groups[date] = [];
+      groups[date].push(r);
+    }
+    const sortedDates = Object.keys(groups).sort((a, b) => b.localeCompare(a));
+    return sortedDates.map((date) => ({
+      title: formatDateDisplay(date) || date,
+      data: groups[date],
+    }));
+  }, [results]);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -89,13 +121,19 @@ export function SearchScreen({ navigation }: Props) {
         theme={{ colors: { elevation: { level3: colors.surface } } }}
         autoFocus
       />
-      <FlatList
-        data={results}
+      <SectionList
+        sections={sections}
         keyExtractor={(item) => String(item.id)}
         contentContainerStyle={styles.list}
+        stickySectionHeadersEnabled={true}
         ListEmptyComponent={
           <Text style={styles.empty}>No matches. Try another keyword.</Text>
         }
+        renderSectionHeader={({ section: { title } }) => (
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionHeaderText}>{title}</Text>
+          </View>
+        )}
         renderItem={({ item }) => (
           <RepairCard
             repair={item}

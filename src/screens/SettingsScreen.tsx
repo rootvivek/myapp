@@ -13,7 +13,7 @@ import {
   Switch,
   Linking,
 } from 'react-native';
-import { Moon, Sun, Briefcase, UploadCloud, Store, Users, User, ChevronRight, Shield, Mail, LogOut, CheckCircle, Crown, RefreshCw, Phone } from 'lucide-react-native';
+import { Moon, Sun, Briefcase, UploadCloud, Store, Users, User, ChevronRight, Shield, Mail, LogOut, CheckCircle, Crown, RefreshCw, Phone, IndianRupee } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '../context/AuthContext';
@@ -695,8 +695,32 @@ export function SettingsScreen(_props: Props) {
               </View>
               <ChevronRight size={18} color={colors.accent} />
             </Pressable>
+
+            <View style={styles.divider} />
+
+            {/* Finance navigation row */}
+            <Pressable
+              onPress={() => _props.navigation.navigate('Finance')}
+              style={({ pressed }) => [
+                styles.row,
+                pressed && { opacity: 0.7 }
+              ]}
+              android_ripple={{ color: colors.border }}
+            >
+              <View style={styles.rowLeft}>
+                <View style={styles.iconBox}>
+                  <IndianRupee size={18} color={colors.accent} />
+                </View>
+                <View style={styles.rowInfo}>
+                  <Text style={styles.rowTitle}>Finance & Earnings</Text>
+                  <Text style={styles.rowSubtitle}>View shop earnings, dues, and cash flow reports</Text>
+                </View>
+              </View>
+              <ChevronRight size={18} color={colors.accent} />
+            </Pressable>
           </View>
         )}
+
 
         {/* Card 4: Account Card */}
         <View style={styles.card}>
