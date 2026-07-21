@@ -1,5 +1,5 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SectionList, StyleSheet, Text, View } from 'react-native';
 import { Searchbar } from 'react-native-paper';
 import LinearGradient from 'react-native-linear-gradient';
@@ -62,9 +62,28 @@ export function SearchScreen({ navigation }: Props) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Repair[]>([]);
 
+  const requestIdRef = useRef(0);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
   const runSearch = useCallback(async (q: string): Promise<void> => {
-    const list = await searchRepairs(q);
-    setResults(list);
+    const currentRequestId = ++requestIdRef.current;
+    try {
+      const list = await searchRepairs(q);
+      if (currentRequestId === requestIdRef.current && mountedRef.current) {
+        setResults(list);
+      }
+    } catch {
+      if (currentRequestId === requestIdRef.current && mountedRef.current) {
+        setResults([]);
+      }
+    }
   }, []);
 
   useEffect(() => {
@@ -81,7 +100,9 @@ export function SearchScreen({ navigation }: Props) {
       paymentUpdate?: { isPaid: boolean; paymentType?: 'cash' | 'online' }
     ): Promise<void> => {
       await updateRepairStatus(repairId, status, paymentUpdate);
-      await runSearch(query);
+      if (mountedRef.current) {
+        await runSearch(query);
+      }
     },
     [query, runSearch]
   );
@@ -99,6 +120,32 @@ export function SearchScreen({ navigation }: Props) {
       data: groups[date],
     }));
   }, [results]);
+
+  const renderSectionHeader = useCallback(
+    ({ section: { title } }: { section: { title: string } }) => (
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionHeaderText}>{title}</Text>
+      </View>
+    ),
+    [styles.sectionHeader, styles.sectionHeaderText]
+  );
+
+  const renderItem = useCallback(
+    ({ item }: { item: Repair }) => (
+      <RepairCard
+        repair={item}
+        onPress={() =>
+          navigation.navigate('RepairDetail', {
+            repairId: item.id,
+          })
+        }
+        onStatusChange={handleStatusChange}
+      />
+    ),
+    [navigation, handleStatusChange]
+  );
+
+  const keyExtractor = useCallback((item: Repair) => String(item.id), []);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -123,28 +170,14 @@ export function SearchScreen({ navigation }: Props) {
       />
       <SectionList
         sections={sections}
-        keyExtractor={(item) => String(item.id)}
+        keyExtractor={keyExtractor}
         contentContainerStyle={styles.list}
         stickySectionHeadersEnabled={true}
         ListEmptyComponent={
           <Text style={styles.empty}>No matches. Try another keyword.</Text>
         }
-        renderSectionHeader={({ section: { title } }) => (
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionHeaderText}>{title}</Text>
-          </View>
-        )}
-        renderItem={({ item }) => (
-          <RepairCard
-            repair={item}
-            onPress={() =>
-              navigation.navigate('RepairDetail', {
-                repairId: item.id,
-              })
-            }
-            onStatusChange={handleStatusChange}
-          />
-        )}
+        renderSectionHeader={renderSectionHeader}
+        renderItem={renderItem}
       />
     </SafeAreaView>
   );

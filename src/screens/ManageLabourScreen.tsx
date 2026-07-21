@@ -226,25 +226,46 @@ export function ManageLabourScreen({ navigation }: Props) {
   const [editPhone, setEditPhone] = useState('');
   const [editBusy, setEditBusy] = useState(false);
 
+  // Synchronous guards
+  const addingRef = React.useRef(false);
+  const resettingRef = React.useRef(false);
+  const editingRef = React.useRef(false);
+  const mountedRef = React.useRef(true);
+
+  React.useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
   const handleEditSave = async () => {
-    if (!editingUser) return;
+    if (!editingUser || editingRef.current) return;
     if (!editName.trim() || !editPhone.trim()) {
       Alert.alert('Missing fields', 'Username and phone number are required.');
       return;
     }
+    editingRef.current = true;
     setEditBusy(true);
     try {
       await updateLabourUser(editingUser.id, editName, editPhone);
-      Alert.alert('Success', 'Team member updated.');
-      setShowEditModal(false);
-      setEditingUser(null);
-      setEditName('');
-      setEditPhone('');
-      await loadMembers();
+      if (mountedRef.current) {
+        Alert.alert('Success', 'Team member updated.');
+        setShowEditModal(false);
+        setEditingUser(null);
+        setEditName('');
+        setEditPhone('');
+        await loadMembers();
+      }
     } catch (err: any) {
-      Alert.alert('Error', err.message || 'Failed to update account.');
+      if (mountedRef.current) {
+        Alert.alert('Error', err.message || 'Failed to update account.');
+      }
     } finally {
-      setEditBusy(false);
+      if (mountedRef.current) {
+        setEditBusy(false);
+      }
+      editingRef.current = false;
     }
   };
 
@@ -252,11 +273,15 @@ export function ManageLabourScreen({ navigation }: Props) {
     setLoading(true);
     try {
       const list = await getShopLabourList();
-      setMembers(list);
+      if (mountedRef.current) {
+        setMembers(list);
+      }
     } catch {
       // silent
     } finally {
-      setLoading(false);
+      if (mountedRef.current) {
+        setLoading(false);
+      }
     }
   }, []);
 
@@ -265,6 +290,7 @@ export function ManageLabourScreen({ navigation }: Props) {
   }, [loadMembers]);
 
   const handleAdd = async () => {
+    if (addingRef.current) return;
     if (!addName.trim() || !addPhone.trim() || !addPassword.trim()) {
       Alert.alert('Missing fields', 'Username, phone number, and password are required.');
       return;
@@ -273,39 +299,55 @@ export function ManageLabourScreen({ navigation }: Props) {
       Alert.alert('Password', 'Use at least 6 characters.');
       return;
     }
+    addingRef.current = true;
     setAddBusy(true);
     try {
       await createLabourAccount(addName, addPassword, addPhone);
-      Alert.alert('Success', `Team member account created for ${addName.trim()}.`);
-      setShowAddModal(false);
-      setAddName('');
-      setAddPassword('');
-      setAddPhone('');
-      await loadMembers();
+      if (mountedRef.current) {
+        Alert.alert('Success', `Team member account created for ${addName.trim()}.`);
+        setShowAddModal(false);
+        setAddName('');
+        setAddPassword('');
+        setAddPhone('');
+        await loadMembers();
+      }
     } catch (err: any) {
-      Alert.alert('Error', err.message || 'Failed to create account.');
+      if (mountedRef.current) {
+        Alert.alert('Error', err.message || 'Failed to create account.');
+      }
     } finally {
-      setAddBusy(false);
+      if (mountedRef.current) {
+        setAddBusy(false);
+      }
+      addingRef.current = false;
     }
   };
 
   const handleResetPassword = async () => {
-    if (!resettingUser) return;
+    if (!resettingUser || resettingRef.current) return;
     if (!resetPassword.trim() || resetPassword.length < 6) {
       Alert.alert('Password', 'Use at least 6 characters.');
       return;
     }
+    resettingRef.current = true;
     setResetBusy(true);
     try {
       await resetLabourPassword(resettingUser.id, resetPassword);
-      Alert.alert('Success', `Password reset for ${resettingUser.name || 'team member'}.`);
-      setShowResetModal(false);
-      setResetPassword('');
-      setResettingUser(null);
+      if (mountedRef.current) {
+        Alert.alert('Success', `Password reset for ${resettingUser.name || 'team member'}.`);
+        setShowResetModal(false);
+        setResetPassword('');
+        setResettingUser(null);
+      }
     } catch (err: any) {
-      Alert.alert('Error', err.message || 'Failed to reset password.');
+      if (mountedRef.current) {
+        Alert.alert('Error', err.message || 'Failed to reset password.');
+      }
     } finally {
-      setResetBusy(false);
+      if (mountedRef.current) {
+        setResetBusy(false);
+      }
+      resettingRef.current = false;
     }
   };
 

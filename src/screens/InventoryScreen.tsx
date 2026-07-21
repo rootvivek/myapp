@@ -195,53 +195,81 @@ export function InventoryScreen({ navigation }: Props) {
     setModalVisible(true);
   }
 
+  const savingRef = React.useRef(false);
+  const mountedRef = React.useRef(true);
+
+  React.useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
   async function handleSave() {
     if (!name.trim()) {
       Alert.alert('Validation', 'Item name is required.');
       return;
     }
+    if (savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     try {
       const input: InventoryInput = {
         name: name.trim(),
         sku: sku.trim(),
-        stockCount: parseInt(stock.trim()) || 0,
-        price: parseFloat(price.trim()) || 0,
+        stockCount: Math.max(0, parseInt(stock.trim()) || 0),
+        price: Math.max(0, parseFloat(price.trim()) || 0),
       };
-      
+
       if (editingId) {
         await updateInventoryItem({ ...input, id: editingId });
       } else {
         await insertInventoryItem(input);
       }
-      await refresh();
-      setModalVisible(false);
+      if (mountedRef.current) {
+        await refresh();
+        setModalVisible(false);
+      }
     } catch (err) {
-      Alert.alert('Error', 'Failed to save item.');
+      if (mountedRef.current) {
+        Alert.alert('Error', 'Failed to save item.');
+      }
     } finally {
-      setSaving(false);
+      if (mountedRef.current) {
+        setSaving(false);
+      }
+      savingRef.current = false;
     }
   }
 
   async function handleDelete() {
-    if (!editingId) return;
+    if (!editingId || savingRef.current) return;
     Alert.alert('Delete Item', 'Are you sure you want to delete this accessory?', [
       { text: 'Cancel', style: 'cancel' },
-      { 
-        text: 'Delete', 
+      {
+        text: 'Delete',
         style: 'destructive',
         onPress: async () => {
+          if (savingRef.current) return;
+          savingRef.current = true;
           setSaving(true);
           try {
             await deleteItem(editingId);
-            setModalVisible(false);
+            if (mountedRef.current) {
+              setModalVisible(false);
+            }
           } catch (err) {
-            Alert.alert('Error', 'Failed to delete item.');
+            if (mountedRef.current) {
+              Alert.alert('Error', 'Failed to delete item.');
+            }
           } finally {
-            setSaving(false);
+            if (mountedRef.current) {
+              setSaving(false);
+            }
+            savingRef.current = false;
           }
-        }
-      }
+        },
+      },
     ]);
   }
 

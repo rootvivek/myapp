@@ -56,8 +56,11 @@ async function removeSlot(userId: string, repairId: number, slot: RepairImageSlo
 export async function removeAllRepairImages(userId: string, repairId: number): Promise<void> {
   const files = ['front.jpg', 'back.jpg', 'thumb.jpg', 'id1.jpg', 'id2.jpg'];
   const paths = files.map((file) => `${userId}/${repairId}/${file}`);
-  // Batch-remove all files; ignore errors (files may not exist)
-  await supabase.storage.from(BUCKET).remove(paths).catch(() => {});
+  try {
+    await supabase.storage.from(BUCKET).remove(paths);
+  } catch {
+    // ignore unlinking errors for missing objects
+  }
 }
 
 /** Sync local / remote image picks to Supabase Storage; returns HTTPS URLs for the repair row. */

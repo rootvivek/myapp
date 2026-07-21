@@ -1,3 +1,4 @@
+import React, { useMemo } from 'react';
 import { DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
@@ -18,29 +19,35 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export function AppNavigator() {
   const { colors, mode } = useTheme();
-  const base = mode === 'dark' ? DarkTheme : DefaultTheme;
-  const theme = {
-    ...base,
-    colors: {
-      ...base.colors,
-      primary: colors.accent,
-      background: colors.bg,
-      card: colors.surface,
-      text: colors.text,
-      border: colors.border,
-    },
-  };
+
+  const theme = useMemo(() => {
+    const base = mode === 'dark' ? DarkTheme : DefaultTheme;
+    return {
+      ...base,
+      colors: {
+        ...base.colors,
+        primary: colors.accent,
+        background: colors.bg,
+        card: colors.surface,
+        text: colors.text,
+        border: colors.border,
+      },
+    };
+  }, [colors, mode]);
+
+  const screenOptions = useMemo(
+    () => ({
+      headerStyle: { backgroundColor: colors.bg },
+      headerTintColor: colors.text,
+      headerTitleStyle: { fontWeight: '700' as const },
+      contentStyle: { backgroundColor: colors.bg },
+    }),
+    [colors]
+  );
 
   return (
     <NavigationContainer theme={theme}>
-      <Stack.Navigator
-        screenOptions={{
-          headerStyle: { backgroundColor: colors.bg },
-          headerTintColor: colors.text,
-          headerTitleStyle: { fontWeight: '700' },
-          contentStyle: { backgroundColor: colors.bg },
-        }}
-      >
+      <Stack.Navigator screenOptions={screenOptions}>
         <Stack.Screen name="Home" component={MainTabScreen} options={{ headerShown: false }} />
         <Stack.Screen
           name="AddRepair"

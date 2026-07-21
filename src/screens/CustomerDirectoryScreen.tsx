@@ -1,10 +1,12 @@
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Linking,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -143,14 +145,29 @@ export function CustomerDirectoryScreen({ navigation }: Props) {
   const [customers, setCustomers] = useState<DirectoryCustomer[]>([]);
   const [query, setQuery] = useState('');
 
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
   const load = useCallback(async (): Promise<void> => {
     try {
       const list = await getDirectoryCustomers();
-      setCustomers(sortCustomers(list));
+      if (mountedRef.current) {
+        setCustomers(sortCustomers(list));
+      }
     } catch {
-      setCustomers([]);
+      if (mountedRef.current) {
+        setCustomers([]);
+      }
     } finally {
-      setLoading(false);
+      if (mountedRef.current) {
+        setLoading(false);
+      }
     }
   }, []);
 
@@ -159,6 +176,19 @@ export function CustomerDirectoryScreen({ navigation }: Props) {
       void load();
     }, [load])
   );
+
+  const handleCall = useCallback(async (href: string) => {
+    try {
+      const canOpen = await Linking.canOpenURL(href);
+      if (canOpen) {
+        await Linking.openURL(href);
+      } else {
+        Alert.alert('Call Error', 'Phone calls are not supported on this device.');
+      }
+    } catch {
+      Alert.alert('Call Error', 'Could not place phone call.');
+    }
+  }, []);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -169,6 +199,52 @@ export function CustomerDirectoryScreen({ navigation }: Props) {
         c.phone.replace(/\s/g, '').includes(q.replace(/\s/g, ''))
     );
   }, [customers, query]);
+
+  const renderItem = useCallback(
+    ({ item }: { item: DirectoryCustomer }) => {
+      const name = item.customerName.trim() || '—';
+      const initial = (name === '—' ? '?' : name).slice(0, 1).toUpperCase();
+      const href = telUri(item.phone);
+      return (
+        <View style={styles.row}>
+          <Pressable
+            onPress={() => navigation.navigate('AddRepair', { prefillCustomer: item })}
+            style={styles.rowMain}
+            android_ripple={{ color: colors.border }}
+          >
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{initial}</Text>
+            </View>
+            <View style={styles.rowBody}>
+              <Text style={styles.name} numberOfLines={2}>
+                {name}
+              </Text>
+              <Text style={styles.phone} selectable>
+                {item.phone}
+              </Text>
+              {item.deviceModel ? (
+                <Text style={styles.device} numberOfLines={1}>
+                  Last device: {item.deviceModel}
+                </Text>
+              ) : null}
+            </View>
+          </Pressable>
+          {href ? (
+            <Pressable
+              onPress={() => void handleCall(href)}
+              style={styles.callBtn}
+              android_ripple={{ color: colors.border }}
+            >
+              <Text style={styles.callBtnText}>Call</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      );
+    },
+    [colors, navigation, handleCall, styles]
+  );
+
+  const keyExtractor = useCallback((item: DirectoryCustomer) => item.phone, []);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -197,8 +273,13 @@ export function CustomerDirectoryScreen({ navigation }: Props) {
       ) : (
         <FlatList
           data={filtered}
-          keyExtractor={(item) => item.phone}
+          keyExtractor={keyExtractor}
           contentContainerStyle={styles.list}
+          initialNumToRender={12}
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          updateCellsBatchingPeriod={50}
+          removeClippedSubviews={Platform.OS === 'android'}
           keyboardShouldPersistTaps="handled"
           ListEmptyComponent={
             <Text style={styles.empty}>
@@ -207,46 +288,7 @@ export function CustomerDirectoryScreen({ navigation }: Props) {
                 : 'No matches. Try another search.'}
             </Text>
           }
-          renderItem={({ item }) => {
-            const name = item.customerName.trim() || '—';
-            const initial = (name === '—' ? '?' : name).slice(0, 1).toUpperCase();
-            const href = telUri(item.phone);
-            return (
-              <View style={styles.row}>
-                <Pressable
-                  onPress={() => navigation.navigate('AddRepair', { prefillCustomer: item })}
-                  style={styles.rowMain}
-                  android_ripple={{ color: colors.border }}
-                >
-                  <View style={styles.avatar}>
-                    <Text style={styles.avatarText}>{initial}</Text>
-                  </View>
-                  <View style={styles.rowBody}>
-                    <Text style={styles.name} numberOfLines={2}>
-                      {name}
-                    </Text>
-                    <Text style={styles.phone} selectable>
-                      {item.phone}
-                    </Text>
-                    {item.deviceModel ? (
-                      <Text style={styles.device} numberOfLines={1}>
-                        Last device: {item.deviceModel}
-                      </Text>
-                    ) : null}
-                  </View>
-                </Pressable>
-                {href ? (
-                  <Pressable
-                    onPress={() => void Linking.openURL(href)}
-                    style={styles.callBtn}
-                    android_ripple={{ color: colors.border }}
-                  >
-                    <Text style={styles.callBtnText}>Call</Text>
-                  </Pressable>
-                ) : null}
-              </View>
-            );
-          }}
+          renderItem={renderItem}
         />
       )}
     </SafeAreaView>
