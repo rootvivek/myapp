@@ -10,10 +10,8 @@ import type { WarrantyType } from '../types';
 
 type Props = {
   warranty: string;
-  customWarranty: string;
   warrantyType: WarrantyType;
   onChangeWarranty: (w: string) => void;
-  onChangeCustomWarranty: (cw: string) => void;
   onChangeWarrantyType: (wt: WarrantyType) => void;
   styles: AddRepairStyles;
   colors: AppColors;
@@ -21,10 +19,8 @@ type Props = {
 
 export const WarrantySection = React.memo(function WarrantySection({
   warranty,
-  customWarranty,
   warrantyType,
   onChangeWarranty,
-  onChangeCustomWarranty,
   onChangeWarrantyType,
   styles,
   colors,
@@ -33,13 +29,7 @@ export const WarrantySection = React.memo(function WarrantySection({
     <>
       <Text style={styles.sectionTitle}>WARRANTY PERIOD</Text>
       <View style={styles.lockCard}>
-        <View style={styles.lockHeaderRow}>
-          <View style={styles.accessoryIcon}>
-            <Shield color={colors.accent} size={22} />
-          </View>
-          <Text style={styles.accessoryTitle}>Warranty coverage</Text>
-        </View>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
           {WARRANTY_OPTIONS.map((opt) => {
             const isSelected = warrantyType === opt.type;
             return (
@@ -50,15 +40,12 @@ export const WarrantySection = React.memo(function WarrantySection({
                 showSelectedCheck={false}
                 onPress={() => {
                   onChangeWarrantyType(opt.type);
-                  if (opt.type !== 'custom') {
-                    onChangeWarranty(opt.value);
-                  } else {
-                    onChangeWarranty(customWarranty);
-                  }
+                  onChangeWarranty(opt.value);
                 }}
                 style={{
                   backgroundColor: isSelected ? accentAlpha(colors.accent, 0.15) : colors.surface2,
                   borderColor: isSelected ? colors.accent : colors.border,
+                  borderRadius: 4,
                 }}
                 textStyle={{
                   color: isSelected ? colors.accent : colors.textMuted,
@@ -74,34 +61,6 @@ export const WarrantySection = React.memo(function WarrantySection({
             );
           })}
         </View>
-
-        {warrantyType === 'custom' && (
-          <View style={styles.lockInputContainer}>
-            <PaperInput
-              label="Custom warranty description"
-              placeholder="e.g. 1 Year, 6 Months, Lifetime"
-              value={customWarranty}
-              onChangeText={(text) => {
-                onChangeCustomWarranty(text);
-                onChangeWarranty(text);
-              }}
-              mode="outlined"
-              dense={true}
-              outlineColor={colors.border}
-              activeOutlineColor={colors.accent}
-              textColor={colors.text}
-              placeholderTextColor={colors.textMuted}
-              theme={{
-                colors: {
-                  background: colors.surface,
-                  placeholder: colors.textMuted,
-                },
-              }}
-              style={styles.lockPaperInput}
-              accessibilityLabel="Custom warranty description"
-            />
-          </View>
-        )}
       </View>
     </>
   );

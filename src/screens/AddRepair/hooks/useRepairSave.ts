@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { Alert } from 'react-native';
-import { getRepairById, insertRepair, updateRepair } from '../../../db/database';
+import { repairService } from '../../../services/repairService';
 import type { RepairImageSlot, RepairInput } from '../../../types/repair';
 import { emptyImageState } from '../../../utils/repairImages';
 import { resolveImagesForSaveCloud } from '../../../utils/repairImageUpload';
@@ -10,6 +10,7 @@ import {
   validateRepairFormFields,
 } from '../../../utils/repairValidation';
 import { shareReceiptPdfToWhatsAppContact } from '../../../utils/receipt';
+import { useRepairActions } from '../../../context/RepairsContext';
 import type { RepairFormState } from '../types';
 import { parseMoney, showDatabaseError, showValidationError } from '../utils';
 
@@ -23,6 +24,7 @@ type SaveOptions = {
 export function useRepairSave() {
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
+  const { upsertRepairInState } = useRepairActions();
 
   const saveRepair = useCallback(
     async (state: RepairFormState, options: SaveOptions) => {
@@ -92,21 +94,24 @@ export function useRepairSave() {
             state.images,
             initialImagesRef.current
           );
-          await updateRepair({ ...base, id: repairId, ...resolved });
+          await repairService.update({ ...base, id: repairId, ...resolved });
           savedRepairId = repairId;
         } else {
-          const newId = await insertRepair(base);
+          const newId = await repairService.create(base);
           const resolved = await resolveImagesForSaveCloud(newId, state.images, emptyImageState());
-          await updateRepair({ ...base, id: newId, ...resolved });
+          await repairService.update({ ...base, id: newId, ...resolved });
           savedRepairId = newId;
         }
 
-        if (shouldAutoSendWhatsApp) {
+        // Fetch single created/updated record and update local cache atomically
+        const savedRepair = await repairService.getById(savedRepairId);
+        if (savedRepair) {
+          upsertRepairInState(savedRepair);
+        }
+
+        if (shouldAutoSendWhatsApp && savedRepair) {
           try {
-            const savedRepair = await getRepairById(savedRepairId);
-            if (savedRepair) {
-              await shareReceiptPdfToWhatsAppContact(savedRepair, ph);
-            }
+            await shareReceiptPdfToWhatsAppContact(savedRepair, ph);
           } catch {
             Alert.alert(
               'WhatsApp',
@@ -123,7 +128,7 @@ export function useRepairSave() {
         setSaving(false);
       }
     },
-    []
+    [upsertRepairInState]
   );
 
   return { saving, saveRepair };

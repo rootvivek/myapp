@@ -1,8 +1,12 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 
-import { deleteRepair as deleteDbRepair, getAllRepairs } from '../db/database';
+import { repairService } from '../services/repairService';
+import { rowToRepair } from '../db/database';
+import { supabase } from '../lib/supabase';
 import type { Repair } from '../types/repair';
+import { appendItem, removeItem, updateItem, upsertItem } from '../utils/cacheHelpers';
+import { logger } from '../utils/logger';
 
 type RepairsStateContextValue = {
   repairs: Repair[];
@@ -15,6 +19,8 @@ type RepairsActionsContextValue = {
   deleteRepair: (repairId: number) => Promise<void>;
   addRepairToState: (repair: Repair) => void;
   updateRepairInState: (repairId: number, updates: Partial<Repair>) => void;
+  upsertRepairInState: (repair: Repair) => void;
+  deleteRepairFromState: (repairId: number) => void;
 };
 
 type RepairsContextValue = RepairsStateContextValue & RepairsActionsContextValue;
@@ -37,17 +43,18 @@ export function RepairsProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  // Initial fetch / manual pull-to-refresh
   const refresh = useCallback(async () => {
     const currentRequestId = ++requestIdRef.current;
     setLoading(true);
     try {
-      const list = await getAllRepairs();
+      const list = await repairService.getAll();
       if (currentRequestId === requestIdRef.current && mountedRef.current) {
         setRepairs(list);
         setReady(true);
       }
     } catch (err) {
-      console.warn('Error fetching repairs:', err);
+      logger.warn('[RepairsContext] Error fetching repairs:', err);
     } finally {
       if (currentRequestId === requestIdRef.current && mountedRef.current) {
         setLoading(false);
@@ -59,25 +66,63 @@ export function RepairsProvider({ children }: { children: React.ReactNode }) {
     void refresh();
   }, [refresh]);
 
+  // Realtime Subscription (Syncs INSERT, UPDATE, DELETE across devices without full table refetch)
+  useEffect(() => {
+    const channel = supabase
+      .channel('public:repairs')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'repairs' },
+        (payload: any) => {
+          if (!mountedRef.current) return;
+          const { eventType, new: newRow, old: oldRow } = payload;
+
+          if (eventType === 'INSERT' && newRow) {
+            const repair = rowToRepair(newRow as Record<string, unknown>);
+            setRepairs((current) => upsertItem(current, repair, 'id'));
+          } else if (eventType === 'UPDATE' && newRow) {
+            const repair = rowToRepair(newRow as Record<string, unknown>);
+            setRepairs((current) => updateItem(current, repair.id, repair, 'id'));
+          } else if (eventType === 'DELETE' && oldRow?.id) {
+            const id = Number(oldRow.id);
+            setRepairs((current) => removeItem(current, id, 'id'));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, []);
+
+  // Reusable Cache Actions
   const addRepairToState = useCallback((newRepair: Repair) => {
-    setRepairs((current) => [newRepair, ...current.filter((r) => r.id !== newRepair.id)]);
+    setRepairs((current) => appendItem(current, newRepair, 'id'));
   }, []);
 
   const updateRepairInState = useCallback((repairId: number, updates: Partial<Repair>) => {
-    setRepairs((current) =>
-      current.map((r) => (r.id === repairId ? { ...r, ...updates } : r))
-    );
+    setRepairs((current) => updateItem(current, repairId, updates, 'id'));
   }, []);
 
+  const upsertRepairInState = useCallback((repair: Repair) => {
+    setRepairs((current) => upsertItem(current, repair, 'id'));
+  }, []);
+
+  const deleteRepairFromState = useCallback((repairId: number) => {
+    setRepairs((current) => removeItem(current, repairId, 'id'));
+  }, []);
+
+  // Optimistic Delete with automatic rollback on error
   const deleteRepair = useCallback(async (repairId: number) => {
     let backup: Repair[] = [];
     setRepairs((current) => {
       backup = current;
-      return current.filter((r) => r.id !== repairId);
+      return removeItem(current, repairId, 'id');
     });
 
     try {
-      await deleteDbRepair(repairId);
+      await repairService.remove(repairId);
     } catch (err: unknown) {
       if (mountedRef.current) {
         setRepairs(backup);
@@ -93,8 +138,22 @@ export function RepairsProvider({ children }: { children: React.ReactNode }) {
   );
 
   const actionsValue = useMemo(
-    () => ({ refresh, deleteRepair, addRepairToState, updateRepairInState }),
-    [refresh, deleteRepair, addRepairToState, updateRepairInState]
+    () => ({
+      refresh,
+      deleteRepair,
+      addRepairToState,
+      updateRepairInState,
+      upsertRepairInState,
+      deleteRepairFromState,
+    }),
+    [
+      refresh,
+      deleteRepair,
+      addRepairToState,
+      updateRepairInState,
+      upsertRepairInState,
+      deleteRepairFromState,
+    ]
   );
 
   return (
@@ -122,4 +181,25 @@ export function useRepairs(): RepairsContextValue {
   const state = useRepairsState();
   const actions = useRepairActions();
   return useMemo(() => ({ ...state, ...actions }), [state, actions]);
+}
+
+/**
+ * Finer-grained selector hooks to minimize re-render scope
+ */
+export function useRepairById(repairId: number): Repair | undefined {
+  const { repairs } = useRepairsState();
+  return useMemo(() => repairs.find((r) => r.id === repairId), [repairs, repairId]);
+}
+
+export function useFilteredRepairs(statusFilter: string): Repair[] {
+  const { repairs } = useRepairsState();
+  return useMemo(() => {
+    if (statusFilter === 'all') return repairs;
+    return repairs.filter((r) => r.status === statusFilter);
+  }, [repairs, statusFilter]);
+}
+
+export function useRepairsCount(): number {
+  const { repairs } = useRepairsState();
+  return repairs.length;
 }

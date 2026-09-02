@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -24,7 +24,7 @@ import type { AppColors } from '../theme';
 import { accentAlpha, spacing } from '../theme';
 import { formatCurrency } from '../utils/format';
 import type { InventoryItem, InventoryInput } from '../types/inventory';
-import { insertInventoryItem, updateInventoryItem } from '../db/database';
+import { inventoryService } from '../services/inventoryService';
 
 function createStyles(colors: AppColors) {
   return StyleSheet.create({
@@ -154,11 +154,21 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Home'>; // or a specifi
 export function InventoryScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const { inventory, loading, refresh, deleteItem } = useInventory();
+  const { inventory, loading, refresh, deleteItem, addInventoryToState, updateInventoryInState } = useInventory();
   const { isOwner } = useAuth();
-  
+
   const [query, setQuery] = useState('');
-  
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await refresh();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refresh]);
+
   // Modal state
   const [modalVisible, setModalVisible] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -221,13 +231,22 @@ export function InventoryScreen({ navigation }: Props) {
         price: Math.max(0, parseFloat(price.trim()) || 0),
       };
 
+      const now = new Date().toISOString();
+
       if (editingId) {
-        await updateInventoryItem({ ...input, id: editingId });
+        // Local cache update + remote database update
+        updateInventoryInState(editingId, input);
+        await inventoryService.update({ ...input, id: editingId });
       } else {
-        await insertInventoryItem(input);
+        const newId = await inventoryService.create(input);
+        addInventoryToState({
+          ...input,
+          id: newId,
+          createdAt: now,
+          updatedAt: now,
+        });
       }
       if (mountedRef.current) {
-        await refresh();
         setModalVisible(false);
       }
     } catch (err) {
@@ -308,6 +327,8 @@ export function InventoryScreen({ navigation }: Props) {
           data={filtered}
           keyExtractor={(item) => String(item.id)}
           contentContainerStyle={styles.list}
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
           ListEmptyComponent={
             <Text style={styles.empty}>
               {inventory.length === 0 ? 'No inventory items yet. Add one!' : 'No matches found.'}
@@ -320,7 +341,7 @@ export function InventoryScreen({ navigation }: Props) {
               android_ripple={{ color: colors.border }}
             >
               <View style={styles.cardIcon}>
-                <Package size={24} color={colors.accent} />
+                <Package size={36} color={colors.accent} />
               </View>
               <View style={styles.cardContent}>
                 <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>

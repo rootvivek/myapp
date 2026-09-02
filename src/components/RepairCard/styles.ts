@@ -94,16 +94,16 @@ export function createCardStyles(colors: AppColors) {
     actionBtn: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'flex-start',
-      gap: 5,
-      width: 90,
+      justifyContent: 'center',
+      gap: 4,
+      flex: 1,
       height: 28,
       backgroundColor: dark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)',
-      borderRadius: 6,
+      borderRadius: 4,
       borderWidth: 1,
       borderColor: dark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
       paddingVertical: 2,
-      paddingHorizontal: 6,
+      paddingHorizontal: 4,
     },
     actionIcon: {
       fontSize: 12,
@@ -137,7 +137,7 @@ export function createCardStyles(colors: AppColors) {
     badgesScrollContent: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 12,
+      gap: 5,
     },
     badgePill: {
       flexDirection: 'row',

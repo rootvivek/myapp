@@ -1,0 +1,27 @@
+/**
+ * Production-ready logger utility.
+ * In production (__DEV__ === false), logs are suppressed or gated for performance and security.
+ */
+
+export const logger = {
+  log: (...args: unknown[]) => {
+    if (__DEV__) {
+      console.log(...args);
+    }
+  },
+  warn: (...args: unknown[]) => {
+    if (__DEV__) {
+      console.warn(...args);
+    }
+  },
+  error: (...args: unknown[]) => {
+    if (__DEV__) {
+      console.error(...args);
+    }
+  },
+  info: (...args: unknown[]) => {
+    if (__DEV__) {
+      console.info(...args);
+    }
+  },
+};

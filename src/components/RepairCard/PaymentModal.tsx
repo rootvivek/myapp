@@ -1,12 +1,12 @@
 import React, { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Modal,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { Modal, Portal } from 'react-native-paper';
 
 import { X } from 'lucide-react-native';
 import type { AppColors } from '../../theme';
@@ -20,6 +20,9 @@ type PaymentUpdate = {
   isPaid: boolean;
   paymentType?: 'cash' | 'online';
 };
+
+/** Which button is currently processing, or null if idle */
+type LoadingTarget = 'unpaid' | 'cash' | 'online' | null;
 
 type Props = {
   visible: boolean;
@@ -47,42 +50,46 @@ export const PaymentModal = React.memo(function PaymentModal({
   colors,
 }: Props) {
   const [step, setStep] = useState<PaymentStep>('paid_status');
-  const [loading, setLoading] = useState(false);
+  const [loadingTarget, setLoadingTarget] = useState<LoadingTarget>(null);
   const busyRef = useRef(false);
 
+  const isBusy = loadingTarget !== null;
+
   const handleClose = useCallback(() => {
-    if (loading) return;
+    if (isBusy) return;
     setStep('paid_status');
+    setLoadingTarget(null);
     onClose();
-  }, [loading, onClose]);
+  }, [isBusy, onClose]);
 
   const submitPayment = useCallback(
-    async (update: PaymentUpdate) => {
+    async (update: PaymentUpdate, target: LoadingTarget) => {
       if (busyRef.current) return;
       busyRef.current = true;
-      setLoading(true);
+      setLoadingTarget(target);
 
       try {
         await onStatusChange(repairId, 'delivered', update);
         setStep('paid_status');
+        setLoadingTarget(null);
         onClose();
       } catch (err: unknown) {
         showError('Status Update Failed', err);
       } finally {
         busyRef.current = false;
-        setLoading(false);
+        setLoadingTarget(null);
       }
     },
     [onStatusChange, repairId, onClose],
   );
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={handleClose}
-    >
+    <Portal>
+      <Modal
+        visible={visible}
+        onDismiss={handleClose}
+        contentContainerStyle={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'transparent' }}
+      >
       <View style={styles.modalWrap}>
         <Pressable
           style={StyleSheet.absoluteFill}
@@ -96,7 +103,7 @@ export const PaymentModal = React.memo(function PaymentModal({
             <Pressable
               style={styles.modalCloseBtn}
               onPress={handleClose}
-              disabled={loading}
+              disabled={isBusy}
               accessibilityRole="button"
               accessibilityLabel={LABELS.CLOSE}
             >
@@ -118,7 +125,7 @@ export const PaymentModal = React.memo(function PaymentModal({
                   <Pressable
                     style={[styles.paymentButton, { borderColor: colors.success }]}
                     onPress={() => setStep('payment_method')}
-                    disabled={loading}
+                    disabled={isBusy}
                     accessibilityRole="button"
                     accessibilityLabel={LABELS.PAID}
                     accessibilityHint="Proceeds to select payment method"
@@ -135,14 +142,14 @@ export const PaymentModal = React.memo(function PaymentModal({
                   </Pressable>
                   <Pressable
                     style={[styles.paymentButton, { borderColor: colors.danger }]}
-                    onPress={() => submitPayment({ isPaid: false })}
-                    disabled={loading}
+                    onPress={() => submitPayment({ isPaid: false }, 'unpaid')}
+                    disabled={isBusy}
                     accessibilityRole="button"
                     accessibilityLabel={LABELS.UNPAID}
                     accessibilityHint="Marks repair as delivered but unpaid"
-                    accessibilityState={{ busy: loading }}
+                    accessibilityState={{ busy: loadingTarget === 'unpaid' }}
                   >
-                    {loading ? (
+                    {loadingTarget === 'unpaid' ? (
                       <ActivityIndicator size="small" color={colors.danger} />
                     ) : (
                       <>
@@ -167,15 +174,15 @@ export const PaymentModal = React.memo(function PaymentModal({
                       { borderColor: colors.accent },
                     ]}
                     onPress={() =>
-                      submitPayment({ isPaid: true, paymentType: 'online' })
+                      submitPayment({ isPaid: true, paymentType: 'online' }, 'online')
                     }
-                    disabled={loading}
+                    disabled={isBusy}
                     accessibilityRole="button"
                     accessibilityLabel={LABELS.ONLINE}
                     accessibilityHint="Marks as paid via online payment"
-                    accessibilityState={{ busy: loading }}
+                    accessibilityState={{ busy: loadingTarget === 'online' }}
                   >
-                    {loading ? (
+                    {loadingTarget === 'online' ? (
                       <ActivityIndicator size="small" color={colors.accent} />
                     ) : (
                       <>
@@ -197,15 +204,15 @@ export const PaymentModal = React.memo(function PaymentModal({
                       { borderColor: colors.success },
                     ]}
                     onPress={() =>
-                      submitPayment({ isPaid: true, paymentType: 'cash' })
+                      submitPayment({ isPaid: true, paymentType: 'cash' }, 'cash')
                     }
-                    disabled={loading}
+                    disabled={isBusy}
                     accessibilityRole="button"
                     accessibilityLabel={LABELS.CASH}
                     accessibilityHint="Marks as paid via cash"
-                    accessibilityState={{ busy: loading }}
+                    accessibilityState={{ busy: loadingTarget === 'cash' }}
                   >
-                    {loading ? (
+                    {loadingTarget === 'cash' ? (
                       <ActivityIndicator size="small" color={colors.success} />
                     ) : (
                       <>
@@ -227,6 +234,7 @@ export const PaymentModal = React.memo(function PaymentModal({
           </View>
         </View>
       </View>
-    </Modal>
+      </Modal>
+    </Portal>
   );
 });

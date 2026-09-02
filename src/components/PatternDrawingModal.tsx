@@ -7,6 +7,7 @@ import {
   Pressable,
   Alert,
   Dimensions,
+  GestureResponderEvent,
 } from 'react-native';
 import Svg, { Circle, Line } from 'react-native-svg';
 import { Lock, RefreshCw, X, Check } from 'lucide-react-native';
@@ -76,7 +77,7 @@ export function PatternDrawingModal({
     return null;
   };
 
-  const handleTouchStart = (e: any) => {
+  const handleTouchStart = (e: GestureResponderEvent) => {
     const { locationX, locationY } = e.nativeEvent;
     const dotId = detectDot(locationX, locationY);
     setIsDrawing(true);
@@ -89,7 +90,7 @@ export function PatternDrawingModal({
     }
   };
 
-  const handleTouchMove = (e: any) => {
+  const handleTouchMove = (e: GestureResponderEvent) => {
     if (!isDrawing) return;
     const { locationX, locationY } = e.nativeEvent;
     setCurrentTouch({ x: locationX, y: locationY });

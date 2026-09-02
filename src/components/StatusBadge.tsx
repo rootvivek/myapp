@@ -1,23 +1,7 @@
 import React, { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-
+import { Chip } from 'react-native-paper';
 import { useTheme } from '../context/ThemeContext';
 import type { RepairStatus } from '../types/repair';
-
-const styles = StyleSheet.create({
-  wrap: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 999,
-    borderWidth: 1,
-  },
-  text: {
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-  },
-});
 
 export const StatusBadge = React.memo(function StatusBadge({
   status,
@@ -46,8 +30,23 @@ export const StatusBadge = React.memo(function StatusBadge({
   }, [status, colors]);
 
   return (
-    <View style={[styles.wrap, { backgroundColor: sc.bg, borderColor: sc.border }]}>
-      <Text style={[styles.text, { color: sc.text }]}>{label}</Text>
-    </View>
+    <Chip
+      compact
+      mode="outlined"
+      style={{
+        backgroundColor: sc.bg,
+        borderColor: sc.border,
+        borderRadius: 4,
+      }}
+      textStyle={{
+        color: sc.text,
+        fontSize: 13,
+        fontWeight: '700',
+        marginVertical: 2,
+        marginHorizontal: 4,
+      }}
+    >
+      {label}
+    </Chip>
   );
 });

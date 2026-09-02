@@ -1,5 +1,6 @@
 import { StatusBar } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { MD3DarkTheme, MD3LightTheme, PaperProvider } from 'react-native-paper';
 
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
@@ -11,7 +12,9 @@ import { SplashScreen } from './src/components/SplashScreen';
 
 function AuthenticatedApp() {
   const { configured, loading, session } = useAuth();
-  const { colors, mode } = useTheme();
+  const { mode } = useTheme();
+
+  const paperTheme = mode === 'dark' ? MD3DarkTheme : MD3LightTheme;
 
   if (!configured) {
     return <AuthScreen />;
@@ -26,12 +29,14 @@ function AuthenticatedApp() {
   }
 
   return (
-    <RepairsProvider>
-      <InventoryProvider>
-        <StatusBar barStyle={mode === 'dark' ? 'light-content' : 'dark-content'} />
-        <AppNavigator />
-      </InventoryProvider>
-    </RepairsProvider>
+    <PaperProvider theme={paperTheme}>
+      <RepairsProvider>
+        <InventoryProvider>
+          <StatusBar barStyle={mode === 'dark' ? 'light-content' : 'dark-content'} />
+          <AppNavigator />
+        </InventoryProvider>
+      </RepairsProvider>
+    </PaperProvider>
   );
 }
 

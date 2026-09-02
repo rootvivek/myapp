@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { Printer } from 'lucide-react-native';
 import type { AppColors } from '../../theme';
@@ -38,11 +38,7 @@ export const RepairActions = React.memo(function RepairActions({
 
   return (
     <View style={styles.badgesRow}>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.badgesScrollContent}
-      >
+      <View style={styles.badgesScrollContent}>
         <StatusChip
           status={repair.status}
           label={statusLabel}
@@ -64,6 +60,7 @@ export const RepairActions = React.memo(function RepairActions({
           accessibilityLabel="Call customer"
           accessibilityHint="Calls the customer phone number"
           styles={styles}
+          flex={1}
         />
 
         <ActionButton
@@ -77,6 +74,7 @@ export const RepairActions = React.memo(function RepairActions({
           accessibilityLabel="Send WhatsApp invoice"
           accessibilityHint="Generates PDF and sends via WhatsApp"
           styles={styles}
+          flex={1}
         />
 
         <ActionButton
@@ -90,14 +88,9 @@ export const RepairActions = React.memo(function RepairActions({
           accessibilityLabel="Share invoice"
           accessibilityHint="Generates and shares PDF invoice"
           styles={styles}
+          flex={1}
         />
-
-        <PaymentBadges
-          repair={repair}
-          styles={styles}
-          colors={colors}
-        />
-      </ScrollView>
+      </View>
     </View>
   );
 });

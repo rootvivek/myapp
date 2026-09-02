@@ -1,6 +1,5 @@
-import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -17,7 +16,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useTheme } from '../context/ThemeContext';
-import { getDirectoryCustomers } from '../db/database';
+import { useRepairs } from '../context/RepairsContext';
 import type { RootStackParamList } from '../navigation/types';
 import type { AppColors } from '../theme';
 import { spacing } from '../theme';
@@ -140,42 +139,25 @@ function createStyles(colors: AppColors): ReturnType<typeof StyleSheet.create> {
 
 export function CustomerDirectoryScreen({ navigation }: Props) {
   const { colors } = useTheme();
+  const { repairs, loading } = useRepairs();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const [loading, setLoading] = useState(true);
-  const [customers, setCustomers] = useState<DirectoryCustomer[]>([]);
   const [query, setQuery] = useState('');
 
-  const mountedRef = useRef(true);
-
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
-
-  const load = useCallback(async (): Promise<void> => {
-    try {
-      const list = await getDirectoryCustomers();
-      if (mountedRef.current) {
-        setCustomers(sortCustomers(list));
-      }
-    } catch {
-      if (mountedRef.current) {
-        setCustomers([]);
-      }
-    } finally {
-      if (mountedRef.current) {
-        setLoading(false);
-      }
+  const customers = useMemo(() => {
+    const seen = new Set<string>();
+    const out: DirectoryCustomer[] = [];
+    for (const r of repairs) {
+      const p = (r.phone || '').trim();
+      if (!p || seen.has(p)) continue;
+      seen.add(p);
+      out.push({
+        phone: p,
+        customerName: r.customerName || '',
+        deviceModel: r.deviceModel || '',
+      });
     }
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      void load();
-    }, [load])
-  );
+    return sortCustomers(out);
+  }, [repairs]);
 
   const handleCall = useCallback(async (href: string) => {
     try {

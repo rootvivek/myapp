@@ -2,6 +2,7 @@ import { generatePDF } from 'react-native-html-to-pdf';
 import RNShare, { Social } from 'react-native-share';
 
 import type { Repair } from '../types/repair';
+import { logger } from './logger';
 import { REPAIR_STATUSES, formatAccessoriesSummary } from '../types/repair';
 import type { ShopBranding } from './shopSettings';
 import { getShopBranding } from './shopSettings';
@@ -182,11 +183,9 @@ export async function shareReceiptPdf(repair: Repair): Promise<void> {
 }
 
 /** Generate a PDF invoice and share directly to a WhatsApp contact. */
-export async function shareReceiptPdfToWhatsAppContact(repair: Repair, customerPhone: string): Promise<void> {
+export async function shareReceiptPdfToWhatsAppContact(repair: Repair, phone: string): Promise<void> {
+  const filePath = await generateInvoicePdf(repair);
   try {
-    const filePath = await generateInvoicePdf(repair);
-    const phone = normalizeWhatsAppPhone(customerPhone);
-
     await RNShare.shareSingle({
       social: Social.Whatsapp,
       url: `file://${filePath}`,
@@ -195,7 +194,7 @@ export async function shareReceiptPdfToWhatsAppContact(repair: Repair, customerP
       whatsAppNumber: phone,
     });
   } catch (err) {
-    console.warn('Direct WhatsApp share error, falling back to general share:', err);
+    logger.warn('Direct WhatsApp share error, falling back to general share:', err);
     await shareReceiptPdf(repair);
   }
 }

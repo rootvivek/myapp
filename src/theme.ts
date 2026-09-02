@@ -90,8 +90,8 @@ export const darkColors: AppColors = {
 };
 
 export const lightColors: AppColors = {
-  bg: '#FAF9F6',
-  bgGradient: ['#FAF9F6', '#E0F2FE', '#F3E8FF'], // Warm ivory, soft sky blue, soft lavender
+  bg: '#F8FAFC',
+  bgGradient: ['#F8FAFC', '#E0F2FE', '#F3E8FF'], // Crisp slate white, soft sky blue, soft lavender
   surface: 'rgba(255, 255, 255, 0.70)',        // Frosted glass
   surface2: 'rgba(255, 255, 255, 0.40)',       // Transparent sub-card
   border: 'rgba(124, 58, 237, 0.12)',          // Soft violet/slate border for glassmorphism alignment

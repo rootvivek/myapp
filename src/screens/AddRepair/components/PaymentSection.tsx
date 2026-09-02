@@ -116,31 +116,33 @@ export const PaymentSection = React.memo(function PaymentSection({
         <Text style={[{ marginTop: spacing.md, color: colors.textMuted, fontSize: 13, fontWeight: '600' }]}>
           Payment Method
         </Text>
-        <View style={{ flexDirection: 'row', gap: 10, marginTop: 6, marginBottom: 4 }}>
+        <View style={{ flexDirection: 'row', gap: 10, marginTop: 8, marginBottom: 4 }}>
           {(['cash', 'online'] as const).map((method) => {
             const isSelected = paymentType === method;
             return (
-              <PaperChip
+              <Pressable
                 key={method}
-                selected={isSelected}
                 onPress={() => onChangePaymentType(method)}
                 style={{
-                  backgroundColor: isSelected ? accentAlpha(colors.accent, 0.15) : colors.surface2,
-                  borderColor: isSelected ? colors.accent : colors.border,
                   flex: 1,
-                }}
-                textStyle={{
-                  color: isSelected ? colors.accent : colors.textMuted,
-                  fontWeight: isSelected ? '700' : '600',
-                  fontSize: 12,
-                  textAlign: 'center',
+                  height: 42,
+                  borderRadius: 4,
+                  borderWidth: 1,
+                  borderColor: isSelected ? colors.accent : colors.border,
+                  backgroundColor: isSelected ? accentAlpha(colors.accent, 0.15) : colors.surface2,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
                 }}
                 accessibilityRole="button"
                 accessibilityLabel={`Payment method ${method}`}
                 accessibilityState={{ selected: isSelected }}
               >
-                {method === 'cash' ? 'Cash' : 'Online'}
-              </PaperChip>
+                <Text style={{ color: isSelected ? colors.accent : colors.textMuted, fontSize: 13, fontWeight: isSelected ? '700' : '600' }}>
+                  {method === 'cash' ? 'Cash' : 'Online'}
+                </Text>
+              </Pressable>
             );
           })}
         </View>

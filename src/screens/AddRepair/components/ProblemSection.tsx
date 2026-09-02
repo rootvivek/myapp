@@ -60,6 +60,7 @@ export const ProblemSection = React.memo(function ProblemSection({
               style={{
                 backgroundColor: colors.surface2,
                 borderColor: colors.border,
+                borderRadius: 4,
                 marginRight: 2,
                 marginBottom: 2,
               }}

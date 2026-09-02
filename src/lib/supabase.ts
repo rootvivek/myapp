@@ -8,8 +8,10 @@ import { EXPO_PUBLIC_SUPABASE_URL, EXPO_PUBLIC_SUPABASE_ANON_KEY } from '@env';
 const supabaseUrl = (EXPO_PUBLIC_SUPABASE_URL ?? '').trim();
 const supabaseAnonKey = (EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '').trim();
 
+import { logger } from '../utils/logger';
+
 if (__DEV__ && (!supabaseUrl || !supabaseAnonKey)) {
-  console.warn(
+  logger.warn(
     '[supabase] Missing EXPO_PUBLIC_SUPABASE_URL or EXPO_PUBLIC_SUPABASE_ANON_KEY in .env',
   );
 }

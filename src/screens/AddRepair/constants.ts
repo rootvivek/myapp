@@ -41,7 +41,6 @@ export const WARRANTY_OPTIONS = [
   { label: '30 Days', type: '30' as const, value: '30 Days' },
   { label: '90 Days', type: '90' as const, value: '90 Days' },
   { label: '180 Days', type: '180' as const, value: '180 Days' },
-  { label: 'Custom', type: 'custom' as const, value: '' },
 ] as const;
 
 export const ACCESSORY_UI = [

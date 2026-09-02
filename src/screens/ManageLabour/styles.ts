@@ -1,0 +1,182 @@
+import { StyleSheet } from 'react-native';
+import type { AppColors } from '../../theme';
+import { accentAlpha, radius, spacing } from '../../theme';
+
+export function createStyles(colors: AppColors) {
+  return StyleSheet.create({
+    safe: { flex: 1, backgroundColor: colors.bg },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.md,
+      gap: spacing.sm,
+    },
+    backBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: colors.surface2,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    title: {
+      flex: 1,
+      fontSize: 22,
+      fontWeight: '800',
+      color: colors.text,
+    },
+    addBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      borderRadius: radius.sm,
+      backgroundColor: colors.accent,
+    },
+    addBtnText: {
+      color: '#fff',
+      fontWeight: '700',
+      fontSize: 14,
+    },
+    list: {
+      padding: spacing.md,
+      paddingBottom: 40,
+    },
+    card: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.md,
+      padding: spacing.md,
+      marginBottom: spacing.sm,
+    },
+    cardInfo: {
+      flex: 1,
+    },
+    cardName: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: colors.text,
+    },
+    cardPhone: {
+      fontSize: 13,
+      color: colors.textMuted,
+      marginTop: 2,
+    },
+    badge: {
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 12,
+      marginTop: 6,
+      alignSelf: 'flex-start',
+    },
+    badgeOwner: {
+      backgroundColor: accentAlpha(colors.accent, 0.15),
+    },
+    badgeLabour: {
+      backgroundColor: accentAlpha(colors.success, 0.15),
+    },
+    badgeText: {
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    deleteBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: colors.surface2,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    centered: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    empty: {
+      color: colors.textMuted,
+      textAlign: 'center',
+      marginTop: spacing.xl,
+      fontSize: 15,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.6)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: spacing.lg,
+    },
+    modalCard: {
+      width: '100%',
+      maxWidth: 400,
+      backgroundColor: colors.surface,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: spacing.lg,
+    },
+    modalTitle: {
+      fontSize: 18,
+      fontWeight: '800',
+      color: colors.text,
+      marginBottom: spacing.md,
+    },
+    label: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: colors.textMuted,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+      marginBottom: spacing.xs,
+      marginTop: spacing.sm,
+    },
+    input: {
+      height: 48,
+      borderRadius: radius.sm,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface2,
+      paddingHorizontal: spacing.md,
+      color: colors.text,
+      fontSize: 15,
+    },
+    modalActions: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+      marginTop: spacing.lg,
+    },
+    cancelBtn: {
+      flex: 1,
+      height: 44,
+      borderRadius: radius.sm,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface2,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    cancelBtnText: {
+      color: colors.text,
+      fontWeight: '600',
+      fontSize: 14,
+    },
+    saveBtn: {
+      flex: 1,
+      height: 44,
+      borderRadius: radius.sm,
+      backgroundColor: colors.accent,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    saveBtnText: {
+      color: '#fff',
+      fontWeight: '700',
+      fontSize: 14,
+    },
+    dim: { opacity: 0.6 },
+  });
+}

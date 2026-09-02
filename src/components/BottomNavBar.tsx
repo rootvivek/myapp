@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
-import { StyleSheet, View, Text, Pressable } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ClipboardList, IndianRupee, PlusCircle, Package, User, BookOpen } from 'lucide-react-native';
+import { ClipboardList, IndianRupee, PlusCircle, Package, User } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -45,11 +45,7 @@ export function BottomNavBar() {
         android_ripple={{ color: 'rgba(124, 58, 237, 0.08)' }}
       >
         <View style={styles.iconWrap}>
-          <Icon
-            size={22}
-            color={isActive ? colors.accent : colors.textMuted}
-            strokeWidth={isActive ? 2.5 : 2.0}
-          />
+          <Icon size={22} color={isActive ? colors.accent : colors.textMuted} strokeWidth={isActive ? 2.5 : 2.0} />
         </View>
         <Text
           style={[
@@ -89,11 +85,7 @@ export function BottomNavBar() {
         android_ripple={{ color: 'rgba(124, 58, 237, 0.08)' }}
       >
         <View style={styles.iconWrap}>
-          <PlusCircle
-            size={28}
-            color={colors.accent}
-            strokeWidth={2.2}
-          />
+          <PlusCircle size={28} color={colors.accent} strokeWidth={2.2} />
         </View>
         <Text
           style={[
@@ -121,7 +113,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     borderTopWidth: 1,
-    paddingTop: 10,
+    paddingTop: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.05,
@@ -137,7 +129,7 @@ const styles = StyleSheet.create({
   iconWrap: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 3,
+    marginBottom: 2,
   },
   label: {
     fontSize: 10,

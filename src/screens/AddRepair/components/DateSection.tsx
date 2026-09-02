@@ -24,7 +24,7 @@ export const DateSection = React.memo(function DateSection({
 
   return (
     <>
-      <Text style={styles.sectionTitle}>DATE</Text>
+      <Text style={styles.sectionTitle}>DATE RECEIVED</Text>
       <Pressable
         onPress={() => setShowDate(true)}
         accessibilityRole="button"
@@ -33,7 +33,6 @@ export const DateSection = React.memo(function DateSection({
       >
         <View pointerEvents="none">
           <PaperInput
-            label="Date Received"
             value={dateReceived}
             editable={false}
             mode="outlined"

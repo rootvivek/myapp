@@ -10,6 +10,7 @@ import React, {
 } from 'react';
 
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
+import { logger } from '../utils/logger';
 import { saveShopBranding } from '../utils/shopSettings';
 import { signInUser, signUpUser } from './AuthService';
 import { authReducer, initialAuthState } from './AuthReducer';
@@ -88,7 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           await loadProfile(s.user.id);
         }
       } catch (err) {
-        console.warn('[AuthProvider] Error initializing auth:', err);
+        logger.warn('[AuthProvider] Error initializing auth:', err);
       } finally {
         if (!cancelled && mountedRef.current) {
           initializingRef.current = false;

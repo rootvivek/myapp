@@ -81,14 +81,14 @@ const styles = StyleSheet.create({
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-start',
+    justifyContent: 'center',
     gap: 4,
-    width: 90,
+    flex: 1,
     height: 28,
-    borderRadius: 4, // 4px border radius as updated by user
+    borderRadius: 4,
     borderWidth: 1,
     paddingVertical: 2,
-    paddingHorizontal: 6,
+    paddingHorizontal: 4,
   },
   pillIcon: { fontSize: 11 },
   pillText: { fontSize: 11, fontWeight: '700' },
@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
   filterChip: {
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: 6,
+    borderRadius: 4,
     borderWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',

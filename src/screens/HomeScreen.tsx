@@ -3,22 +3,27 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  SectionList,
+  FlatList,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Wrench } from 'lucide-react-native';
+import { EmptyState } from '../components/EmptyState';
 import { HomeHeader } from '../components/HomeHeader';
 import type { StatusFilter } from '../components/HomeHeader';
 import { RepairCard } from '../components/RepairCard';
+import { RepairCardSkeleton } from '../components/Skeleton';
 
-import { useRepairs } from '../context/RepairsContext';
+import {
+  useFilteredRepairs,
+  useRepairActions,
+  useRepairsState,
+} from '../context/RepairsContext';
 import { useTheme } from '../context/ThemeContext';
-import { updateRepairStatus } from '../db/database';
-import { formatDateDisplay } from '../utils/format';
+import { repairService } from '../services/repairService';
 import type { RootStackParamList } from '../navigation/types';
 import type { AppColors } from '../theme';
 import { spacing } from '../theme';
@@ -33,29 +38,6 @@ function createStyles(colors: AppColors) {
 
     list: { paddingHorizontal: 6, paddingTop: spacing.sm, paddingBottom: 120 },
     centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    empty: {
-      color: colors.textMuted,
-      textAlign: 'center',
-      marginTop: spacing.xxl,
-      paddingHorizontal: spacing.lg,
-      fontSize: 15,
-      lineHeight: 22,
-    },
-    sectionHeader: {
-      backgroundColor: colors.bgGradient[0] || colors.bg,
-      paddingVertical: 8,
-      marginHorizontal: -6,
-      paddingHorizontal: 6,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    sectionHeaderText: {
-      color: colors.accent,
-      fontSize: 13,
-      fontWeight: '700',
-      letterSpacing: 0.3,
-      textAlign: 'center',
-    },
   });
   return s;
 }
@@ -63,34 +45,12 @@ function createStyles(colors: AppColors) {
 export function HomeScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const { repairs, loading, refresh } = useRepairs();
+  const { repairs, loading } = useRepairsState();
+  const { refresh, updateRepairInState } = useRepairActions();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('pending');
   const [refreshing, setRefreshing] = useState(false);
 
-  const filteredRepairs = useMemo(() => {
-    if (statusFilter === 'all') return repairs;
-    return repairs.filter((r) => r.status === statusFilter);
-  }, [repairs, statusFilter]);
-
-  const sections = useMemo(() => {
-    const groups: Record<string, typeof filteredRepairs> = {};
-    for (const r of filteredRepairs) {
-      const date = r.dateReceived || 'Unknown Date';
-      if (!groups[date]) groups[date] = [];
-      groups[date].push(r);
-    }
-    const sortedDates = Object.keys(groups).sort((a, b) => b.localeCompare(a));
-    return sortedDates.map((date) => ({
-      title: formatDateDisplay(date) || date,
-      data: groups[date],
-    }));
-  }, [filteredRepairs]);
-
-  useFocusEffect(
-    useCallback(() => {
-      void refresh();
-    }, [refresh])
-  );
+  const filteredRepairs = useFilteredRepairs(statusFilter);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -107,19 +67,32 @@ export function HomeScreen({ navigation }: Props) {
       status: RepairStatus,
       paymentUpdate?: { isPaid: boolean; paymentType?: 'cash' | 'online' }
     ): Promise<void> => {
-      await updateRepairStatus(repairId, status, paymentUpdate);
-      await refresh();
-    },
-    [refresh]
-  );
+      const existing = repairs.find((r) => r.id === repairId);
+      if (!existing) return;
 
-  const renderSectionHeader = useCallback(
-    ({ section: { title } }: { section: { title: string } }) => (
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionHeaderText}>{title}</Text>
-      </View>
-    ),
-    [styles.sectionHeader, styles.sectionHeaderText]
+      const previousState: Partial<Repair> = {
+        status: existing.status,
+        isPaid: existing.isPaid,
+        paymentType: existing.paymentType,
+      };
+
+      const localUpdates: Partial<Repair> = { status };
+      if (paymentUpdate) {
+        localUpdates.isPaid = paymentUpdate.isPaid;
+        if (paymentUpdate.paymentType) {
+          localUpdates.paymentType = paymentUpdate.paymentType;
+        }
+      }
+      updateRepairInState(repairId, localUpdates);
+
+      try {
+        await repairService.updateStatus(repairId, status, paymentUpdate);
+      } catch {
+        // Rollback local state on error
+        updateRepairInState(repairId, previousState);
+      }
+    },
+    [repairs, updateRepairInState]
   );
 
   const renderItem = useCallback(
@@ -154,23 +127,31 @@ export function HomeScreen({ navigation }: Props) {
 
         {/* ── Repair list ── */}
         {loading && repairs.length === 0 ? (
-          <View style={styles.centered}>
-            <ActivityIndicator size="large" color={colors.accent} />
+          <View style={styles.list}>
+            <RepairCardSkeleton />
+            <RepairCardSkeleton />
+            <RepairCardSkeleton />
           </View>
         ) : (
-          <SectionList
-            sections={sections}
+          <FlatList
+            data={filteredRepairs}
             keyExtractor={keyExtractor}
             contentContainerStyle={styles.list}
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            stickySectionHeadersEnabled={true}
             ListEmptyComponent={
-              <Text style={styles.empty}>
-                {repairs.length === 0 ? 'No repairs yet.' : 'No jobs with this status.'}
-              </Text>
+              <EmptyState
+                icon={<Wrench size={36} color={colors.accent} />}
+                title={repairs.length === 0 ? 'No repairs yet' : 'No jobs found'}
+                description={
+                  repairs.length === 0
+                    ? 'Tap the + button above to log your first repair job.'
+                    : 'No repair jobs match the selected status filter.'
+                }
+                actionLabel={repairs.length === 0 ? 'Create Repair' : undefined}
+                onAction={repairs.length === 0 ? () => navigation.navigate('AddRepair', {}) : undefined}
+              />
             }
-            renderSectionHeader={renderSectionHeader}
             renderItem={renderItem}
           />
         )}

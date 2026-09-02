@@ -1,6 +1,6 @@
 import type { LockType, Repair, RepairImageSlot, RepairStatus } from '../../types/repair';
 
-export type WarrantyType = 'none' | '30' | '90' | '180' | 'custom';
+export type WarrantyType = 'none' | '30' | '90' | '180';
 export type PaymentStep = 'paid_status' | 'payment_method';
 
 export interface RepairFormState {
@@ -28,7 +28,7 @@ export interface RepairFormState {
 }
 
 export type RepairFormAction =
-  | { type: 'SET_FIELD'; field: keyof RepairFormState; value: any }
+  | { type: 'SET_FIELD'; field: keyof RepairFormState; value: RepairFormState[keyof RepairFormState] }
   | { type: 'SET_ACCESSORY'; key: 'accSimTray' | 'accBackCover'; value: boolean }
   | { type: 'SET_IMAGE'; slot: RepairImageSlot; uri: string }
   | { type: 'SET_FORM_DATA'; payload: Partial<RepairFormState> }

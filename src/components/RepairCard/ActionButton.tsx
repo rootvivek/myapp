@@ -15,6 +15,7 @@ type Props = {
   accessibilityLabel: string;
   accessibilityHint: string;
   styles: CardStyles;
+  flex?: number;
 };
 
 export const ActionButton = React.memo(function ActionButton({
@@ -29,6 +30,7 @@ export const ActionButton = React.memo(function ActionButton({
   accessibilityLabel,
   accessibilityHint,
   styles,
+  flex,
 }: Props) {
   const isDisabled = loading || disabled;
 
@@ -36,7 +38,7 @@ export const ActionButton = React.memo(function ActionButton({
     <Pressable
       onPress={onPress}
       disabled={isDisabled}
-      style={[styles.actionBtn, isDisabled && styles.disabled]}
+      style={[styles.actionBtn, isDisabled && styles.disabled, flex != null && { flex, width: undefined }]}
       android_ripple={{ color: rippleColor }}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}

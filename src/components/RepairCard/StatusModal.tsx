@@ -1,5 +1,6 @@
 import React from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Portal } from 'react-native-paper';
 
 import type { AppColors } from '../../theme';
 import type { RepairStatus } from '../../types/repair';
@@ -27,12 +28,12 @@ export const StatusModal = React.memo(function StatusModal({
   colors,
 }: Props) {
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
+    <Portal>
+      <Modal
+        visible={visible}
+        onDismiss={onClose}
+        contentContainerStyle={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'transparent' }}
+      >
       <View style={styles.modalWrap}>
         <Pressable
           style={StyleSheet.absoluteFill}
@@ -63,7 +64,6 @@ export const StatusModal = React.memo(function StatusModal({
                     ]}
                   >
                     {s.label}
-                    {isCurrent ? '  ✓' : ''}
                   </Text>
                 </Pressable>
               );
@@ -79,6 +79,7 @@ export const StatusModal = React.memo(function StatusModal({
           </View>
         </View>
       </View>
-    </Modal>
+      </Modal>
+    </Portal>
   );
 });

@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Image, ImageProps } from 'react-native';
 import { supabase } from '../lib/supabase';
+import { logger } from '../utils/logger';
 
 export function useSecureImage(imageUrl: string | null | undefined) {
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
@@ -19,7 +20,7 @@ export function useSecureImage(imageUrl: string | null | undefined) {
     }
 
     // If it's a Supabase storage URL for our private bucket
-    if (imageUrl.includes('/storage/v1/object/public/repair-images/')) {
+    if (imageUrl.includes('/storage/v1/object/authenticated/repair-images/')) {
       let isMounted = true;
       setLoading(true);
 
@@ -42,7 +43,7 @@ export function useSecureImage(imageUrl: string | null | undefined) {
             setSignedUrl(data.signedUrl);
           }
         } catch (err) {
-          console.warn('[useSecureImage] error signing url:', err);
+          logger.warn('[useSecureImage] error signing url:', err);
           if (isMounted) setSignedUrl(imageUrl);
         } finally {
           if (isMounted) setLoading(false);

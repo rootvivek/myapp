@@ -26,6 +26,8 @@ export type UpdateInfo = {
   isForceUpdate: boolean;
 };
 
+import { logger } from '../utils/logger';
+
 export async function checkAppUpdate(): Promise<UpdateInfo | null> {
   try {
     if (!supabase) return null;
@@ -37,7 +39,7 @@ export async function checkAppUpdate(): Promise<UpdateInfo | null> {
       .maybeSingle();
 
     if (error) {
-      console.warn('[AutoUpdater] checkAppUpdate query error:', error);
+      logger.warn('[AutoUpdater] checkAppUpdate query error:', error);
       return null;
     }
 
@@ -55,7 +57,7 @@ export async function checkAppUpdate(): Promise<UpdateInfo | null> {
       };
     }
   } catch (err) {
-    console.warn('[AutoUpdater] checkAppUpdate failed:', err);
+    logger.warn('[AutoUpdater] checkAppUpdate failed:', err);
   }
   return null;
 }
@@ -92,7 +94,7 @@ export function AutoUpdater() {
     try {
       await Linking.openURL(url);
     } catch (err) {
-      console.warn('[AutoUpdater] Failed to open download URL:', err);
+      logger.warn('[AutoUpdater] Failed to open download URL:', err);
       Alert.alert(
         'Download Failed',
         'Could not open the download link in your browser. Please try again manually.',

@@ -6,8 +6,9 @@ import LinearGradient from 'react-native-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { RepairCard } from '../components/RepairCard';
+import { useRepairActions } from '../context/RepairsContext';
 import { useTheme } from '../context/ThemeContext';
-import { searchRepairs, updateRepairStatus } from '../db/database';
+import { repairService } from '../services/repairService';
 import type { RootStackParamList } from '../navigation/types';
 import type { AppColors } from '../theme';
 import { spacing } from '../theme';
@@ -58,6 +59,7 @@ function createStyles(colors: AppColors): ReturnType<typeof StyleSheet.create> {
 
 export function SearchScreen({ navigation }: Props) {
   const { colors } = useTheme();
+  const { updateRepairInState } = useRepairActions();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Repair[]>([]);
@@ -75,7 +77,7 @@ export function SearchScreen({ navigation }: Props) {
   const runSearch = useCallback(async (q: string): Promise<void> => {
     const currentRequestId = ++requestIdRef.current;
     try {
-      const list = await searchRepairs(q);
+      const list = await repairService.search(q);
       if (currentRequestId === requestIdRef.current && mountedRef.current) {
         setResults(list);
       }
@@ -99,12 +101,29 @@ export function SearchScreen({ navigation }: Props) {
       status: RepairStatus,
       paymentUpdate?: { isPaid: boolean; paymentType?: 'cash' | 'online' }
     ): Promise<void> => {
-      await updateRepairStatus(repairId, status, paymentUpdate);
-      if (mountedRef.current) {
-        await runSearch(query);
+      const localUpdates: Partial<Repair> = { status };
+      if (paymentUpdate) {
+        localUpdates.isPaid = paymentUpdate.isPaid;
+        if (paymentUpdate.paymentType) {
+          localUpdates.paymentType = paymentUpdate.paymentType;
+        }
+      }
+
+      // Optimistically update local search results and global context
+      setResults((prev) =>
+        prev.map((r) => (r.id === repairId ? { ...r, ...localUpdates } : r))
+      );
+      updateRepairInState(repairId, localUpdates);
+
+      try {
+        await repairService.updateStatus(repairId, status, paymentUpdate);
+      } catch {
+        if (mountedRef.current) {
+          await runSearch(query);
+        }
       }
     },
-    [query, runSearch]
+    [query, runSearch, updateRepairInState]
   );
 
   const sections = useMemo(() => {

@@ -7,10 +7,12 @@ import { ActivityIndicator, Pressable, ScrollView, StatusBar, Text, View } from 
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useTheme } from '../../context/ThemeContext';
-import { getDirectoryCustomers, getRepairById } from '../../db/database';
+import { customerService } from '../../services/customerService';
+import { repairService } from '../../services/repairService';
 import type { RootStackParamList } from '../../navigation/types';
 import type { DirectoryCustomer } from '../../types/customer';
 import type { LockType, RepairImageSlot } from '../../types/repair';
+import type { WarrantyType } from './types';
 import { emptyImageState, repairToImageState } from '../../utils/repairImages';
 import {
   normalizeImeiInput,
@@ -57,7 +59,7 @@ export function AddRepairScreen({ navigation, route }: Props) {
 
   const loadDirectory = useCallback(async () => {
     try {
-      const list = await getDirectoryCustomers();
+      const list = await customerService.getDirectory();
       setDirectoryCustomers(list);
     } catch {
       setDirectoryCustomers([]);
@@ -106,18 +108,17 @@ export function AddRepairScreen({ navigation, route }: Props) {
 
     (async () => {
       setLoading(true);
-      const r = await getRepairById(repairId);
+      const r = await repairService.getById(repairId);
       if (cancelled || !r) {
         setLoading(false);
         return;
       }
 
       const w = r.warranty || 'No Warranty';
-      let wType: any = 'none';
+      let wType: WarrantyType = 'none';
       if (w === '30 Days') wType = '30';
       else if (w === '90 Days') wType = '90';
       else if (w === '180 Days') wType = '180';
-      else if (w !== 'No Warranty') wType = 'custom';
 
       const imgState = repairToImageState(r);
       initialImagesRef.current = imgState;
@@ -132,7 +133,7 @@ export function AddRepairScreen({ navigation, route }: Props) {
         problem: r.problem,
         warranty: w,
         warrantyType: wType,
-        customWarranty: wType === 'custom' ? w : '',
+        customWarranty: '',
         dateReceived: r.dateReceived,
         status: r.status,
         repairCost: String(r.repairCost || ''),
@@ -229,15 +230,6 @@ export function AddRepairScreen({ navigation, route }: Props) {
           colors={colors}
         />
 
-        <LockSection
-          lockType={state.lockType}
-          lockValue={state.lockValue}
-          onChangeLockType={(val) => setField('lockType', val)}
-          onChangeLockValue={(val) => setField('lockValue', val)}
-          styles={styles}
-          colors={colors}
-        />
-
         <ProblemSection
           problem={state.problem}
           onChangeProblem={(val) => setField('problem', val)}
@@ -252,13 +244,11 @@ export function AddRepairScreen({ navigation, route }: Props) {
           colors={colors}
         />
 
-        <WarrantySection
-          warranty={state.warranty}
-          customWarranty={state.customWarranty}
-          warrantyType={state.warrantyType}
-          onChangeWarranty={(val) => setField('warranty', val)}
-          onChangeCustomWarranty={(val) => setField('customWarranty', val)}
-          onChangeWarrantyType={(val) => setField('warrantyType', val)}
+        <LockSection
+          lockType={state.lockType}
+          lockValue={state.lockValue}
+          onChangeLockType={(val) => setField('lockType', val)}
+          onChangeLockValue={(val) => setField('lockValue', val)}
           styles={styles}
           colors={colors}
         />
@@ -269,9 +259,11 @@ export function AddRepairScreen({ navigation, route }: Props) {
           styles={styles}
         />
 
-        <DateSection
-          dateReceived={state.dateReceived}
-          onChangeDateReceived={(val) => setField('dateReceived', val)}
+        <WarrantySection
+          warranty={state.warranty}
+          warrantyType={state.warrantyType}
+          onChangeWarranty={(val) => setField('warranty', val)}
+          onChangeWarrantyType={(val) => setField('warrantyType', val)}
           styles={styles}
           colors={colors}
         />
@@ -279,7 +271,6 @@ export function AddRepairScreen({ navigation, route }: Props) {
         <StatusSection
           status={state.status}
           onChangeStatus={(val) => setField('status', val)}
-          onOpenPaymentModal={() => setPaymentModalVisible(true)}
           styles={styles}
           colors={colors}
         />
@@ -298,6 +289,13 @@ export function AddRepairScreen({ navigation, route }: Props) {
           onChangeIsPaid={(val) => setField('isPaid', val)}
           onChangePaymentType={(val) => setField('paymentType', val)}
           onChangeSendWhatsAppInvoice={(val) => setField('sendWhatsAppInvoice', val)}
+          styles={styles}
+          colors={colors}
+        />
+
+        <DateSection
+          dateReceived={state.dateReceived}
+          onChangeDateReceived={(val) => setField('dateReceived', val)}
           styles={styles}
           colors={colors}
         />

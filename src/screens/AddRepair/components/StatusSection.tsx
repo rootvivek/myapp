@@ -10,7 +10,6 @@ import type { AddRepairStyles } from '../styles';
 type Props = {
   status: RepairStatus;
   onChangeStatus: (s: RepairStatus) => void;
-  onOpenPaymentModal: () => void;
   styles: AddRepairStyles;
   colors: AppColors;
 };
@@ -18,7 +17,6 @@ type Props = {
 export const StatusSection = React.memo(function StatusSection({
   status,
   onChangeStatus,
-  onOpenPaymentModal,
   styles,
   colors,
 }: Props) {
@@ -34,17 +32,13 @@ export const StatusSection = React.memo(function StatusSection({
                 <PaperChip
                   key={s.value}
                   selected={isSelected}
+                  showSelectedCheck={false}
                   mode="outlined"
-                  onPress={() => {
-                    if (s.value === 'delivered' && status !== 'delivered') {
-                      onOpenPaymentModal();
-                    } else {
-                      onChangeStatus(s.value);
-                    }
-                  }}
+                  onPress={() => onChangeStatus(s.value)}
                   style={{
                     backgroundColor: isSelected ? accentAlpha(colors.accent, 0.15) : colors.surface2,
                     borderColor: isSelected ? colors.accent : colors.border,
+                    borderRadius: 4,
                   }}
                   textStyle={{
                     color: isSelected ? colors.accent : colors.textMuted,
