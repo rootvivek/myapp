@@ -23,8 +23,16 @@ export const DateSection = React.memo(function DateSection({
   const dateValue = new Date(dateReceived + 'T12:00:00');
 
   return (
-    <>
-      <Text style={styles.sectionTitle}>DATE RECEIVED</Text>
+    <View style={styles.formCard}>
+      <View style={styles.cardHeader}>
+        <View style={styles.cardHeaderIcon}>
+          <Calendar size={16} color={colors.accent} />
+        </View>
+        <View style={styles.cardHeaderInfo}>
+          <Text style={styles.cardTitle}>Received Date</Text>
+        </View>
+      </View>
+
       <Pressable
         onPress={() => setShowDate(true)}
         accessibilityRole="button"
@@ -43,12 +51,12 @@ export const DateSection = React.memo(function DateSection({
             placeholderTextColor={colors.textMuted}
             theme={{
               colors: {
-                background: colors.surface,
+                background: colors.surface2,
                 placeholder: colors.textMuted,
               },
             }}
-            style={styles.paperInput}
-            right={<PaperInput.Icon icon={() => <Calendar color={colors.accent} size={20} />} />}
+            style={[styles.paperInput, { marginBottom: 0 }]}
+            right={<PaperInput.Icon icon={() => <Calendar color={colors.accent} size={18} />} />}
           />
         </View>
       </Pressable>
@@ -78,6 +86,7 @@ export const DateSection = React.memo(function DateSection({
           <Text style={{ color: colors.accent, fontWeight: '700', fontSize: 14 }}>Done</Text>
         </Pressable>
       )}
-    </>
+    </View>
   );
 });
+

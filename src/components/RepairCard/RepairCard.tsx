@@ -11,8 +11,11 @@ import { RepairInfo } from './RepairInfo';
 import { StatusModal } from './StatusModal';
 import { createCardStyles } from './styles';
 
+import Animated, { FadeInUp } from 'react-native-reanimated';
+
 type Props = {
   repair: Repair;
+  index?: number;
   onPress: () => void;
   onStatusChange?: (
     repairId: number,
@@ -23,6 +26,7 @@ type Props = {
 
 export const RepairCard = React.memo(function RepairCard({
   repair,
+  index,
   onPress,
   onStatusChange,
 }: Props) {
@@ -49,7 +53,7 @@ export const RepairCard = React.memo(function RepairCard({
 
       setStatusModal(false);
 
-      if (newStatus === 'delivered' && repair.status !== 'delivered') {
+      if (newStatus === 'delivered') {
         setPaymentModal(true);
         return;
       }
@@ -77,10 +81,14 @@ export const RepairCard = React.memo(function RepairCard({
   }, []);
 
   return (
-    <View style={styles.card}>
+    <Animated.View
+      entering={FadeInUp.delay((index ?? 0) * 40).duration(300)}
+      style={styles.card}
+    >
       <RepairInfo
         repair={repair}
         onPress={onPress}
+        onPaymentPress={onStatusChange ? () => setPaymentModal(true) : undefined}
         styles={styles}
         colors={colors}
       />
@@ -118,6 +126,6 @@ export const RepairCard = React.memo(function RepairCard({
           colors={colors}
         />
       )}
-    </View>
+    </Animated.View>
   );
 });

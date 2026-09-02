@@ -15,12 +15,14 @@ import { Searchbar } from 'react-native-paper';
 import LinearGradient from 'react-native-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Search, X } from 'lucide-react-native';
 import { useTheme } from '../context/ThemeContext';
 import { useRepairs } from '../context/RepairsContext';
 import type { RootStackParamList } from '../navigation/types';
 import type { AppColors } from '../theme';
 import { spacing } from '../theme';
 import type { DirectoryCustomer } from '../types/customer';
+import { CustomerHistoryModal, matchPhone } from '../components/CustomerHistoryModal';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CustomerDirectory'>;
 
@@ -182,15 +184,24 @@ export function CustomerDirectoryScreen({ navigation }: Props) {
     );
   }, [customers, query]);
 
+  const [selectedCustomer, setSelectedCustomer] = useState<DirectoryCustomer | null>(null);
+
   const renderItem = useCallback(
     ({ item }: { item: DirectoryCustomer }) => {
       const name = item.customerName.trim() || '—';
       const initial = (name === '—' ? '?' : name).slice(0, 1).toUpperCase();
       const href = telUri(item.phone);
+
+      const jobCount = repairs.filter((r) => {
+        if (item.phone && matchPhone(r.phone, item.phone)) return true;
+        if (item.customerName && r.customerName.trim().toLowerCase() === item.customerName.trim().toLowerCase()) return true;
+        return false;
+      }).length;
+
       return (
         <View style={styles.row}>
           <Pressable
-            onPress={() => navigation.navigate('AddRepair', { prefillCustomer: item })}
+            onPress={() => setSelectedCustomer(item)}
             style={styles.rowMain}
             android_ripple={{ color: colors.border }}
           >
@@ -204,11 +215,9 @@ export function CustomerDirectoryScreen({ navigation }: Props) {
               <Text style={styles.phone} selectable>
                 {item.phone}
               </Text>
-              {item.deviceModel ? (
-                <Text style={styles.device} numberOfLines={1}>
-                  Last device: {item.deviceModel}
-                </Text>
-              ) : null}
+              <Text style={[styles.device, { color: colors.accent, fontWeight: '600' }]} numberOfLines={1}>
+                {jobCount} {jobCount === 1 ? 'Job' : 'Jobs'} • Tap for History & Warranties
+              </Text>
             </View>
           </Pressable>
           {href ? (
@@ -223,7 +232,7 @@ export function CustomerDirectoryScreen({ navigation }: Props) {
         </View>
       );
     },
-    [colors, navigation, handleCall, styles]
+    [colors, handleCall, styles, repairs]
   );
 
   const keyExtractor = useCallback((item: DirectoryCustomer) => item.phone, []);
@@ -243,9 +252,10 @@ export function CustomerDirectoryScreen({ navigation }: Props) {
         placeholderTextColor={colors.textMuted}
         onChangeText={setQuery}
         value={query}
-        style={styles.searchbar}
-        iconColor={colors.accent}
-        inputStyle={{ color: colors.text }}
+        style={[styles.searchbar, { height: 46, justifyContent: 'center' }]}
+        icon={({ size }) => <Search size={18} color={colors.accent} />}
+        clearIcon={({ size }) => <X size={18} color={colors.textMuted} />}
+        inputStyle={{ color: colors.text, fontSize: 14, minHeight: 0, paddingVertical: 0, alignSelf: 'center' }}
         theme={{ colors: { elevation: { level3: colors.surface } } }}
       />
       {loading && customers.length === 0 ? (
@@ -273,6 +283,15 @@ export function CustomerDirectoryScreen({ navigation }: Props) {
           renderItem={renderItem}
         />
       )}
+
+      <CustomerHistoryModal
+        visible={Boolean(selectedCustomer)}
+        customer={selectedCustomer}
+        repairs={repairs}
+        onClose={() => setSelectedCustomer(null)}
+        onSelectRepair={(repairId) => navigation.navigate('RepairDetail', { repairId })}
+        onNewRepair={(prefillCustomer) => navigation.navigate('AddRepair', { prefillCustomer })}
+      />
     </SafeAreaView>
   );
 }

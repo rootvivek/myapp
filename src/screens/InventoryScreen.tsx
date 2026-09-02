@@ -13,7 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Searchbar } from 'react-native-paper';
 import LinearGradient from 'react-native-linear-gradient';
-import { Plus, Package, Edit2, Trash2 } from 'lucide-react-native';
+import { Plus, Package, Edit2, Trash2, Search, X } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { useInventory } from '../context/InventoryContext';
@@ -314,9 +314,10 @@ export function InventoryScreen({ navigation }: Props) {
         placeholderTextColor={colors.textMuted}
         onChangeText={setQuery}
         value={query}
-        style={styles.searchbar}
-        iconColor={colors.accent}
-        inputStyle={{ color: colors.text }}
+        style={[styles.searchbar, { height: 46, justifyContent: 'center' }]}
+        icon={({ size }) => <Search size={18} color={colors.accent} />}
+        clearIcon={({ size }) => <X size={18} color={colors.textMuted} />}
+        inputStyle={{ color: colors.text, fontSize: 14, minHeight: 0, paddingVertical: 0, alignSelf: 'center' }}
         theme={{ colors: { elevation: { level3: colors.surface } } }}
       />
 

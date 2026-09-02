@@ -1,5 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Package } from 'lucide-react-native';
 import type { AppColors } from '../../../theme';
 import type { Repair } from '../../../types/repair';
 import { ACCESSORY_UI } from '../constants';
@@ -19,21 +20,28 @@ export const AccessoriesSection = React.memo(function AccessoriesSection({
   colors,
 }: Props) {
   return (
-    <>
-      <Text style={styles.sectionTitle}>ACCESSORIES (RECEIVED WITH DEVICE)</Text>
+    <View style={styles.formCard}>
+      <View style={styles.cardHeader}>
+        <View style={styles.cardHeaderIcon}>
+          <Package size={16} color={colors.accent} />
+        </View>
+        <View style={styles.cardHeaderInfo}>
+          <Text style={styles.cardTitle}>Accessories Received</Text>
+        </View>
+      </View>
 
-      <View style={[localStyles.cardRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <View style={localStyles.cardRow}>
         {ACCESSORY_UI.map(({ icon: AccIcon, title, key }, index) => (
           <View
             key={key}
             style={[
               localStyles.itemContainer,
-              index > 0 && { borderLeftWidth: 1, borderLeftColor: colors.border, paddingLeft: 14 },
+              index > 0 && { borderLeftWidth: 1, borderLeftColor: colors.border, paddingLeft: 12 },
               index === 0 && { paddingRight: 10 },
             ]}
           >
             <View style={localStyles.headerRow}>
-              <AccIcon color={colors.accent} size={18} />
+              <AccIcon color={colors.accent} size={16} />
               <Text style={[localStyles.titleText, { color: colors.text }]} numberOfLines={1}>
                 {title}
               </Text>
@@ -99,21 +107,15 @@ export const AccessoriesSection = React.memo(function AccessoriesSection({
           </View>
         ))}
       </View>
-    </>
+    </View>
   );
 });
 
 const localStyles = StyleSheet.create({
   cardRow: {
-    marginHorizontal: 18,
-    marginBottom: 8,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderRadius: 16,
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
   },
   itemContainer: {
     flex: 1,
@@ -124,38 +126,39 @@ const localStyles = StyleSheet.create({
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
+    gap: 6,
+    marginBottom: 6,
   },
   titleText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   radioGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
+    gap: 12,
   },
   radioButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    minHeight: 32,
+    gap: 5,
+    minHeight: 28,
   },
   outerCircle: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    borderWidth: 2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
   },
   innerCircle: {
-    width: 9,
-    height: 9,
-    borderRadius: 4.5,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   radioLabel: {
-    fontSize: 13,
+    fontSize: 12.5,
   },
 });
+

@@ -38,7 +38,6 @@ create table if not exists public.shops (
   id uuid primary key default uuid_generate_v4(),
   shop_name text not null default '',
   owner_id uuid not null references auth.users (id) on delete cascade,
-  business_type text not null default 'repair_shop' check (business_type in ('repair_shop', 'wholesaler')),
   created_at timestamptz not null default now()
 );
 
@@ -261,20 +260,32 @@ as $$
 declare
   v_safe text;
 begin
-  -- Server-side sanitization: strip SQL wildcards to prevent pattern injection
-  v_safe := regexp_replace(trim(coalesce(p_query, '')), '[%_]', '', 'g');
+  -- Strip SQL wildcards and symbols (#, -, spaces, etc.) to get a clean search string
+  v_safe := regexp_replace(trim(coalesce(p_query, '')), '[%_,#\- ]', '', 'g');
   if length(v_safe) = 0 then
     return;
   end if;
+
+  -- Strip 'ord' prefix if user typed 'ord123'
+  if v_safe ilike 'ord%' then
+    v_safe := substring(v_safe from 4);
+  end if;
+
   return query
     select *
     from public.repairs r
     where r.shop_id = public.get_user_shop_id(auth.uid())
     and (
-      r.customer_name ilike '%' || v_safe || '%'
+      r.customer_name ilike '%' || p_query || '%'
+      or r.phone ilike '%' || p_query || '%'
+      or r.imei ilike '%' || p_query || '%'
+      or r.order_code ilike '%' || p_query || '%'
+      or r.customer_name ilike '%' || v_safe || '%'
       or r.phone ilike '%' || v_safe || '%'
       or r.imei ilike '%' || v_safe || '%'
       or r.order_code ilike '%' || v_safe || '%'
+      or r.id::text = v_safe
+      or r.order_code ilike '%' || lpad(v_safe, 5, '0') || '%'
     )
     order by r.date_received desc, r.id desc;
 end;

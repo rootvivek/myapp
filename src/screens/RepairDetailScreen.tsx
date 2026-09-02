@@ -27,16 +27,16 @@ import { ACCESSORY_ITEMS, REPAIR_STATUSES } from '../types/repair';
 import { shareReceiptPdf } from '../utils/receipt';
 
 import { ActionButtons } from './RepairDetail/ActionButtons';
-import { OrderCodeCard } from './RepairDetail/OrderCodeCard';
 import { PaymentCard } from './RepairDetail/PaymentCard';
 import { RepairInfoCard } from './RepairDetail/RepairInfoCard';
+import { CustomerHistoryModal } from '../components/CustomerHistoryModal';
 import { createStyles } from './RepairDetail/styles';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'RepairDetail'>;
 
 export function RepairDetailScreen({ navigation, route }: Props) {
   const { colors, mode } = useTheme();
-  const { deleteRepair, updateRepairInState } = useRepairs();
+  const { repairs, deleteRepair, updateRepairInState } = useRepairs();
   const { isOwner, user } = useAuth();
   const styles = useMemo(() => createStyles(colors, mode), [colors, mode]);
   const { repairId } = route.params;
@@ -44,6 +44,7 @@ export function RepairDetailScreen({ navigation, route }: Props) {
   const [repair, setRepair] = useState<Repair | null>(null);
   const [loading, setLoading] = useState(true);
   const [revealLock, setRevealLock] = useState(false);
+  const [historyVisible, setHistoryVisible] = useState(false);
 
   const mountedRef = useRef(true);
 
@@ -139,12 +140,25 @@ export function RepairDetailScreen({ navigation, route }: Props) {
   }
 
   async function handleDelete(): Promise<void> {
-    try {
-      await deleteRepair(repairId);
-      navigation.goBack();
-    } catch {
-      Alert.alert('Error', 'Failed to delete repair.');
-    }
+    Alert.alert(
+      'Delete Job',
+      'Are you sure you want to delete this repair job?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteRepair(repairId);
+              navigation.goBack();
+            } catch {
+              Alert.alert('Error', 'Failed to delete repair.');
+            }
+          },
+        },
+      ]
+    );
   }
 
   if (loading || !repair) {
@@ -188,16 +202,15 @@ export function RepairDetailScreen({ navigation, route }: Props) {
         </Pressable>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll}>
-        {/* Order Code */}
-        <OrderCodeCard repair={repair} statusLabel={statusLabel} mode={mode} colors={colors} />
-
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* Customer & Device Info */}
         <RepairInfoCard
           repair={repair}
+          statusLabel={statusLabel}
           revealLock={revealLock}
           setRevealLock={setRevealLock}
           onCall={handleCall}
+          onViewHistory={() => setHistoryVisible(true)}
           mode={mode}
           colors={colors}
           cardColors={cardColors}
@@ -207,27 +220,27 @@ export function RepairDetailScreen({ navigation, route }: Props) {
         <View style={styles.sectionTitle}>
           <Text style={styles.sectionTitleText}>Accessories received</Text>
         </View>
-        <LinearGradient colors={cardColors} style={styles.accessoryCard}>
+        <View style={styles.accessoryCard}>
           <View style={styles.accessoryCardInner}>
             {ACCESSORY_ITEMS.map(({ key, label }) => (
               <AccessoryRow key={key} label={label} value={repair[key]} styles={styles} />
             ))}
           </View>
-        </LinearGradient>
+        </View>
 
         {/* Device Photos */}
         <View style={styles.sectionTitle}>
           <Text style={styles.sectionTitleText}>Device photos</Text>
         </View>
-        <LinearGradient colors={cardColors} style={styles.photoCard}>
+        <View style={styles.photoCard}>
           <View style={styles.photoCardInner}>
             <PhotoGrid repair={repair} styles={styles} />
           </View>
-        </LinearGradient>
+        </View>
 
         {/* Payment Details */}
         <View style={styles.sectionTitle}>
-          <Text style={styles.sectionTitleText}>Payment</Text>
+          <Text style={styles.sectionTitleText}>Payment Breakdown</Text>
         </View>
         <PaymentCard
           repair={repair}
@@ -235,7 +248,6 @@ export function RepairDetailScreen({ navigation, route }: Props) {
           onMarkAsPaid={() => void handleMarkAsPaid()}
           mode={mode}
           colors={colors}
-          cardColors={cardColors}
         />
 
         {/* Action Buttons */}
@@ -248,6 +260,25 @@ export function RepairDetailScreen({ navigation, route }: Props) {
           colors={colors}
         />
       </ScrollView>
+
+      <CustomerHistoryModal
+        visible={historyVisible}
+        customer={{
+          customerName: repair.customerName,
+          phone: repair.phone,
+          deviceModel: repair.deviceModel,
+        }}
+        repairs={repairs}
+        onClose={() => setHistoryVisible(false)}
+        onSelectRepair={(id) => {
+          setHistoryVisible(false);
+          navigation.navigate('RepairDetail', { repairId: id });
+        }}
+        onNewRepair={(prefillCustomer) => {
+          setHistoryVisible(false);
+          navigation.navigate('AddRepair', { prefillCustomer });
+        }}
+      />
     </SafeAreaView>
   );
 }

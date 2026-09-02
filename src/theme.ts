@@ -52,41 +52,41 @@ export type AppColors = {
   statusCancelledBorder: string;
 };
 
-/** Premium dark UI (CRED / Linear inspired). */
+/** Premium dark UI (Linear / Raycast / Vercel inspired deep obsidian palette). */
 export const darkColors: AppColors = {
-  bg: '#050816',
-  bgGradient: ['#020617', '#03122D', '#020617'],
-  surface: '#0F172A',
-  surface2: '#1A2332',
-  border: '#1E293B',
-  text: '#FFFFFF',
+  bg: '#08090E',
+  bgGradient: ['#0B0D14', '#111422', '#08090E'],
+  surface: '#121520',
+  surface2: '#181C2B',
+  border: '#23283E',
+  text: '#F8FAFC',
   textMuted: '#94A3B8',
-  accent: '#7C3AED',
-  success: '#22C55E',
+  accent: '#8B5CF6',
+  success: '#10B981',
   warning: '#F59E0B',
-  danger: '#EF4444',
-  chipBg: '#1E293B',
+  danger: '#F43F5E',
+  chipBg: '#181C2B',
 
   // Status badges in dark mode
-  statusPendingText: '#F59E0B',
-  statusPendingBg: 'rgba(245, 158, 11, 0.15)',
-  statusPendingBorder: 'rgba(245, 158, 11, 0.3)',
+  statusPendingText: '#FBBF24',
+  statusPendingBg: 'rgba(245, 158, 11, 0.16)',
+  statusPendingBorder: 'rgba(245, 158, 11, 0.32)',
   
   statusInProgressText: '#818CF8',
-  statusInProgressBg: 'rgba(99, 102, 241, 0.15)',
-  statusInProgressBorder: 'rgba(99, 102, 241, 0.3)',
+  statusInProgressBg: 'rgba(129, 140, 248, 0.16)',
+  statusInProgressBorder: 'rgba(129, 140, 248, 0.32)',
 
-  statusCompletedText: '#60A5FA',
-  statusCompletedBg: 'rgba(59, 130, 246, 0.15)',
-  statusCompletedBorder: 'rgba(59, 130, 246, 0.3)',
+  statusCompletedText: '#38BDF8',
+  statusCompletedBg: 'rgba(56, 189, 248, 0.16)',
+  statusCompletedBorder: 'rgba(56, 189, 248, 0.32)',
 
-  statusDeliveredText: '#22C55E',
-  statusDeliveredBg: 'rgba(34, 197, 94, 0.15)',
-  statusDeliveredBorder: 'rgba(34, 197, 94, 0.3)',
+  statusDeliveredText: '#34D399',
+  statusDeliveredBg: 'rgba(52, 211, 153, 0.16)',
+  statusDeliveredBorder: 'rgba(52, 211, 153, 0.32)',
 
-  statusCancelledText: '#EF4444',
-  statusCancelledBg: 'rgba(239, 68, 68, 0.15)',
-  statusCancelledBorder: 'rgba(239, 68, 68, 0.3)',
+  statusCancelledText: '#FB7185',
+  statusCancelledBg: 'rgba(251, 113, 133, 0.16)',
+  statusCancelledBorder: 'rgba(251, 113, 133, 0.32)',
 };
 
 export const lightColors: AppColors = {

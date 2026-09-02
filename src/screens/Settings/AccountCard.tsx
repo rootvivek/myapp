@@ -65,8 +65,8 @@ export const AccountCard = React.memo(function AccountCard({
           pressed && { opacity: 0.8 },
         ]}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <LogOut size={16} color={colors.danger} />
+        <View style={styles.saveBtnInner}>
+          <LogOut size={16} color={colors.danger} strokeWidth={2.4} />
           <Text style={[styles.saveBtnText, { color: colors.danger }]}>Sign Out</Text>
         </View>
       </Pressable>

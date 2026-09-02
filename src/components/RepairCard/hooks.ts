@@ -58,7 +58,11 @@ export function useRepairActions(repair: Repair): RepairActions {
         await shareReceiptPdf(repair);
       }
     } catch (err: unknown) {
-      showError('WhatsApp PDF', err);
+      const msg = String((err as any)?.message || err).toLowerCase();
+      const isCancel = msg.includes('user did not share') || msg.includes('cancel') || msg.includes('abort');
+      if (!isCancel) {
+        showError('WhatsApp PDF', err);
+      }
     } finally {
       pdfBusyRef.current = false;
       setPdfBusy(false);

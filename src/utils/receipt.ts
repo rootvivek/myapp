@@ -33,6 +33,25 @@ function monogramLetter(shopName: string): string {
   return '◆';
 }
 
+async function readUriAsDataUrl(uri: string): Promise<string | null> {
+  try {
+    const res = await fetch(uri);
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        resolve(reader.result as string);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch (err) {
+    logger.warn('Failed to read logo image as data URL:', err);
+    return null;
+  }
+}
+
 function buildReceiptHtml(
   repair: Repair,
   branding: ShopBranding,
@@ -53,49 +72,50 @@ function buildReceiptHtml(
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     * { box-sizing: border-box; }
-    body { margin: 0; padding: 28px 20px 36px; font-family: system-ui, sans-serif; color: #0f172a; background: #f1f5f9; }
-    .sheet { max-width: 440px; margin: 0 auto; background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 4px 24px rgba(15, 23, 42, 0.08); border: 1px solid #e2e8f0; }
-    .hero { background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 55%, #172554 100%); color: #f8fafc; padding: 22px; }
-    .hero-top { display: flex; align-items: center; gap: 16px; }
-    .logo-img { width: 72px; height: 72px; object-fit: contain; border-radius: 12px; background: rgba(255,255,255,0.12); flex-shrink: 0; }
-    .logo-fallback { width: 72px; height: 72px; border-radius: 12px; background: linear-gradient(145deg, #3b82f6, #1d4ed8); display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 800; color: #fff; flex-shrink: 0; }
-    .shop-name { font-size: 22px; font-weight: 800; margin: 0; }
-    .invoice-tag { margin: 6px 0 0; font-size: 11px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: #94a3b8; }
-    .shop-phone { margin: 6px 0 0; font-size: 13px; color: #cbd5e1; }
-    .order-strip { margin-top: 18px; padding: 12px 14px; background: rgba(255,255,255,0.08); border-radius: 10px; display: flex; justify-content: space-between; }
-    .order-label { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #94a3b8; }
-    .order-value { font-size: 18px; font-weight: 800; color: #fff; }
-    .body { padding: 20px 22px 24px; }
-    table.meta { width: 100%; border-collapse: collapse; font-size: 13px; }
+    body { margin: 0; padding: 10px 10px 10px; font-family: system-ui, sans-serif; color: #0f172a; background: #f1f5f9; }
+    .sheet { max-width: 440px; margin: 0 auto; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(15, 23, 42, 0.08); border: 1px solid #e2e8f0; }
+    .hero { background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 55%, #172554 100%); color: #f8fafc; padding: 14px 18px; }
+    .hero-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .hero-left { display: flex; align-items: center; gap: 14px; min-width: 0; flex: 1; }
+    .hero-right { text-align: right; margin-left: auto; flex-shrink: 0; }
+    .logo-img { width: 50px; height: 50px; object-fit: contain; border-radius: 10px; background: rgba(255,255,255,0.12); flex-shrink: 0; }
+    .logo-fallback { width: 50px; height: 50px; border-radius: 10px; background: linear-gradient(145deg, #3b82f6, #1d4ed8); display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; color: #fff; flex-shrink: 0; }
+    .shop-name { font-size: 18px; font-weight: 800; margin: 0; }
+    .invoice-tag { margin: 3px 0 0; font-size: 9px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: #cbd5e1; }
+    .shop-phone { margin: 3px 0 0; font-size: 12px; color: #cbd5e1; }
+    .body { padding: 12px 18px 12px; }
+    table.meta { width: 100%; border-collapse: collapse; font-size: 12px; }
     table.meta tr { border-bottom: 1px solid #f1f5f9; }
-    table.meta td { padding: 10px 0; vertical-align: top; }
+    table.meta td { padding: 5px 0; vertical-align: top; }
     table.meta td.l { color: #64748b; font-weight: 600; width: 38%; }
     table.meta td.r { color: #0f172a; font-weight: 500; text-align: right; }
-    .section-title { font-size: 10px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #94a3b8; margin: 18px 0 8px; }
-    .amount-row { display: flex; justify-content: space-between; padding: 12px 14px; background: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0; margin-top: 8px; }
-    .amt-label { font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; }
-    .amt-value { font-size: 20px; font-weight: 800; color: #1e40af; }
-    .terms-box { margin-top: 20px; border-top: 1px dashed #e2e8f0; padding-top: 14px; }
-    .terms-title { font-size: 9px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #94a3b8; margin: 0 0 6px; }
-    .terms-list { margin: 0; padding-left: 14px; font-size: 9px; color: #64748b; line-height: 1.45; }
-    .terms-list li { margin-bottom: 4px; }
-    .footer { text-align: center; font-size: 12px; color: #94a3b8; margin-top: 20px; padding-top: 16px; border-top: 1px solid #f1f5f9; }
+    .section-title { font-size: 9px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #94a3b8; margin: 8px 0 4px; }
+    .amount-row { display: flex; justify-content: space-between; padding: 8px 12px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; margin-top: 6px; }
+    .amt-label { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; }
+    .amt-value { font-size: 18px; font-weight: 800; color: #1e40af; }
+    .terms-box { margin-top: 10px; border-top: 1px dashed #e2e8f0; padding-top: 8px; }
+    .terms-title { font-size: 8px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #94a3b8; margin: 0 0 4px; }
+    .terms-list { margin: 0; padding-left: 12px; font-size: 8px; color: #64748b; line-height: 1.4; }
+    .terms-list li { margin-bottom: 2px; }
+    .footer { text-align: center; font-size: 11px; color: #94a3b8; margin-top: 10px; padding-top: 8px; border-top: 1px solid #f1f5f9; }
   </style>
 </head>
 <body>
   <div class="sheet">
     <header class="hero">
       <div class="hero-top">
-        ${logoBlock}
-        <div>
-          <p class="shop-name">${shop}</p>
-          <p class="shop-phone">${shopPhone}</p>
-          <p class="invoice-tag">Service invoice</p>
+        <div class="hero-left">
+          ${logoBlock}
+          <div>
+            <p class="shop-name">${shop}</p>
+            <p class="shop-phone">${shopPhone}</p>
+            <p class="invoice-tag">Service invoice</p>
+          </div>
         </div>
-      </div>
-      <div class="order-strip">
-        <span class="order-label">Order ID</span>
-        <span class="order-value">${escapeHtml(repair.orderCode)}</span>
+        <div class="hero-right">
+          <p style="font-size: 10px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #cbd5e1; margin: 0;">Order ID</p>
+          <p style="font-size: 20px; font-weight: 800; color: #fff; margin: 4px 0 0;">${escapeHtml(repair.orderCode)}</p>
+        </div>
       </div>
     </header>
     <div class="body">
@@ -137,6 +157,10 @@ function buildReceiptHtml(
           <li>Estimated repair times and costs may vary depending on spare parts availability.</li>
         </ul>
       </div>
+      <div style="text-align: center; margin-top: 12px; border-top: 1px dashed #e2e8f0; padding-top: 8px;">
+        <p style="font-size: 8px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #94a3b8; margin: 0 0 4px;">Order Barcode</p>
+        <img src="https://quickchart.io/barcode?type=code128&text=${encodeURIComponent(repair.orderCode)}" style="width: 180px; height: 48px; object-fit: contain; background: #fff; padding: 4px;" />
+      </div>
       <p class="footer">Thank you for your business.</p>
     </div>
   </div>
@@ -147,11 +171,15 @@ function buildReceiptHtml(
 /** Shared helper: generate a PDF file from a repair and return its file path. */
 async function generateInvoicePdf(repair: Repair): Promise<string> {
   const branding = await getShopBranding();
-  const html = buildReceiptHtml(repair, branding, null);
+  let logoDataUrl: string | null = null;
+  if (branding.logoUri) {
+    logoDataUrl = await readUriAsDataUrl(branding.logoUri);
+  }
+  const html = buildReceiptHtml(repair, branding, logoDataUrl);
 
   const file = await generatePDF({
     html,
-    fileName: `Invoice_${repair.orderCode.replace(/[^a-zA-Z0-9]/g, '_')}`,
+    fileName: `MCA_Phone_Wala_Invoice_${repair.orderCode.replace(/[^a-zA-Z0-9]/g, '_')}`,
     forceReset: true,
   });
 
@@ -160,12 +188,6 @@ async function generateInvoicePdf(repair: Repair): Promise<string> {
   }
 
   return file.filePath;
-}
-
-function normalizeWhatsAppPhone(raw: string): string {
-  const digits = raw.replace(/\D/g, '');
-  if (digits.length === 10) return `91${digits}`;
-  return digits;
 }
 
 /** Generate a PDF invoice and open the system share sheet.
@@ -182,18 +204,23 @@ export async function shareReceiptPdf(repair: Repair): Promise<void> {
   });
 }
 
-/** Generate a PDF invoice and share directly to a WhatsApp contact. */
-export async function shareReceiptPdfToWhatsAppContact(repair: Repair, phone: string): Promise<void> {
+/** Generate a PDF invoice and share directly via WhatsApp.
+ *  WhatsApp will show its contact picker with the PDF attached. */
+export async function shareReceiptPdfToWhatsAppContact(repair: Repair, _phone: string): Promise<void> {
   const filePath = await generateInvoicePdf(repair);
+
   try {
     await RNShare.shareSingle({
       social: Social.Whatsapp,
       url: `file://${filePath}`,
       type: 'application/pdf',
-      // @ts-ignore - whatsAppNumber is valid at runtime but missing from types
-      whatsAppNumber: phone,
     });
-  } catch (err) {
+  } catch (err: any) {
+    const msg = String(err?.message || err).toLowerCase();
+    const isCancel = msg.includes('user did not share') || msg.includes('cancel') || msg.includes('abort');
+    if (isCancel) {
+      throw err;
+    }
     logger.warn('Direct WhatsApp share error, falling back to general share:', err);
     await shareReceiptPdf(repair);
   }

@@ -112,11 +112,15 @@ export function useRepairSave() {
         if (shouldAutoSendWhatsApp && savedRepair) {
           try {
             await shareReceiptPdfToWhatsAppContact(savedRepair, ph);
-          } catch {
-            Alert.alert(
-              'WhatsApp',
-              'Job saved, but could not open WhatsApp PDF share. You can share it manually from the job list.'
-            );
+          } catch (err: any) {
+            const msg = String(err?.message || err).toLowerCase();
+            const isCancel = msg.includes('user did not share') || msg.includes('cancel') || msg.includes('abort');
+            if (!isCancel) {
+              Alert.alert(
+                'WhatsApp',
+                'Job saved, but could not open WhatsApp PDF share. You can share it manually from the job list.'
+              );
+            }
           }
         }
 

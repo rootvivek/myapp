@@ -24,8 +24,7 @@ import {
 
 import { AccountCard } from './Settings/AccountCard';
 import { AppearanceCard } from './Settings/AppearanceCard';
-import { ProfileCard } from './Settings/ProfileCard';
-import { ShopBrandingCard } from './Settings/ShopBrandingCard';
+import { BrandingAndProfileCard } from './Settings/BrandingAndProfileCard';
 import { createStyles } from './Settings/styles';
 import { TeamCard } from './Settings/TeamCard';
 
@@ -44,7 +43,6 @@ export function SettingsScreen({ navigation }: Props) {
   const [logoBusy, setLogoBusy] = useState(false);
 
   const [profileName, setProfileName] = useState(profile?.name || '');
-  const [profileSaving, setProfileSaving] = useState(false);
   const [checkingUpdate, setCheckingUpdate] = useState(false);
 
   useEffect(() => {
@@ -101,45 +99,40 @@ export function SettingsScreen({ navigation }: Props) {
     }
   }
 
-  async function onSaveShopDetails() {
+  async function onSaveAllDetails() {
     const nameTrimmed = shopName.trim();
     const phoneTrimmed = shopPhone.trim();
-    if (!nameTrimmed) {
-      Alert.alert('Shop name', 'Enter a shop name.');
-      return;
-    }
-    setSaving(true);
-    try {
-      if (isOwner) {
-        await updateShopName(nameTrimmed);
-      }
-      await saveShopBranding({ shopName: nameTrimmed, shopPhone: phoneTrimmed });
-      setShopName(nameTrimmed);
-      setShopPhone(phoneTrimmed);
-      Alert.alert('Saved', 'Shop details updated successfully.');
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error occurred.';
-      Alert.alert('Failed to save shop details', msg);
-    } finally {
-      setSaving(false);
-    }
-  }
+    const profileNameTrimmed = profileName.trim();
 
-  async function onSaveProfileName() {
-    const t = profileName.trim();
-    if (!t) {
+    if (!profileNameTrimmed) {
       Alert.alert('Name required', 'Please enter your name.');
       return;
     }
-    setProfileSaving(true);
+
+    if (isOwner && !nameTrimmed) {
+      Alert.alert('Shop name', 'Please enter a shop name.');
+      return;
+    }
+
+    setSaving(true);
     try {
-      await updateProfileName(t);
-      Alert.alert('Saved', 'Profile name updated successfully.');
+      // 1. Save Profile Name
+      await updateProfileName(profileNameTrimmed);
+
+      // 2. Save Shop Details (if Owner)
+      if (isOwner) {
+        await updateShopName(nameTrimmed);
+        await saveShopBranding({ shopName: nameTrimmed, shopPhone: phoneTrimmed });
+        setShopName(nameTrimmed);
+        setShopPhone(phoneTrimmed);
+      }
+
+      Alert.alert('Saved', 'Details updated successfully.');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error occurred.';
-      Alert.alert('Failed to save profile name', msg);
+      Alert.alert('Failed to save details', msg);
     } finally {
-      setProfileSaving(false);
+      setSaving(false);
     }
   }
 
@@ -186,22 +179,36 @@ export function SettingsScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerInfo}>
-            <Text style={styles.headerTitle}>Profile & Settings</Text>
-            <Text style={styles.headerSubtitle}>Manage your shop and account</Text>
-          </View>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Profile Hero Card */}
+        <View style={styles.heroCard}>
           <View style={styles.avatarContainer}>
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>{userInitial}</Text>
             </View>
             {isOwner && (
               <View style={styles.crownBadge}>
-                <Crown size={10} color="#F59E0B" fill="#F59E0B" />
+                <Crown size={11} color="#F59E0B" fill="#F59E0B" />
               </View>
             )}
+          </View>
+          <View style={styles.heroInfo}>
+            <Text style={styles.heroName} numberOfLines={1}>
+              {profile?.name || user?.email?.split('@')[0] || 'User Profile'}
+            </Text>
+            <Text style={styles.heroEmail} numberOfLines={1}>
+              {user?.email || 'Logged in'}
+            </Text>
+            <View style={styles.roleBadge}>
+              <Text style={styles.roleBadgeText}>
+                {isOwner ? '👑 Shop Owner' : '👷 Team Member'}
+                {shopName ? ` · ${shopName}` : ''}
+              </Text>
+            </View>
           </View>
         </View>
 
@@ -212,33 +219,25 @@ export function SettingsScreen({ navigation }: Props) {
           colors={colors}
         />
 
-        {/* Card 2: Shop Branding (Owner only) */}
-        {isOwner && (
-          <ShopBrandingCard
-            shopName={shopName}
-            setShopName={setShopName}
-            shopPhone={shopPhone}
-            setShopPhone={setShopPhone}
-            logoUri={logoUri}
-            logoBusy={logoBusy}
-            saving={saving}
-            onPickLogo={() => void onPickLogo()}
-            onRemoveLogo={() => void onRemoveLogo()}
-            onSaveShopDetails={() => void onSaveShopDetails()}
-            colors={colors}
-          />
-        )}
-
-        {/* Card 3: Profile Name */}
-        <ProfileCard
+        {/* Card 2: Profile & Shop Details Container */}
+        <BrandingAndProfileCard
+          shopName={shopName}
+          setShopName={setShopName}
+          shopPhone={shopPhone}
+          setShopPhone={setShopPhone}
           profileName={profileName}
           setProfileName={setProfileName}
-          profileSaving={profileSaving}
-          onSaveProfileName={() => void onSaveProfileName()}
+          logoUri={logoUri}
+          logoBusy={logoBusy}
+          saving={saving}
+          isOwner={isOwner}
+          onPickLogo={() => void onPickLogo()}
+          onRemoveLogo={() => void onRemoveLogo()}
+          onSaveAllDetails={() => void onSaveAllDetails()}
           colors={colors}
         />
 
-        {/* Card 4: Manage Labour (Owner only) */}
+        {/* Card 3: Manage Labour (Owner only) */}
         {isOwner && (
           <TeamCard
             onManageLabour={() => navigation.navigate('ManageLabour')}
@@ -246,7 +245,7 @@ export function SettingsScreen({ navigation }: Props) {
           />
         )}
 
-        {/* Card 5: Account & App */}
+        {/* Card 4: Account & App */}
         <AccountCard
           userEmail={user?.email}
           checkingUpdate={checkingUpdate}

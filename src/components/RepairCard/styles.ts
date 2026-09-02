@@ -1,7 +1,7 @@
 import { StyleSheet } from 'react-native';
 
 import type { AppColors } from '../../theme';
-import { accentAlpha, spacing } from '../../theme';
+import { accentAlpha, radius, spacing } from '../../theme';
 
 const isDark = (colors: AppColors) => colors.text === '#FFFFFF';
 
@@ -11,86 +11,188 @@ export function createCardStyles(colors: AppColors) {
   return StyleSheet.create({
     /* ── Card Container ────────────── */
     card: {
-      backgroundColor: dark ? 'rgba(10, 12, 28, 0.75)' : 'rgba(255, 255, 255, 0.55)',
-      borderRadius: 8,
+      backgroundColor: colors.surface,
+      borderRadius: radius.lg,
       borderWidth: 1,
-      borderColor: dark ? 'rgba(124, 58, 237, 0.25)' : 'rgba(124, 58, 237, 0.15)',
+      borderColor: colors.border,
       overflow: 'hidden',
-      marginBottom: 6,
-      shadowColor: '#7C3AED',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: dark ? 0.15 : 0.08,
+      marginBottom: spacing.sm + 2,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: dark ? 0.2 : 0.05,
       shadowRadius: 8,
-      elevation: 0,
-      padding: 8,
-    },
-    body: {
-      flexDirection: 'row',
-      alignItems: 'stretch',
+      elevation: 2,
+      padding: spacing.md - 2,
     },
 
-    /* ── Left Image ────────────────── */
-    imgWrap: {
-      width: 100,
-      justifyContent: 'center',
-      position: 'relative',
-    },
-    img: {
-      width: 100,
-      height: 100,
-      borderRadius: 8,
-      backgroundColor: colors.surface2,
-    },
-    badge: {
-      position: 'absolute',
-      bottom: 6,
-      left: 6,
-      backgroundColor: 'rgba(0,0,0,0.6)',
-      borderRadius: 8,
+    /* ── Card Top Row ─────────────── */
+    cardHeader: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 3,
-      paddingHorizontal: 6,
-      paddingVertical: 2,
+      justifyContent: 'space-between',
+      marginBottom: spacing.sm,
     },
-    badgeText: {
-      color: '#fff',
-      fontSize: 10,
+    headerLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs + 2,
+      flex: 1,
+      marginRight: spacing.sm,
+    },
+    orderCodeBadge: {
+      backgroundColor: colors.surface2,
+      paddingHorizontal: 7,
+      paddingVertical: 2,
+      borderRadius: radius.sm,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    orderCodeText: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: colors.accent,
+      letterSpacing: 0.2,
+    },
+    customerName: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: colors.text,
+      flex: 1,
+    },
+
+    /* ── Payment Badge ─────────────── */
+    paymentBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: radius.sm,
+      borderWidth: 1,
+      gap: 3,
+    },
+    paymentBadgeText: {
+      fontSize: 11,
       fontWeight: '700',
     },
 
-    /* ── Center Content ────────────── */
+    /* ── Body ──────────────────────── */
+    body: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md - 4,
+    },
+
+    /* ── Image Thumbnail ───────────── */
+    imgWrap: {
+      width: 76,
+      height: 76,
+      borderRadius: radius.md,
+      overflow: 'hidden',
+      backgroundColor: colors.surface2,
+      borderWidth: 1,
+      borderColor: colors.border,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    img: {
+      width: '100%',
+      height: '100%',
+    },
+
+    /* ── Content ───────────────────── */
     content: {
       flex: 1,
-      paddingHorizontal: 8,
       justifyContent: 'center',
-      gap: 3,
+      gap: 2,
     },
     infoRow: {
       flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
+      alignItems: 'flex-start',
+      gap: 6,
     },
     infoLabel: {
-      color: colors.textMuted,
       fontSize: 11,
-      fontWeight: '600',
-      width: 64,
+      fontWeight: '700',
+      color: colors.textMuted,
+      width: 54,
+      textTransform: 'uppercase',
+      letterSpacing: 0.4,
     },
     infoValue: {
-      flex: 1,
+      fontSize: 12.5,
+      fontWeight: '600',
       color: colors.text,
-      fontSize: 12,
-      fontWeight: '500',
+      flex: 1,
+      lineHeight: 16,
+    },
+    costValue: {
+      fontSize: 13,
+      fontWeight: '800',
+      color: colors.text,
+      flex: 1,
     },
     addedBy: {
       fontSize: 10,
       color: colors.textMuted,
-      fontWeight: '600',
+      fontWeight: '500',
       marginTop: 2,
     },
 
+    /* ── Card Footer / Actions ─────── */
+    cardFooter: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginTop: spacing.sm + 2,
+      paddingTop: spacing.sm,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      gap: spacing.sm,
+    },
+    statusChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: radius.sm + 2,
+      borderWidth: 1,
+      gap: 5,
+      flexShrink: 1,
+    },
+    statusIcon: {
+      fontSize: 12,
+    },
+    statusText: {
+      fontSize: 12,
+      fontWeight: '700',
+    },
+
     /* ── Action Buttons ────────────── */
+    actionIconsGroup: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    iconBtn: {
+      width: 32,
+      height: 32,
+      borderRadius: radius.sm + 2,
+      borderWidth: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    callBtn: {
+      backgroundColor: accentAlpha(colors.success, 0.12),
+      borderColor: accentAlpha(colors.success, 0.25),
+    },
+    whatsappBtn: {
+      backgroundColor: 'rgba(37,211,102,0.12)',
+      borderColor: 'rgba(37,211,102,0.25)',
+    },
+    invoiceBtn: {
+      backgroundColor: accentAlpha(colors.accent, 0.12),
+      borderColor: accentAlpha(colors.accent, 0.25),
+    },
     actionBtn: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -104,9 +206,6 @@ export function createCardStyles(colors: AppColors) {
       borderColor: dark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
       paddingVertical: 2,
       paddingHorizontal: 4,
-    },
-    actionIcon: {
-      fontSize: 12,
     },
     callText: {
       color: colors.success,
@@ -123,22 +222,6 @@ export function createCardStyles(colors: AppColors) {
       fontSize: 11,
       fontWeight: '700',
     },
-    disabled: {
-      opacity: 0.5,
-    },
-
-    /* ── Badges Row ─────────────────── */
-    badgesRow: {
-      marginTop: 8,
-      paddingTop: 8,
-      borderTopWidth: 1,
-      borderTopColor: colors.border,
-    },
-    badgesScrollContent: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 5,
-    },
     badgePill: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -154,7 +237,10 @@ export function createCardStyles(colors: AppColors) {
       fontWeight: '700',
     },
     badgePillIcon: {
-      fontSize: 11,
+      fontSize: 14,
+    },
+    disabled: {
+      opacity: 0.5,
     },
 
     /* ── Modal Shared ──────────────── */
@@ -259,3 +345,4 @@ export function createCardStyles(colors: AppColors) {
 }
 
 export type CardStyles = ReturnType<typeof createCardStyles>;
+

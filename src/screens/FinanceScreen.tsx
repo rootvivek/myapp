@@ -39,7 +39,7 @@ type Props = {
 export function FinanceScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const { isOwner } = useAuth();
-  const { repairs, loading, updateRepairInState } = useRepairs();
+  const { repairs, loading, refresh, updateRepairInState } = useRepairs();
 
   const [subTab, setSubTab] = useState<'dues' | 'paid'>('dues');
   const [period, setPeriod] = useState<FinancePeriod>('all');
@@ -66,6 +66,12 @@ export function FinanceScreen({ navigation }: Props) {
       mountedRef.current = false;
     };
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      void refresh();
+    }, [refresh])
+  );
 
 
 

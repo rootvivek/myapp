@@ -271,6 +271,7 @@ export function AddRepairScreen({ navigation, route }: Props) {
         <StatusSection
           status={state.status}
           onChangeStatus={(val) => setField('status', val)}
+          isEdit={isEdit}
           styles={styles}
           colors={colors}
         />

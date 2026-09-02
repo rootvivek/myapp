@@ -1,6 +1,6 @@
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -96,9 +96,10 @@ export function HomeScreen({ navigation }: Props) {
   );
 
   const renderItem = useCallback(
-    ({ item }: { item: Repair }) => (
+    ({ item, index }: { item: Repair; index: number }) => (
       <RepairCard
         repair={item}
+        index={index}
         onPress={() => navigation.navigate('RepairDetail', { repairId: item.id })}
         onStatusChange={handleStatusChange}
       />

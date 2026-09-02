@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
-import { Button as PaperButton, TextInput as PaperInput } from 'react-native-paper';
+import { TextInput as PaperInput } from 'react-native-paper';
 import { ScanLine, Smartphone } from 'lucide-react-native';
 import type { AppColors } from '../../../theme';
 import { normalizeImeiInput } from '../../../utils/repairValidation';
@@ -37,13 +37,20 @@ export const DeviceSection = React.memo(function DeviceSection({
       : [];
 
   return (
-    <>
-      <Text style={styles.sectionTitle}>DEVICE DETAILS</Text>
+    <View style={styles.formCard}>
+      <View style={styles.cardHeader}>
+        <View style={styles.cardHeaderIcon}>
+          <Smartphone size={16} color={colors.accent} />
+        </View>
+        <View style={styles.cardHeaderInfo}>
+          <Text style={styles.cardTitle}>Device Details</Text>
+        </View>
+      </View>
 
       <View style={{ position: 'relative', zIndex: 9 }}>
         <PaperInput
           label="Device Model"
-          placeholder="Enter device model"
+          placeholder="e.g. Samsung Galaxy S23"
           value={deviceModel}
           onChangeText={(t) => {
             onChangeDeviceModel(t);
@@ -58,15 +65,15 @@ export const DeviceSection = React.memo(function DeviceSection({
           placeholderTextColor={colors.textMuted}
           theme={{
             colors: {
-              background: colors.surface,
+              background: colors.surface2,
               placeholder: colors.textMuted,
             },
           }}
           style={styles.paperInput}
-          left={<PaperInput.Icon icon={() => <Smartphone color={colors.accent} size={20} />} />}
+          left={<PaperInput.Icon icon={() => <Smartphone color={colors.accent} size={18} />} />}
           accessibilityLabel="Device Model"
-          accessibilityHint="Enter or pick phone model brand"
         />
+
         {matches.length > 0 && (
           <View style={styles.brandSuggestContainer}>
             <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled">
@@ -91,10 +98,10 @@ export const DeviceSection = React.memo(function DeviceSection({
       </View>
 
       {/* IMEI Row */}
-      <View style={{ marginHorizontal: 18, flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 10 }}>
+      <View style={styles.imeiRow}>
         <PaperInput
-          label="IMEI (max 15 digits)"
-          placeholder="Enter IMEI digits"
+          label="IMEI (15 digits)"
+          placeholder="Enter IMEI number"
           value={imei}
           onChangeText={(t) => onChangeImei(normalizeImeiInput(t))}
           keyboardType="number-pad"
@@ -107,27 +114,25 @@ export const DeviceSection = React.memo(function DeviceSection({
           placeholderTextColor={colors.textMuted}
           theme={{
             colors: {
-              background: colors.surface,
+              background: colors.surface2,
               placeholder: colors.textMuted,
             },
           }}
-          style={styles.imeiPaperInput}
+          style={styles.imeiInput}
           accessibilityLabel="IMEI Number"
         />
-        <PaperButton
-          mode="contained"
+
+        <Pressable
           onPress={onScanImei}
-          style={[styles.scanPaperBtn, { marginTop: 3 }]}
-          contentStyle={styles.scanPaperBtnContent}
-          buttonColor={colors.accent}
-          textColor="#FFFFFF"
-          icon={() => <ScanLine color="#FFFFFF" size={18} />}
+          style={({ pressed }) => [styles.scanBtn, pressed && { opacity: 0.8 }]}
           accessibilityRole="button"
           accessibilityLabel="Scan IMEI with camera"
         >
-          Scan
-        </PaperButton>
+          <ScanLine color="#FFFFFF" size={16} />
+          <Text style={styles.scanBtnText}>Scan</Text>
+        </Pressable>
       </View>
-    </>
+    </View>
   );
 });
+

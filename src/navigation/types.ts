@@ -9,6 +9,7 @@ export type RootStackParamList = {
   Search: undefined;
   CustomerDirectory: undefined;
   ScanImei: { repairId?: number } | undefined;
+  ScanQr: undefined;
   Settings: undefined;
   ManageLabour: undefined;
   Finance: undefined;

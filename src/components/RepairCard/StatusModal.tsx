@@ -34,51 +34,52 @@ export const StatusModal = React.memo(function StatusModal({
         onDismiss={onClose}
         contentContainerStyle={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'transparent' }}
       >
-      <View style={styles.modalWrap}>
-        <Pressable
-          style={StyleSheet.absoluteFill}
-          onPress={onClose}
-          accessibilityRole="button"
-          accessibilityLabel={LABELS.CLOSE}
-        />
-        <View style={styles.modalOuter}>
-          <View style={styles.modalSheet}>
-            <Text style={styles.modalTitle}>{LABELS.SET_STATUS}</Text>
-            <Text style={styles.modalSub}>{deviceModel}</Text>
-            {REPAIR_STATUSES.map((s) => {
-              const isCurrent = s.value === currentStatus;
-              return (
-                <Pressable
-                  key={s.value}
-                  onPress={() => onSelect(s.value)}
-                  style={[styles.modalRow, isCurrent && styles.modalRowCur]}
-                  android_ripple={{ color: 'rgba(124,58,237,0.12)' }}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${s.label}${isCurrent ? ', current status' : ''}`}
-                  accessibilityState={{ selected: isCurrent }}
-                >
-                  <Text
-                    style={[
-                      styles.modalRowText,
-                      isCurrent && styles.modalRowTextCur,
-                    ]}
+        <View style={styles.modalWrap}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={onClose}
+            accessibilityRole="button"
+            accessibilityLabel={LABELS.CLOSE}
+          />
+          <View style={styles.modalOuter}>
+            <View style={styles.modalSheet}>
+              <Text style={styles.modalTitle}>{LABELS.SET_STATUS}</Text>
+              <Text style={styles.modalSub}>{deviceModel}</Text>
+              {REPAIR_STATUSES.map((s) => {
+                const isCurrent = s.value === currentStatus;
+                return (
+                  <Pressable
+                    key={s.value}
+                    onPress={() => onSelect(s.value)}
+                    style={[styles.modalRow, isCurrent && styles.modalRowCur]}
+                    android_ripple={{ color: 'rgba(124,58,237,0.12)' }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${s.label}${isCurrent ? ', current status' : ''}`}
+                    accessibilityState={{ selected: isCurrent }}
                   >
-                    {s.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-            <Pressable
-              onPress={onClose}
-              style={styles.modalCancel}
-              accessibilityRole="button"
-              accessibilityLabel={LABELS.CANCEL}
-            >
-              <Text style={styles.modalCancelText}>{LABELS.CANCEL}</Text>
-            </Pressable>
+                    <Text
+                      style={[
+                        styles.modalRowText,
+                        isCurrent && styles.modalRowTextCur,
+                      ]}
+                    >
+                      {s.label}
+                      {isCurrent ? '  ✓' : ''}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+              <Pressable
+                onPress={onClose}
+                style={styles.modalCancel}
+                accessibilityRole="button"
+                accessibilityLabel={LABELS.CANCEL}
+              >
+                <Text style={styles.modalCancelText}>{LABELS.CANCEL}</Text>
+              </Pressable>
+            </View>
           </View>
         </View>
-      </View>
       </Modal>
     </Portal>
   );

@@ -58,7 +58,7 @@ export const PeriodFilter = React.memo(function PeriodFilter({
                 onPress={() => onPeriodChange(p.key)}
                 style={[
                   styles.periodBtn,
-                  { borderColor: colors.border },
+                  { borderColor: colors.border, backgroundColor: colors.surface2 },
                   active && { backgroundColor: colors.accent, borderColor: colors.accent },
                 ]}
               >

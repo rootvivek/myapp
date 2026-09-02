@@ -1,18 +1,16 @@
 import { useMemo } from 'react';
 import {
-    Image,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
-
-import { StatusChip } from './StatusChip';
+import { QrCode, Search } from 'lucide-react-native';
 
 import { useTheme } from '../context/ThemeContext';
 import type { AppColors } from '../theme';
-import { radius, spacing } from '../theme';
+import { accentAlpha, radius, spacing } from '../theme';
 import type { RootStackParamList } from '../navigation/types';
 import type { RepairStatus } from '../types/repair';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -24,9 +22,10 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 export type StatusFilter = 'all' | RepairStatus;
 
 type Props = {
-    navigation: NativeStackNavigationProp<RootStackParamList, 'Home'>;
-    statusFilter: StatusFilter;
-    onStatusFilterChange: (key: StatusFilter) => void;
+  navigation: NativeStackNavigationProp<RootStackParamList, 'Home'>;
+  statusFilter: StatusFilter;
+  onStatusFilterChange: (key: StatusFilter) => void;
+  searchVisible?: boolean;
 };
 
 /* ------------------------------------------------------------------ */
@@ -34,12 +33,12 @@ type Props = {
 /* ------------------------------------------------------------------ */
 
 const FILTER_CHIPS: readonly { key: StatusFilter; label: string; icon: string }[] = [
-    { key: 'all', label: 'All', icon: '📋' },
-    { key: 'pending', label: 'Pending', icon: '⏳' },
-    { key: 'in_progress', label: 'In Progress', icon: '🔄' },
-    { key: 'completed', label: 'Repaired', icon: '✅' },
-    { key: 'delivered', label: 'Delivered', icon: '📦' },
-    { key: 'cancelled', label: 'Cancelled', icon: '❌' },
+  { key: 'all', label: 'All Jobs', icon: '📋' },
+  { key: 'pending', label: 'Pending', icon: '⏳' },
+  { key: 'in_progress', label: 'In Progress', icon: '🔄' },
+  { key: 'completed', label: 'Repaired', icon: '✅' },
+  { key: 'delivered', label: 'Delivered', icon: '📦' },
+  { key: 'cancelled', label: 'Cancelled', icon: '❌' },
 ] as const;
 
 /* ------------------------------------------------------------------ */
@@ -47,131 +46,161 @@ const FILTER_CHIPS: readonly { key: StatusFilter; label: string; icon: string }[
 /* ------------------------------------------------------------------ */
 
 function createStyles(colors: AppColors) {
-    const s = StyleSheet.create({
-        topContainer: {
-            backgroundColor: colors.surface,
-            borderBottomWidth: 0,
-            borderBottomColor: colors.border,
-            // Premium glassmorphism shadow
-            shadowColor: colors.accent,
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.04,
-            shadowRadius: 12,
-            elevation: 3,
-        },
-        headerRow: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            paddingHorizontal: spacing.md,
-            paddingTop: spacing.md,
-            paddingBottom: spacing.sm,
-            gap: spacing.sm,
-        },
-        headerLeft: {
-            flex: 1,
-            flexDirection: 'row',
-            alignItems: 'center',
-            minWidth: 0,
-            gap: spacing.sm,
-        },
-
-        logoWrap: { width: 32, height: 32, borderRadius: 10, overflow: 'hidden' },
-        logo: { width: 32, height: 32 },
-        title: {
-            flex: 1,
-            minWidth: 0,
-            color: colors.text,
-            fontSize: 18,
-            fontWeight: '800',
-            textAlign: 'left',
-            letterSpacing: -0.5,
-        },
-        searchBtn: {
-            paddingHorizontal: 16,
-            paddingVertical: 6,
-            borderRadius: 8,
-            borderWidth: 1,
-            borderColor: colors.border,
-            backgroundColor: colors.surface2,
-        },
-        searchBtnText: { color: colors.text, fontWeight: '600', fontSize: 13 },
-
-        filterSection: {
-            paddingHorizontal: spacing.sm,
-            paddingTop: spacing.sm,
-            paddingBottom: spacing.sm,
-            borderTopWidth: 1,
-            borderTopColor: colors.border,
-        },
-        filterScroll: { flexGrow: 0 },
-        filterChipsContent: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 8,
-            paddingHorizontal: 4,
-        },
-    });
-    return s as typeof s & { logo: import('react-native').ImageStyle };
+  return StyleSheet.create({
+    container: {
+      backgroundColor: colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.06,
+      shadowRadius: 8,
+      elevation: 3,
+      paddingBottom: spacing.xs,
+    },
+    searchRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: spacing.md,
+      paddingTop: spacing.sm,
+      paddingBottom: spacing.xs,
+      gap: spacing.sm,
+    },
+    searchBar: {
+      flex: 1,
+      height: 44,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface2,
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: spacing.md,
+      gap: 10,
+    },
+    searchPlaceholder: {
+      color: colors.textMuted,
+      fontSize: 14,
+      fontWeight: '500',
+      flex: 1,
+    },
+    qrBtn: {
+      width: 44,
+      height: 44,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface2,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    filterSection: {
+      paddingVertical: spacing.xs,
+    },
+    filterScroll: {
+      paddingHorizontal: spacing.md,
+      gap: spacing.xs,
+    },
+    chip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 12,
+      paddingVertical: 7,
+      borderRadius: radius.full,
+      backgroundColor: colors.surface2,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 5,
+    },
+    activeChip: {
+      backgroundColor: colors.accent,
+      borderColor: colors.accent,
+      shadowColor: colors.accent,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.3,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    chipIcon: {
+      fontSize: 12,
+    },
+    chipText: {
+      fontSize: 12.5,
+      fontWeight: '600',
+      color: colors.textMuted,
+    },
+    activeChipText: {
+      color: '#FFFFFF',
+      fontWeight: '700',
+    },
+  });
 }
 
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
 
-export function HomeHeader({ navigation, statusFilter, onStatusFilterChange }: Props) {
-    const { colors, mode } = useTheme();
-    const styles = useMemo(() => createStyles(colors), [colors]);
+export function HomeHeader({ navigation, statusFilter, onStatusFilterChange, searchVisible = true }: Props) {
+  const { colors, mode } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
-    return (
-        <>
-            {/* ── Header row ── */}
-            <View style={styles.topContainer}>
-                <View style={styles.headerRow}>
-                    <View style={styles.headerLeft}>
-                        <View style={styles.logoWrap}>
-                            <Image
-                                source={require('../../assets/app-logo.jpg')}
-                                style={styles.logo}
-                                resizeMode="cover"
-                            />
-                        </View>
-                        <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">
-                            MCA Phone Wala
-                        </Text>
-                    </View>
-                    <Pressable
-                        onPress={() => navigation.navigate('Search')}
-                        style={styles.searchBtn}
-                        android_ripple={{ color: mode === 'light' ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.15)' }}
-                    >
-                        <Text style={styles.searchBtnText}>🔍 Search</Text>
-                    </Pressable>
-                </View>
-            </View>
+  return (
+    <View style={styles.container}>
+      {/* ── Search Bar & QR Scanner ── */}
+      {searchVisible && (
+        <View style={styles.searchRow}>
+          <Pressable
+            onPress={() => navigation.navigate('Search')}
+            style={styles.searchBar}
+            android_ripple={{ color: accentAlpha(colors.accent, 0.1) }}
+            accessibilityRole="search"
+            accessibilityLabel="Search repairs"
+          >
+            <Search size={18} color={colors.accent} strokeWidth={2.2} />
+            <Text style={styles.searchPlaceholder} numberOfLines={1}>
+              Search customer, device, order ID...
+            </Text>
+          </Pressable>
 
-            {/* ── Filter chips ── */}
-            <View style={styles.filterSection}>
-                <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.filterChipsContent}
-                    style={styles.filterScroll}
-                >
-                    {FILTER_CHIPS.map(({ key, label, icon }) => {
-                        const active = statusFilter === key;
-                        return (
-                            <StatusChip
-                                key={key}
-                                variant="filter"
-                                label={label}
-                                icon={icon}
-                                active={active}
-                                onPress={() => onStatusFilterChange(key)}
-                            />
-                        );
-                    })}
-                </ScrollView>
-            </View>
-        </>
-    );
+          <Pressable
+            onPress={() => navigation.navigate('ScanQr')}
+            style={styles.qrBtn}
+            android_ripple={{ color: accentAlpha(colors.accent, 0.15) }}
+            accessibilityRole="button"
+            accessibilityLabel="Scan QR or Barcode"
+          >
+            <QrCode size={20} color={colors.accent} strokeWidth={2.2} />
+          </Pressable>
+        </View>
+      )}
+
+      {/* ── Filter Chips ── */}
+      <View style={styles.filterSection}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterScroll}
+        >
+          {FILTER_CHIPS.map(({ key, label, icon }) => {
+            const active = statusFilter === key;
+            return (
+              <Pressable
+                key={key}
+                onPress={() => onStatusFilterChange(key)}
+                style={[styles.chip, active && styles.activeChip]}
+                android_ripple={{ color: 'rgba(255, 255, 255, 0.2)' }}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: active }}
+              >
+                <Text style={styles.chipIcon}>{icon}</Text>
+                <Text style={[styles.chipText, active && styles.activeChipText]}>
+                  {label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      </View>
+    </View>
+  );
 }

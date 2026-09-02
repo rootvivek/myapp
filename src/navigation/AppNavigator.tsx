@@ -12,6 +12,7 @@ import { SearchScreen } from '../screens/SearchScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { ManageLabourScreen } from '../screens/ManageLabourScreen';
 import { FinanceScreen } from '../screens/FinanceScreen';
+import { ScanQrScreen } from '../screens/ScanQrScreen';
 
 import type { RootStackParamList } from './types';
 
@@ -64,6 +65,7 @@ export function AppNavigator() {
         <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Shop & invoice' }} />
         <Stack.Screen name="ManageLabour" component={ManageLabourScreen} options={{ headerShown: false }} />
         <Stack.Screen name="ScanImei" component={ScanImeiScreen} options={{ title: 'Scan IMEI' }} />
+        <Stack.Screen name="ScanQr" component={ScanQrScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Finance" component={FinanceScreen} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
