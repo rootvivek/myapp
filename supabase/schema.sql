@@ -210,12 +210,11 @@ create policy "repairs_delete_shop" on public.repairs
   );
 
 -- Storage bucket (must exist before policies). App uses bucket id `repair-images` + getPublicUrl.
--- ⚠️ SECURITY: This bucket is set to public. Anyone with an image URL can view customer photos/IDs.
--- For higher security, set public=false and use createSignedUrl() in the app instead of getPublicUrl().
--- This requires updating repairImageUpload.ts and migrating existing stored URLs.
+-- Storage bucket (must exist before policies). App uses bucket id `repair-images` with signed URLs for security.
+-- 🔐 SECURITY: Bucket is private (`public = false`). Access is granted via RLS policies and signed URLs.
 insert into storage.buckets (id, name, public)
 values ('repair-images', 'repair-images', false)
-on conflict (id) do update set public = excluded.public;
+on conflict (id) do update set public = false;
 
 -- Or: Dashboard → Storage → New bucket → id `repair-images`, Public OFF.
 

@@ -78,10 +78,22 @@ export async function deleteLabourUser(labourUserId: string): Promise<void> {
   if (error) throw new Error('Failed to remove labour: ' + error.message);
 }
 
-export async function updateLabourUser(labourUserId: string, name: string, phone: string): Promise<void> {
+export async function updateLabourUser(
+  labourUserId: string,
+  name: string,
+  phone: string,
+  username?: string
+): Promise<void> {
+  const updatePayload: Record<string, string> = {
+    name: name.trim(),
+    phone: phone.trim(),
+  };
+  if (username !== undefined) {
+    updatePayload.username = username.trim();
+  }
   const { error } = await supabase
     .from('profiles')
-    .update({ name: name.trim(), phone: phone.trim() })
+    .update(updatePayload)
     .eq('id', labourUserId);
   if (error) throw new Error('Failed to update labour: ' + error.message);
 }

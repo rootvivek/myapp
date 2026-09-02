@@ -95,7 +95,7 @@ export function HomeScreen({ navigation }: Props) {
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      await refresh();
+      await refresh(true);
     } finally {
       setRefreshing(false);
     }
@@ -108,7 +108,7 @@ export function HomeScreen({ navigation }: Props) {
       paymentUpdate?: { isPaid: boolean; paymentType?: 'cash' | 'online' }
     ): Promise<void> => {
       await updateRepairStatus(repairId, status, paymentUpdate);
-      await refresh();
+      await refresh(true);
     },
     [refresh]
   );
@@ -165,6 +165,10 @@ export function HomeScreen({ navigation }: Props) {
             refreshing={refreshing}
             onRefresh={handleRefresh}
             stickySectionHeadersEnabled={true}
+            initialNumToRender={10}
+            maxToRenderPerBatch={10}
+            windowSize={5}
+            updateCellsBatchingPeriod={50}
             ListEmptyComponent={
               <Text style={styles.empty}>
                 {repairs.length === 0 ? 'No repairs yet.' : 'No jobs with this status.'}

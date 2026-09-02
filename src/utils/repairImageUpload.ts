@@ -19,7 +19,7 @@ function rethrowStorageError(err: unknown): never {
   const msg = err instanceof Error ? err.message : String(err);
   if (msg.includes('Bucket not found')) {
     throw new Error(
-      `Storage bucket "${BUCKET}" is missing. In Supabase: SQL Editor → run supabase/schema.sql (bucket insert), or Storage → New bucket → name ${BUCKET}, Public.`
+      `Storage bucket "${BUCKET}" is missing. In Supabase: SQL Editor → run supabase/schema.sql (bucket insert), or Storage → New bucket → name ${BUCKET}.`
     );
   }
   throw err;

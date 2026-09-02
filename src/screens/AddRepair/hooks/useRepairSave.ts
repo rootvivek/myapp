@@ -86,18 +86,41 @@ export function useRepairSave() {
         };
 
         let savedRepairId = repairId ?? 0;
+
         if (isEdit && repairId != null) {
-          const resolved = await resolveImagesForSaveCloud(
-            repairId,
-            state.images,
-            initialImagesRef.current
-          );
-          await updateRepair({ ...base, id: repairId, ...resolved });
+          let resolvedImages = {
+            imagePhoneFront: initialImagesRef.current.front || '',
+            imagePhoneBack: initialImagesRef.current.back || '',
+            imageThumbnail: initialImagesRef.current.front || '',
+            imageId1: initialImagesRef.current.id1 || '',
+            imageId2: initialImagesRef.current.id2 || '',
+          };
+          try {
+            resolvedImages = await resolveImagesForSaveCloud(
+              repairId,
+              state.images,
+              initialImagesRef.current
+            );
+          } catch (imgErr) {
+            console.warn('[useRepairSave] Image upload failed on edit, keeping existing images:', imgErr);
+          }
+          await updateRepair({ ...base, id: repairId, ...resolvedImages });
           savedRepairId = repairId;
         } else {
+          let resolvedImages = {
+            imagePhoneFront: '',
+            imagePhoneBack: '',
+            imageThumbnail: '',
+            imageId1: '',
+            imageId2: '',
+          };
           const newId = await insertRepair(base);
-          const resolved = await resolveImagesForSaveCloud(newId, state.images, emptyImageState());
-          await updateRepair({ ...base, id: newId, ...resolved });
+          try {
+            resolvedImages = await resolveImagesForSaveCloud(newId, state.images, emptyImageState());
+          } catch (imgErr) {
+            console.warn('[useRepairSave] Image upload failed on create, repair record created:', imgErr);
+          }
+          await updateRepair({ ...base, id: newId, ...resolvedImages });
           savedRepairId = newId;
         }
 
