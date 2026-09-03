@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { Alert } from 'react-native';
-import { getRepairById, insertRepair, updateRepair } from '../../../db/database';
+import { deductInventoryStock, getRepairById, insertRepair, updateRepair } from '../../../db/database';
 import type { RepairImageSlot, RepairInput } from '../../../types/repair';
 import { emptyImageState } from '../../../utils/repairImages';
 import { resolveImagesForSaveCloud } from '../../../utils/repairImageUpload';
@@ -122,6 +122,12 @@ export function useRepairSave() {
           }
           await updateRepair({ ...base, id: newId, ...resolvedImages });
           savedRepairId = newId;
+        }
+
+        if (state.selectedInventoryItemIds && state.selectedInventoryItemIds.length > 0) {
+          for (const invId of state.selectedInventoryItemIds) {
+            void deductInventoryStock(invId, 1);
+          }
         }
 
         if (shouldAutoSendWhatsApp) {

@@ -375,6 +375,31 @@ export async function updateRepairStatus(
   if (error) throw error;
 }
 
+export async function deductInventoryStock(inventoryItemId: number, quantity = 1): Promise<void> {
+  const { data: item, error: fetchErr } = await supabase
+    .from('inventory')
+    .select('stock_count')
+    .eq('id', inventoryItemId)
+    .single();
+
+  if (fetchErr || !item) {
+    console.warn('[deductInventoryStock] Item not found:', inventoryItemId);
+    return;
+  }
+
+  const currentStock = Number(item.stock_count ?? 0);
+  const newStock = Math.max(0, currentStock - quantity);
+
+  const { error: updateErr } = await supabase
+    .from('inventory')
+    .update({ stock_count: newStock, updated_at: new Date().toISOString() })
+    .eq('id', inventoryItemId);
+
+  if (updateErr) {
+    console.error('[deductInventoryStock] Failed to update stock:', updateErr);
+  }
+}
+
 export async function updateRepair(input: RepairInput & { id: number }): Promise<void> {
 
   const now = new Date().toISOString();

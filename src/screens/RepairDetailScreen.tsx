@@ -399,6 +399,18 @@ export function RepairDetailScreen({ navigation, route }: Props) {
       .catch(() => Alert.alert('Error', 'Failed to initiate call.'));
   }
 
+  function handleNotifyWhatsApp(): void {
+    if (!repair || !repair.phone) return;
+    const digits = repair.phone.replace(/\D/g, '');
+    const phone = digits.length === 10 ? `91${digits}` : digits;
+    const statusTxt = repair.status === 'completed' ? 'ready for pickup' : repair.status;
+    const msg = `Hello ${repair.customerName}, your repair order (${repair.deviceModel}) is currently ${statusTxt}.\nThank you!\nMCA Phone Wala`;
+    const url = `whatsapp://send?phone=${phone}&text=${encodeURIComponent(msg)}`;
+    Linking.openURL(url).catch(() => {
+      Alert.alert('WhatsApp Error', 'Could not open WhatsApp on this device.');
+    });
+  }
+
   function handleCopy(): void {
     if (!repair?.orderCode) return;
     Clipboard.setString(repair.orderCode);
@@ -735,6 +747,13 @@ export function RepairDetailScreen({ navigation, route }: Props) {
                 <Text style={styles.actionBtnText}>Generate Invoice</Text>
               </View>
             </LinearGradient>
+          </Pressable>
+
+          {/* WhatsApp Status Notification */}
+          <Pressable onPress={handleNotifyWhatsApp} style={[styles.actionBtnSecondary, { borderColor: 'rgba(34, 197, 94, 0.4)', backgroundColor: 'rgba(34, 197, 94, 0.08)' }]}>
+            <Text style={[styles.actionBtnSecondaryText, { color: '#22C55E', fontWeight: '700' }]}>
+              💬 Send Status Update on WhatsApp
+            </Text>
           </Pressable>
 
           {/* Edit & Delete */}

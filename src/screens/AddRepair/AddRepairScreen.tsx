@@ -241,6 +241,12 @@ export function AddRepairScreen({ navigation, route }: Props) {
         <ProblemSection
           problem={state.problem}
           onChangeProblem={(val) => setField('problem', val)}
+          currentExpense={state.expense}
+          onChangeExpense={(val) => setField('expense', val)}
+          selectedInventoryItemIds={state.selectedInventoryItemIds}
+          onAddInventoryItemId={(id) =>
+            setField('selectedInventoryItemIds', [...(state.selectedInventoryItemIds || []), id])
+          }
           styles={styles}
           colors={colors}
         />

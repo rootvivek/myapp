@@ -25,6 +25,7 @@ export interface RepairFormState {
   accessories: Pick<Repair, 'accSimTray' | 'accBackCover'>;
   orderCode: string;
   sendWhatsAppInvoice: boolean;
+  selectedInventoryItemIds: number[];
 }
 
 export type RepairFormAction =
