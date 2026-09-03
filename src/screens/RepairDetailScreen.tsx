@@ -102,6 +102,18 @@ export function RepairDetailScreen({ navigation, route }: Props) {
       .catch(() => Alert.alert('Error', 'Failed to initiate call.'));
   }
 
+  function handleNotifyWhatsApp(): void {
+    if (!repair || !repair.phone) return;
+    const digits = repair.phone.replace(/\D/g, '');
+    const phone = digits.length === 10 ? `91${digits}` : digits;
+    const statusTxt = repair.status === 'completed' ? 'ready for pickup' : repair.status;
+    const msg = `Hello ${repair.customerName}, your repair order (${repair.deviceModel}) is currently ${statusTxt}.\nThank you!\nMCA Phone Wala`;
+    const url = `whatsapp://send?phone=${phone}&text=${encodeURIComponent(msg)}`;
+    Linking.openURL(url).catch(() => {
+      Alert.alert('WhatsApp Error', 'Could not open WhatsApp on this device.');
+    });
+  }
+
   function handleCopy(): void {
     if (!repair?.orderCode) return;
     Clipboard.setString(repair.orderCode);
@@ -250,6 +262,7 @@ export function RepairDetailScreen({ navigation, route }: Props) {
           colors={colors}
         />
 
+<<<<<<< HEAD
         {/* Action Buttons */}
         <ActionButtons
           canModify={canModify}
@@ -259,6 +272,50 @@ export function RepairDetailScreen({ navigation, route }: Props) {
           mode={mode}
           colors={colors}
         />
+=======
+        {/* Actions */}
+        <View style={styles.actions}>
+          {/* Invoice */}
+          <Pressable onPress={() => void handlePdf()} style={styles.actionBtn}>
+            <LinearGradient colors={['#7C3AED', '#4F46E5']} start={{ x: 0, y: 1 }} end={{ x: 1, y: 0 }}>
+              <View style={styles.actionBtnInner}>
+                <FileText size={18} color="#fff" strokeWidth={1.8} />
+                <Text style={styles.actionBtnText}>Generate Invoice</Text>
+              </View>
+            </LinearGradient>
+          </Pressable>
+
+          {/* WhatsApp Status Notification */}
+          <Pressable onPress={handleNotifyWhatsApp} style={[styles.actionBtnSecondary, { borderColor: 'rgba(34, 197, 94, 0.4)', backgroundColor: 'rgba(34, 197, 94, 0.08)' }]}>
+            <Text style={[styles.actionBtnSecondaryText, { color: '#22C55E', fontWeight: '700' }]}>
+              💬 Send Status Update on WhatsApp
+            </Text>
+          </Pressable>
+
+          {/* Edit & Delete */}
+          {canModify && (
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <Pressable
+                onPress={() => navigation.navigate('AddRepair', { repairId: repair.id })}
+                style={[styles.actionBtnSecondary, { flex: 1 }]}
+              >
+                <Text style={styles.actionBtnSecondaryText}>Edit job</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  Alert.alert('Delete Repair', 'Are you sure? This cannot be undone.', [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Delete', style: 'destructive', onPress: handleDelete },
+                  ]);
+                }}
+                style={[styles.actionBtnSecondary, { flex: 1, borderColor: 'rgba(239,68,68,0.2)' }]}
+              >
+                <Text style={[styles.actionBtnSecondaryText, { color: '#EF4444' }]}>Delete</Text>
+              </Pressable>
+            </View>
+          )}
+        </View>
+>>>>>>> 59d5b3f0e76670e4b0b8d54687271a6ec0dd3ad9
       </ScrollView>
 
       <CustomerHistoryModal

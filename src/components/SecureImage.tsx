@@ -19,15 +19,31 @@ export function useSecureImage(imageUrl: string | null | undefined) {
       return;
     }
 
+<<<<<<< HEAD
     // If it's a Supabase storage URL for our private bucket
     if (imageUrl.includes('/storage/v1/object/authenticated/repair-images/')) {
+=======
+    // If it's a Supabase storage URL or path for our private bucket
+    const isSupabaseRepairImage =
+      imageUrl.includes('/repair-images/') ||
+      imageUrl.includes('/storage/v1/object/public/repair-images/') ||
+      imageUrl.includes('/storage/v1/object/authenticated/repair-images/') ||
+      imageUrl.includes('/storage/v1/object/sign/repair-images/');
+
+    if (isSupabaseRepairImage) {
+>>>>>>> 59d5b3f0e76670e4b0b8d54687271a6ec0dd3ad9
       let isMounted = true;
       setLoading(true);
 
       const getSignedUrl = async () => {
         try {
-          const pathStart = imageUrl.indexOf('/repair-images/') + '/repair-images/'.length;
-          const path = decodeURIComponent(imageUrl.substring(pathStart));
+          let path = '';
+          if (imageUrl.includes('/repair-images/')) {
+            const pathStart = imageUrl.indexOf('/repair-images/') + '/repair-images/'.length;
+            path = decodeURIComponent(imageUrl.substring(pathStart).split('?')[0]);
+          } else {
+            path = decodeURIComponent(imageUrl);
+          }
           
           if (!supabase) {
             if (isMounted) setSignedUrl(imageUrl);

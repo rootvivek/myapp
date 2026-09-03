@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { View } from 'react-native';
+import { Linking, View } from 'react-native';
 
 import { useTheme } from '../../context/ThemeContext';
 import type { Repair, RepairStatus } from '../../types/repair';
@@ -48,7 +48,7 @@ export const RepairCard = React.memo(function RepairCard({
   }, []);
 
   const handleStatusSelect = useCallback(
-    async (newStatus: RepairStatus) => {
+    async (newStatus: RepairStatus, sendWhatsApp?: boolean) => {
       if (statusBusyRef.current) return;
 
       setStatusModal(false);
@@ -63,13 +63,21 @@ export const RepairCard = React.memo(function RepairCard({
       statusBusyRef.current = true;
       try {
         await onStatusChange(repair.id, newStatus);
+        if (sendWhatsApp && repair.phone) {
+          const digits = repair.phone.replace(/\D/g, '');
+          const phone = digits.length === 10 ? `91${digits}` : digits;
+          const statusTxt = newStatus === 'completed' ? 'ready for pickup' : newStatus;
+          const msg = `Hello ${repair.customerName}, your repair order (${repair.deviceModel}) is now ${statusTxt}. Thank you!\nMCA Phone Wala`;
+          const url = `whatsapp://send?phone=${phone}&text=${encodeURIComponent(msg)}`;
+          await Linking.openURL(url).catch(() => {});
+        }
       } catch (err: unknown) {
         showError('Status Update Failed', err);
       } finally {
         statusBusyRef.current = false;
       }
     },
-    [onStatusChange, repair.id, repair.status],
+    [onStatusChange, repair.id, repair.status, repair.phone, repair.customerName, repair.deviceModel],
   );
 
   const handlePaymentClose = useCallback(() => {

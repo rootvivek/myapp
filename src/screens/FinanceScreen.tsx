@@ -69,8 +69,15 @@ export function FinanceScreen({ navigation }: Props) {
 
   useFocusEffect(
     useCallback(() => {
+<<<<<<< HEAD
       void refresh();
     }, [refresh])
+=======
+      if (isOwner) {
+        void refresh(false);
+      }
+    }, [refresh, isOwner])
+>>>>>>> 59d5b3f0e76670e4b0b8d54687271a6ec0dd3ad9
   );
 
 

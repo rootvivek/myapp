@@ -55,7 +55,7 @@ export function HomeScreen({ navigation }: Props) {
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      await refresh();
+      await refresh(true);
     } finally {
       setRefreshing(false);
     }
@@ -67,8 +67,16 @@ export function HomeScreen({ navigation }: Props) {
       status: RepairStatus,
       paymentUpdate?: { isPaid: boolean; paymentType?: 'cash' | 'online' }
     ): Promise<void> => {
+<<<<<<< HEAD
       const existing = repairs.find((r) => r.id === repairId);
       if (!existing) return;
+=======
+      await updateRepairStatus(repairId, status, paymentUpdate);
+      await refresh(true);
+    },
+    [refresh]
+  );
+>>>>>>> 59d5b3f0e76670e4b0b8d54687271a6ec0dd3ad9
 
       const previousState: Partial<Repair> = {
         status: existing.status,
@@ -140,6 +148,14 @@ export function HomeScreen({ navigation }: Props) {
             contentContainerStyle={styles.list}
             refreshing={refreshing}
             onRefresh={handleRefresh}
+<<<<<<< HEAD
+=======
+            stickySectionHeadersEnabled={true}
+            initialNumToRender={10}
+            maxToRenderPerBatch={10}
+            windowSize={5}
+            updateCellsBatchingPeriod={50}
+>>>>>>> 59d5b3f0e76670e4b0b8d54687271a6ec0dd3ad9
             ListEmptyComponent={
               <EmptyState
                 icon={<Wrench size={36} color={colors.accent} />}

@@ -15,7 +15,7 @@ type RepairsStateContextValue = {
 };
 
 type RepairsActionsContextValue = {
-  refresh: () => Promise<void>;
+  refresh: (force?: boolean) => Promise<void>;
   deleteRepair: (repairId: number) => Promise<void>;
   addRepairToState: (repair: Repair) => void;
   updateRepairInState: (repairId: number, updates: Partial<Repair>) => void;
@@ -34,6 +34,7 @@ export function RepairsProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
 
   const requestIdRef = useRef(0);
+  const lastFetchTimeRef = useRef(0);
   const mountedRef = useRef(true);
 
   useEffect(() => {
@@ -43,8 +44,18 @@ export function RepairsProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+<<<<<<< HEAD
   // Initial fetch / manual pull-to-refresh
   const refresh = useCallback(async () => {
+=======
+  const refresh = useCallback(async (force = false) => {
+    const now = Date.now();
+    // Throttle automatic focus refetches to once every 10 seconds unless forced
+    if (!force && lastFetchTimeRef.current > 0 && now - lastFetchTimeRef.current < 10000) {
+      return;
+    }
+
+>>>>>>> 59d5b3f0e76670e4b0b8d54687271a6ec0dd3ad9
     const currentRequestId = ++requestIdRef.current;
     setLoading(true);
     try {
@@ -52,6 +63,7 @@ export function RepairsProvider({ children }: { children: React.ReactNode }) {
       if (currentRequestId === requestIdRef.current && mountedRef.current) {
         setRepairs(list);
         setReady(true);
+        lastFetchTimeRef.current = Date.now();
       }
     } catch (err) {
       logger.warn('[RepairsContext] Error fetching repairs:', err);

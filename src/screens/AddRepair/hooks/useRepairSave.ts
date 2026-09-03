@@ -1,6 +1,10 @@
 import { useCallback, useRef, useState } from 'react';
 import { Alert } from 'react-native';
+<<<<<<< HEAD
 import { repairService } from '../../../services/repairService';
+=======
+import { deductInventoryStock, getRepairById, insertRepair, updateRepair } from '../../../db/database';
+>>>>>>> 59d5b3f0e76670e4b0b8d54687271a6ec0dd3ad9
 import type { RepairImageSlot, RepairInput } from '../../../types/repair';
 import { emptyImageState } from '../../../utils/repairImages';
 import { resolveImagesForSaveCloud } from '../../../utils/repairImageUpload';
@@ -88,7 +92,9 @@ export function useRepairSave() {
         };
 
         let savedRepairId = repairId ?? 0;
+
         if (isEdit && repairId != null) {
+<<<<<<< HEAD
           const resolved = await resolveImagesForSaveCloud(
             repairId,
             state.images,
@@ -110,6 +116,51 @@ export function useRepairSave() {
         }
 
         if (shouldAutoSendWhatsApp && savedRepair) {
+=======
+          let resolvedImages = {
+            imagePhoneFront: initialImagesRef.current.front || '',
+            imagePhoneBack: initialImagesRef.current.back || '',
+            imageThumbnail: initialImagesRef.current.front || '',
+            imageId1: initialImagesRef.current.id1 || '',
+            imageId2: initialImagesRef.current.id2 || '',
+          };
+          try {
+            resolvedImages = await resolveImagesForSaveCloud(
+              repairId,
+              state.images,
+              initialImagesRef.current
+            );
+          } catch (imgErr) {
+            console.warn('[useRepairSave] Image upload failed on edit, keeping existing images:', imgErr);
+          }
+          await updateRepair({ ...base, id: repairId, ...resolvedImages });
+          savedRepairId = repairId;
+        } else {
+          let resolvedImages = {
+            imagePhoneFront: '',
+            imagePhoneBack: '',
+            imageThumbnail: '',
+            imageId1: '',
+            imageId2: '',
+          };
+          const newId = await insertRepair(base);
+          try {
+            resolvedImages = await resolveImagesForSaveCloud(newId, state.images, emptyImageState());
+          } catch (imgErr) {
+            console.warn('[useRepairSave] Image upload failed on create, repair record created:', imgErr);
+          }
+          await updateRepair({ ...base, id: newId, ...resolvedImages });
+          savedRepairId = newId;
+        }
+
+        if (state.selectedInventoryItemIds && state.selectedInventoryItemIds.length > 0) {
+          for (const invId of state.selectedInventoryItemIds) {
+            void deductInventoryStock(invId, 1);
+          }
+        }
+
+        if (shouldAutoSendWhatsApp) {
+>>>>>>> 59d5b3f0e76670e4b0b8d54687271a6ec0dd3ad9
           try {
             await shareReceiptPdfToWhatsAppContact(savedRepair, ph);
           } catch (err: any) {

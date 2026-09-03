@@ -27,6 +27,7 @@ export const initialRepairFormState: RepairFormState = {
   },
   orderCode: '',
   sendWhatsAppInvoice: false,
+  selectedInventoryItemIds: [],
 };
 
 export function repairFormReducer(
