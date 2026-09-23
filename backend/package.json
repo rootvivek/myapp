@@ -1,0 +1,18 @@
+{
+  "name": "myapp-otp-server",
+  "version": "1.0.0",
+  "private": true,
+  "main": "otp-server.js",
+  "scripts": {
+    "start": "node otp-server.js",
+    "migrate:phone": "node migrate-users-to-phone.js",
+    "migrate:phone:apply": "node migrate-users-to-phone.js --apply"
+  },
+  "dependencies": {
+    "@msg91comm/sendotp-react-native": "^3.0.0",
+    "@supabase/supabase-js": "^2.108.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^4.19.2"
+  }
+}
