@@ -19,10 +19,6 @@ export function useSecureImage(imageUrl: string | null | undefined) {
       return;
     }
 
-<<<<<<< HEAD
-    // If it's a Supabase storage URL for our private bucket
-    if (imageUrl.includes('/storage/v1/object/authenticated/repair-images/')) {
-=======
     // If it's a Supabase storage URL or path for our private bucket
     const isSupabaseRepairImage =
       imageUrl.includes('/repair-images/') ||
@@ -31,7 +27,6 @@ export function useSecureImage(imageUrl: string | null | undefined) {
       imageUrl.includes('/storage/v1/object/sign/repair-images/');
 
     if (isSupabaseRepairImage) {
->>>>>>> 59d5b3f0e76670e4b0b8d54687271a6ec0dd3ad9
       let isMounted = true;
       setLoading(true);
 

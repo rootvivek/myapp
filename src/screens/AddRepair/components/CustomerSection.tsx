@@ -1,14 +1,15 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { TextInput as PaperInput } from 'react-native-paper';
 import { CheckCircle2, Phone, Search, User, UserPlus, X } from 'lucide-react-native';
 import type { AppColors } from '../../../theme';
 import { accentAlpha } from '../../../theme';
+import { FormTextInput } from '../../../components/FormTextInput';
 import type { DirectoryCustomer } from '../../../types/customer';
 import {
   normalizePhoneInput,
   normalizeStoredPhoneForDisplay,
   sanitizeCustomerNameInput,
+  type RepairFormErrors,
 } from '../../../utils/repairValidation';
 import type { AddRepairStyles } from '../styles';
 
@@ -17,6 +18,8 @@ type Props = {
   phone: string;
   isEdit: boolean;
   directoryCustomers: DirectoryCustomer[];
+  /** Inline validation messages keyed by field. */
+  errors?: RepairFormErrors;
   onChangeCustomerName: (name: string) => void;
   onChangePhone: (phone: string) => void;
   styles: AddRepairStyles;
@@ -28,6 +31,7 @@ export const CustomerSection = React.memo(function CustomerSection({
   phone,
   isEdit,
   directoryCustomers,
+  errors,
   onChangeCustomerName,
   onChangePhone,
   styles,
@@ -37,6 +41,16 @@ export const CustomerSection = React.memo(function CustomerSection({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isNewCustomerMode, setIsNewCustomerMode] = useState(false);
   const [selectedExisting, setSelectedExisting] = useState(false);
+
+  const nameError = errors?.customerName;
+  const phoneError = errors?.phone;
+
+  // The manual name/phone inputs are hidden in search mode. When validation
+  // fails for them, reveal the inputs so the red outline + message are visible.
+  useEffect(() => {
+    if (isEdit || selectedExisting) return;
+    if (nameError || phoneError) setIsNewCustomerMode(true);
+  }, [isEdit, selectedExisting, nameError, phoneError]);
 
   const query = searchQuery.trim().toLowerCase();
   const matches =
@@ -89,7 +103,7 @@ export const CustomerSection = React.memo(function CustomerSection({
       {!isEdit && !isNewCustomerMode && !selectedExisting && (
         <View style={{ zIndex: 10 }}>
           <View style={styles.searchCustomerRow}>
-            <PaperInput
+            <FormTextInput
               placeholder="Search customer (Name or Phone)..."
               value={searchQuery}
               onChangeText={(t) => {
@@ -97,20 +111,9 @@ export const CustomerSection = React.memo(function CustomerSection({
                 setShowSuggestions(true);
               }}
               onFocus={() => setShowSuggestions(true)}
-              mode="outlined"
-              dense={true}
-              outlineColor={colors.border}
-              activeOutlineColor={colors.accent}
-              textColor={colors.text}
-              placeholderTextColor={colors.textMuted}
-              theme={{
-                colors: {
-                  background: colors.surface2,
-                  placeholder: colors.textMuted,
-                },
-              }}
-              style={styles.searchCustomerInput}
-              left={<PaperInput.Icon icon={() => <Search color={colors.accent} size={18} />} />}
+              icon={Search}
+              containerStyle={styles.inputFlex}
+              style={styles.searchInputText}
               accessibilityLabel="Search customer"
             />
 
@@ -217,50 +220,26 @@ export const CustomerSection = React.memo(function CustomerSection({
           )}
 
           {/* Separate Column 1: Customer Name */}
-          <PaperInput
+          <FormTextInput
             label="Customer Name"
             placeholder="Enter customer full name"
             value={customerName}
             onChangeText={(t) => onChangeCustomerName(sanitizeCustomerNameInput(t))}
-            mode="outlined"
-            dense={true}
-            outlineColor={colors.border}
-            activeOutlineColor={colors.accent}
-            textColor={colors.text}
-            placeholderTextColor={colors.textMuted}
-            theme={{
-              colors: {
-                background: colors.surface2,
-                placeholder: colors.textMuted,
-              },
-            }}
-            style={[styles.paperInput, { marginBottom: 0 }]}
-            left={<PaperInput.Icon icon={() => <User color={colors.accent} size={18} />} />}
+            error={nameError}
+            icon={User}
             accessibilityLabel="Customer Name"
           />
 
           {/* Separate Column 2: Customer Phone Number */}
-          <PaperInput
+          <FormTextInput
             label="Phone Number"
             placeholder="Enter 10-digit mobile number"
             value={phone}
             onChangeText={(t) => onChangePhone(normalizePhoneInput(t))}
             keyboardType="number-pad"
             maxLength={10}
-            mode="outlined"
-            dense={true}
-            outlineColor={colors.border}
-            activeOutlineColor={colors.accent}
-            textColor={colors.text}
-            placeholderTextColor={colors.textMuted}
-            theme={{
-              colors: {
-                background: colors.surface2,
-                placeholder: colors.textMuted,
-              },
-            }}
-            style={[styles.paperInput, { marginBottom: 0 }]}
-            left={<PaperInput.Icon icon={() => <Phone color={colors.accent} size={18} />} />}
+            error={phoneError}
+            icon={Phone}
             accessibilityLabel="Phone Number"
           />
         </View>

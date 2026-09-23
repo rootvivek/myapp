@@ -139,11 +139,6 @@ export function createAddRepairStyles(colors: AppColors) {
       gap: 8,
       marginBottom: 8,
     },
-    searchCustomerInput: {
-      flex: 1,
-      backgroundColor: COLORS.input,
-      fontSize: 13.5,
-    },
     newCustomerBtn: {
       width: 48,
       height: 48,
@@ -168,21 +163,26 @@ export function createAddRepairStyles(colors: AppColors) {
       marginBottom: 5,
       marginTop: 4,
     },
-    paperInput: {
-      backgroundColor: COLORS.input,
-      marginBottom: 8,
-      fontSize: 14,
+    /* Layout wrappers for FormTextInput (the input itself is themed by the
+       shared component, so these only control spacing/flex). */
+    inputStack: {
+      marginBottom: spacing.sm,
+    },
+    inputTight: {
+      marginBottom: 4,
+    },
+    inputFlex: {
+      flex: 1,
+      minWidth: 0,
+    },
+    searchInputText: {
+      fontSize: 13.5,
     },
     imeiRow: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 8,
       marginBottom: 4,
-    },
-    imeiInput: {
-      flex: 1,
-      backgroundColor: COLORS.input,
-      fontSize: 14,
     },
     scanBtn: {
       borderRadius: radius.md,

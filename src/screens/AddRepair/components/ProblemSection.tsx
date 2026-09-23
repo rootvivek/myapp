@@ -1,16 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { Text, View, Pressable, Modal, FlatList } from 'react-native';
-import { Chip as PaperChip, TextInput as PaperInput } from 'react-native-paper';
+import { Chip as PaperChip } from 'react-native-paper';
 import { AlertCircle } from 'lucide-react-native';
 import type { AppColors } from '../../../theme';
+import { FormTextInput } from '../../../components/FormTextInput';
 import { COMMON_PROBLEMS } from '../constants';
 import type { AddRepairStyles } from '../styles';
 import { getAllInventory } from '../../../db/database';
 import type { InventoryItem } from '../../../types/inventory';
 import { formatCurrency } from '../../../utils/format';
+import type { RepairFormErrors } from '../../../utils/repairValidation';
 
 type Props = {
   problem: string;
+  /** Inline validation messages keyed by field. */
+  errors?: RepairFormErrors;
   onChangeProblem: (text: string) => void;
   currentExpense?: string;
   onChangeExpense?: (expense: string) => void;
@@ -22,6 +26,7 @@ type Props = {
 
 export const ProblemSection = React.memo(function ProblemSection({
   problem,
+  errors,
   onChangeProblem,
   currentExpense,
   onChangeExpense,
@@ -65,7 +70,6 @@ export const ProblemSection = React.memo(function ProblemSection({
   };
 
   return (
-<<<<<<< HEAD
     <View style={styles.formCard}>
       <View style={styles.cardHeader}>
         <View style={styles.cardHeaderIcon}>
@@ -76,29 +80,40 @@ export const ProblemSection = React.memo(function ProblemSection({
         </View>
       </View>
 
-      <PaperInput
+      <FormTextInput
         label="Problem description"
         placeholder="e.g. Broken display glass, touch not working..."
         value={problem}
         onChangeText={onChangeProblem}
+        error={errors?.problem}
         multiline
         numberOfLines={3}
-        mode="outlined"
-        outlineColor={colors.border}
-        activeOutlineColor={colors.accent}
-        textColor={colors.text}
-        placeholderTextColor={colors.textMuted}
-        theme={{
-          colors: {
-            background: colors.surface2,
-            placeholder: colors.textMuted,
-          },
-        }}
-        style={[styles.paperInput, { marginBottom: 4 }]}
+        containerStyle={styles.inputTight}
         accessibilityLabel="Problem description"
       />
 
       <View style={styles.problemSuggestions}>
+        <PaperChip
+          mode="outlined"
+          onPress={() => setInventoryModalVisible(true)}
+          style={{
+            backgroundColor: colors.accent,
+            borderColor: colors.accent,
+            borderRadius: 8,
+            height: 30,
+            marginRight: 4,
+            marginBottom: 4,
+          }}
+          textStyle={{
+            color: '#FFFFFF',
+            fontSize: 11,
+            fontWeight: '700',
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Attach Inventory Part"
+        >
+          📦 Attach Inventory Part
+        </PaperChip>
         {COMMON_PROBLEMS.map((item) => (
           <PaperChip
             key={item}
@@ -116,6 +131,8 @@ export const ProblemSection = React.memo(function ProblemSection({
               borderColor: colors.border,
               borderRadius: 8,
               height: 30,
+              marginRight: 2,
+              marginBottom: 2,
             }}
             textStyle={{
               color: colors.textMuted,
@@ -128,84 +145,6 @@ export const ProblemSection = React.memo(function ProblemSection({
             {item}
           </PaperChip>
         ))}
-      </View>
-    </View>
-=======
-    <>
-      <Text style={styles.sectionTitle}>PROBLEM / NOTES</Text>
-
-      <View style={styles.problemCard}>
-        <PaperInput
-          label="Describe the issue..."
-          placeholder="Describe the issue..."
-          value={problem}
-          onChangeText={onChangeProblem}
-          multiline
-          numberOfLines={4}
-          mode="outlined"
-          outlineColor={colors.border}
-          activeOutlineColor={colors.accent}
-          textColor={colors.text}
-          placeholderTextColor={colors.textMuted}
-          theme={{
-            colors: {
-              background: colors.surface,
-              placeholder: colors.textMuted,
-            },
-          }}
-          style={styles.problemPaperInput}
-          accessibilityLabel="Problem description"
-        />
-        <View style={styles.problemSuggestions}>
-          <PaperChip
-            mode="outlined"
-            onPress={() => setInventoryModalVisible(true)}
-            style={{
-              backgroundColor: colors.accent,
-              borderColor: colors.accent,
-              marginRight: 4,
-              marginBottom: 4,
-            }}
-            textStyle={{
-              color: '#FFFFFF',
-              fontSize: 11,
-              fontWeight: '700',
-            }}
-            accessibilityRole="button"
-            accessibilityLabel="Attach Inventory Part"
-          >
-            📦 Attach Inventory Part
-          </PaperChip>
-          {COMMON_PROBLEMS.map((item) => (
-            <PaperChip
-              key={item}
-              mode="outlined"
-              onPress={() => {
-                const trimmed = problem.trim();
-                if (!trimmed) {
-                  onChangeProblem(item);
-                } else if (!trimmed.toLowerCase().includes(item.toLowerCase())) {
-                  onChangeProblem(`${trimmed}, ${item}`);
-                }
-              }}
-              style={{
-                backgroundColor: colors.surface2,
-                borderColor: colors.border,
-                marginRight: 2,
-                marginBottom: 2,
-              }}
-              textStyle={{
-                color: colors.textMuted,
-                fontSize: 11,
-                fontWeight: '600',
-              }}
-              accessibilityRole="button"
-              accessibilityLabel={`Add problem shortcut ${item}`}
-            >
-              {item}
-            </PaperChip>
-          ))}
-        </View>
       </View>
 
       <Modal
@@ -269,8 +208,7 @@ export const ProblemSection = React.memo(function ProblemSection({
           </View>
         </View>
       </Modal>
-    </>
->>>>>>> 59d5b3f0e76670e4b0b8d54687271a6ec0dd3ad9
+    </View>
   );
 });
 

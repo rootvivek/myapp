@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { Chip as PaperChip, TextInput as PaperInput } from 'react-native-paper';
+import { Chip as PaperChip } from 'react-native-paper';
 import { Lock } from 'lucide-react-native';
 import { PatternDrawingModal, PatternPreview } from '../../../components/PatternDrawingModal';
 import type { AppColors } from '../../../theme';
 import { accentAlpha } from '../../../theme';
+import { FormTextInput } from '../../../components/FormTextInput';
 import type { LockType } from '../../../types/repair';
 import { LOCK_TYPES } from '../../../types/repair';
 import type { AddRepairStyles } from '../styles';
@@ -103,25 +104,12 @@ export const LockSection = React.memo(function LockSection({
       )}
 
       {lockType === 'password' && (
-        <PaperInput
+        <FormTextInput
           label="PIN or Password"
           placeholder="Enter unlock PIN or password"
           value={lockValue}
           onChangeText={onChangeLockValue}
-          mode="outlined"
-          dense={true}
-          outlineColor={colors.border}
-          activeOutlineColor={colors.accent}
-          textColor={colors.text}
-          placeholderTextColor={colors.textMuted}
-          theme={{
-            colors: {
-              background: colors.surface2,
-              placeholder: colors.textMuted,
-            },
-          }}
-          style={[styles.paperInput, { marginBottom: 0 }]}
-          left={<PaperInput.Icon icon={() => <Lock color={colors.accent} size={18} />} />}
+          icon={Lock}
           accessibilityLabel="Password or PIN"
         />
       )}

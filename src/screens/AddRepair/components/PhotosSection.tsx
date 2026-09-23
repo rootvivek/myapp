@@ -3,16 +3,20 @@ import { Text, View } from 'react-native';
 import { Camera } from 'lucide-react-native';
 import { RepairImagePairRow, RepairImageSlotCell } from '../../../components/RepairImageSlotRow';
 import type { RepairImageSlot } from '../../../types/repair';
+import type { RepairFormErrors } from '../../../utils/repairValidation';
 import type { AddRepairStyles } from '../styles';
 
 type Props = {
   images: Record<RepairImageSlot, string>;
+  /** Inline validation messages keyed by field. */
+  errors?: RepairFormErrors;
   onChangeImageSlot: (slot: RepairImageSlot, uri: string) => void;
   styles: AddRepairStyles;
 };
 
 export const PhotosSection = React.memo(function PhotosSection({
   images,
+  errors,
   onChangeImageSlot,
   styles,
 }: Props) {
@@ -31,11 +35,13 @@ export const PhotosSection = React.memo(function PhotosSection({
         <RepairImageSlotCell
           label="Front *"
           uri={images.front}
+          error={errors?.imageFront}
           onChange={(uri) => onChangeImageSlot('front', uri)}
         />
         <RepairImageSlotCell
           label="Back *"
           uri={images.back}
+          error={errors?.imageBack}
           onChange={(uri) => onChangeImageSlot('back', uri)}
         />
         <RepairImageSlotCell

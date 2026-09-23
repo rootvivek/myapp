@@ -3,7 +3,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import LinearGradient from 'react-native-linear-gradient';
 import { ArrowLeft } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StatusBar, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, BackHandler, Pressable, ScrollView, StatusBar, Text, View, type LayoutChangeEvent } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useTheme } from '../../context/ThemeContext';
@@ -12,13 +12,18 @@ import { repairService } from '../../services/repairService';
 import type { RootStackParamList } from '../../navigation/types';
 import type { DirectoryCustomer } from '../../types/customer';
 import type { LockType, RepairImageSlot } from '../../types/repair';
-import type { WarrantyType } from './types';
+import type { RepairFormState, WarrantyType } from './types';
 import { emptyImageState, repairToImageState } from '../../utils/repairImages';
 import {
+  firstInvalidRepairField,
+  isRepairFormField,
   normalizeImeiInput,
   normalizeStoredImeiForDisplay,
   normalizeStoredPhoneForDisplay,
   sanitizeCustomerNameInput,
+  validateRepairFormField,
+  type RepairFormErrors,
+  type RepairFormField,
 } from '../../utils/repairValidation';
 
 import { AccessoriesSection } from './components/AccessoriesSection';
@@ -39,6 +44,18 @@ import { createAddRepairStyles } from './styles';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AddRepair'>;
 
+type FormSectionKey = 'customer' | 'device' | 'problem' | 'photos';
+
+/** Which card holds each validatable field — used to scroll to the first error. */
+const FIELD_SECTION: Record<RepairFormField, FormSectionKey> = {
+  customerName: 'customer',
+  phone: 'customer',
+  deviceModel: 'device',
+  problem: 'problem',
+  imageFront: 'photos',
+  imageBack: 'photos',
+};
+
 export function AddRepairScreen({ navigation, route }: Props) {
   const { colors, mode } = useTheme();
   const styles = useMemo(() => createAddRepairStyles(colors), [colors]);
@@ -49,6 +66,10 @@ export function AddRepairScreen({ navigation, route }: Props) {
   const [loading, setLoading] = useState(!!isEdit);
   const [directoryCustomers, setDirectoryCustomers] = useState<DirectoryCustomer[]>([]);
   const [paymentModalVisible, setPaymentModalVisible] = useState(false);
+  /** Inline validation messages shown under each invalid input (no popup). */
+  const [fieldErrors, setFieldErrors] = useState<RepairFormErrors>({});
+  const formScrollRef = useRef<ScrollView>(null);
+  const sectionOffsetsRef = useRef<Partial<Record<FormSectionKey, number>>>({});
 
   const initialImagesRef = useRef<Record<RepairImageSlot, string>>(emptyImageState());
   const lastProcessedImeiRef = useRef<string | undefined>(undefined);
@@ -56,6 +77,64 @@ export function AddRepairScreen({ navigation, route }: Props) {
 
   const { state, setField, setAccessory, setImageSlot, setFormData } = useRepairForm();
   const { saving, saveRepair } = useRepairSave();
+
+  const clearFieldError = useCallback((field: RepairFormField) => {
+    setFieldErrors((current) => {
+      if (!current[field]) return current;
+      const next = { ...current };
+      delete next[field];
+      return next;
+    });
+  }, []);
+
+  /**
+   * `setField` + re-validate that one field when it is already flagged, so the
+   * red outline/message stay visible (focused or not) until the value is valid.
+   */
+  const updateField = useCallback(
+    <K extends keyof RepairFormState>(field: K, value: RepairFormState[K]) => {
+      setField(field, value);
+      if (!isRepairFormField(field)) return;
+
+      setFieldErrors((current) => {
+        if (!current[field]) return current;
+
+        const nextState = { ...state, [field]: value } as RepairFormState;
+        const message = validateRepairFormField(field, {
+          customerName: nextState.customerName,
+          phone: nextState.phone,
+          deviceModel: nextState.deviceModel,
+          problem: nextState.problem,
+          images: nextState.images,
+        });
+
+        if (message) return { ...current, [field]: message };
+
+        const next = { ...current };
+        delete next[field];
+        return next;
+      });
+    },
+    [setField, state]
+  );
+
+  /** Photos: keep the message until a photo is actually attached. */
+  const updateImageSlot = useCallback(
+    (slot: RepairImageSlot, uri: string) => {
+      setImageSlot(slot, uri);
+      if (!uri.trim()) return;
+      if (slot === 'front') clearFieldError('imageFront');
+      else if (slot === 'back') clearFieldError('imageBack');
+    },
+    [setImageSlot, clearFieldError]
+  );
+
+  const handleSectionLayout = useCallback(
+    (key: FormSectionKey) => (event: LayoutChangeEvent) => {
+      sectionOffsetsRef.current[key] = event.nativeEvent.layout.y;
+    },
+    []
+  );
 
   const loadDirectory = useCallback(async () => {
     try {
@@ -97,9 +176,12 @@ export function AddRepairScreen({ navigation, route }: Props) {
       imei: '',
       problem: '',
     });
+    clearFieldError('customerName');
+    clearFieldError('phone');
+    clearFieldError('deviceModel');
     void loadDirectory();
     navigation.setParams({ prefillCustomer: undefined });
-  }, [route.params?.prefillCustomer, repairId, navigation, loadDirectory, setFormData]);
+  }, [route.params?.prefillCustomer, repairId, navigation, loadDirectory, setFormData, clearFieldError]);
 
   // Edit Repair fetch
   useEffect(() => {
@@ -159,9 +241,35 @@ export function AddRepairScreen({ navigation, route }: Props) {
       isEdit,
       repairId: repairId ?? undefined,
       initialImagesRef,
+      onValidationError: (errors) => {
+        setFieldErrors(errors);
+        const field = firstInvalidRepairField(errors);
+        if (!field) return;
+        const offset = sectionOffsetsRef.current[FIELD_SECTION[field]];
+        if (typeof offset === 'number') {
+          formScrollRef.current?.scrollTo({ y: Math.max(0, offset - 8), animated: true });
+        }
+      },
       onSuccess: () => navigation.goBack(),
     });
   }, [saveRepair, state, isEdit, repairId, navigation]);
+
+  const handleBack = useCallback(() => {
+    Alert.alert(
+      isEdit ? 'Discard changes?' : 'Leave new job?',
+      isEdit ? 'Your changes will not be saved.' : 'Your new job details will be lost.',
+      [
+        { text: 'Stay', style: 'cancel' },
+        { text: 'Leave', style: 'destructive', onPress: () => navigation.goBack() },
+      ]
+    );
+    return true;
+  }, [isEdit, navigation]);
+
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener('hardwareBackPress', handleBack);
+    return () => subscription.remove();
+  }, [handleBack]);
 
   const handleSelectDeliveredPaid = useCallback(
     (type: 'cash' | 'online') => {
@@ -191,10 +299,10 @@ export function AddRepairScreen({ navigation, route }: Props) {
       <StatusBar barStyle={mode === 'dark' ? 'light-content' : 'dark-content'} />
       <LinearGradient colors={colors.bgGradient} style={{ position: 'absolute', width: '100%', height: '100%' }} />
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView ref={formScrollRef} showsVerticalScrollIndicator={false} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {/* Header */}
         <View style={styles.header}>
-          <Pressable onPress={() => navigation.goBack()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Go back">
+          <Pressable onPress={handleBack} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Go back">
             <ArrowLeft color={colors.text} size={24} />
           </Pressable>
           <View style={styles.headerTextWrap}>
@@ -209,39 +317,48 @@ export function AddRepairScreen({ navigation, route }: Props) {
           </View>
         ) : null}
 
-        <CustomerSection
-          customerName={state.customerName}
-          phone={state.phone}
-          isEdit={isEdit}
-          directoryCustomers={directoryCustomers}
-          onChangeCustomerName={(val) => setField('customerName', val)}
-          onChangePhone={(val) => setField('phone', val)}
-          styles={styles}
-          colors={colors}
-        />
+        <View onLayout={handleSectionLayout('customer')}>
+          <CustomerSection
+            customerName={state.customerName}
+            phone={state.phone}
+            isEdit={isEdit}
+            directoryCustomers={directoryCustomers}
+            errors={fieldErrors}
+            onChangeCustomerName={(val) => updateField('customerName', val)}
+            onChangePhone={(val) => updateField('phone', val)}
+            styles={styles}
+            colors={colors}
+          />
+        </View>
 
-        <DeviceSection
-          deviceModel={state.deviceModel}
-          imei={state.imei}
-          onChangeDeviceModel={(val) => setField('deviceModel', val)}
-          onChangeImei={(val) => setField('imei', val)}
-          onScanImei={() => navigation.navigate('ScanImei', { repairId: repairId ?? undefined })}
-          styles={styles}
-          colors={colors}
-        />
+        <View onLayout={handleSectionLayout('device')}>
+          <DeviceSection
+            deviceModel={state.deviceModel}
+            imei={state.imei}
+            errors={fieldErrors}
+            onChangeDeviceModel={(val) => updateField('deviceModel', val)}
+            onChangeImei={(val) => updateField('imei', val)}
+            onScanImei={() => navigation.navigate('ScanImei', { repairId: repairId ?? undefined })}
+            styles={styles}
+            colors={colors}
+          />
+        </View>
 
-        <ProblemSection
-          problem={state.problem}
-          onChangeProblem={(val) => setField('problem', val)}
-          currentExpense={state.expense}
-          onChangeExpense={(val) => setField('expense', val)}
-          selectedInventoryItemIds={state.selectedInventoryItemIds}
-          onAddInventoryItemId={(id) =>
-            setField('selectedInventoryItemIds', [...(state.selectedInventoryItemIds || []), id])
-          }
-          styles={styles}
-          colors={colors}
-        />
+        <View onLayout={handleSectionLayout('problem')}>
+          <ProblemSection
+            problem={state.problem}
+            errors={fieldErrors}
+            onChangeProblem={(val) => updateField('problem', val)}
+            currentExpense={state.expense}
+            onChangeExpense={(val) => updateField('expense', val)}
+            selectedInventoryItemIds={state.selectedInventoryItemIds}
+            onAddInventoryItemId={(id) =>
+              updateField('selectedInventoryItemIds', [...(state.selectedInventoryItemIds || []), id])
+            }
+            styles={styles}
+            colors={colors}
+          />
+        </View>
 
         <AccessoriesSection
           accessories={state.accessories}
@@ -259,11 +376,14 @@ export function AddRepairScreen({ navigation, route }: Props) {
           colors={colors}
         />
 
-        <PhotosSection
-          images={state.images}
-          onChangeImageSlot={setImageSlot}
-          styles={styles}
-        />
+        <View onLayout={handleSectionLayout('photos')}>
+          <PhotosSection
+            images={state.images}
+            errors={fieldErrors}
+            onChangeImageSlot={updateImageSlot}
+            styles={styles}
+          />
+        </View>
 
         <WarrantySection
           warranty={state.warranty}

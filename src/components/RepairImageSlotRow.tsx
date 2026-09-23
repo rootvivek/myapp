@@ -2,6 +2,7 @@ import { SecureImage } from './SecureImage';
 import type { ReactNode } from 'react';
 import { useMemo } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
+import { HelperText } from 'react-native-paper';
 
 import { useTheme } from '../context/ThemeContext';
 import type { AppColors } from '../theme';
@@ -12,6 +13,8 @@ type Props = {
   label: string;
   uri: string;
   onChange: (uri: string) => void;
+  /** Validation message: red outline on the slot + message below it. */
+  error?: string | null;
   /** Full-width square (rare); default is half row like other pair cells. */
   fullWidth?: boolean;
   style?: ViewStyle;
@@ -46,6 +49,10 @@ function createCellStyles(colors: AppColors) {
       marginBottom: 8,
       fontWeight: '500',
     },
+    labelError: {
+      color: colors.danger,
+      fontWeight: '700',
+    },
     previewHit: {
       borderRadius: radius.md,
       overflow: 'hidden',
@@ -67,6 +74,18 @@ function createCellStyles(colors: AppColors) {
       borderStyle: 'dashed',
       alignItems: 'center',
       justifyContent: 'center',
+    },
+    placeholderError: {
+      borderColor: colors.danger,
+      borderWidth: 1.5,
+    },
+    errorText: {
+      // Paper's HelperText owns the layout/animation; we only retint it to the
+      // app's danger color (Paper defaults to its own MD3 error red).
+      color: colors.danger,
+      paddingVertical: 0,
+      paddingHorizontal: 0,
+      marginTop: 2,
     },
     placeholderText: {
       color: colors.textMuted,
@@ -90,7 +109,7 @@ function createCellStyles(colors: AppColors) {
   };
 }
 
-export function RepairImageSlotCell({ label, uri, onChange, fullWidth, style }: Props) {
+export function RepairImageSlotCell({ label, uri, onChange, error, fullWidth, style }: Props) {
   const { colors } = useTheme();
   const styles = useMemo(() => createCellStyles(colors), [colors]);
 
@@ -122,7 +141,7 @@ export function RepairImageSlotCell({ label, uri, onChange, fullWidth, style }: 
 
   return (
     <View style={[styles.cell, fullWidth && styles.cellFull, style]}>
-      <Text style={styles.label} numberOfLines={1} ellipsizeMode="tail">{label}</Text>
+      <Text style={[styles.label, !!error && styles.labelError]} numberOfLines={1} ellipsizeMode="tail">{label}</Text>
       <Pressable
         onPress={openCamera}
         onLongPress={openMoreOptions}
@@ -133,12 +152,17 @@ export function RepairImageSlotCell({ label, uri, onChange, fullWidth, style }: 
         {uri ? (
           <SecureImage source={{ uri }} style={styles.preview} resizeMode="cover" />
         ) : (
-          <View style={styles.placeholder}>
+          <View style={[styles.placeholder, !!error && styles.placeholderError]}>
             <Text style={styles.placeholderText}>Tap: camera</Text>
             <Text style={styles.placeholderHint}>Hold: gallery</Text>
           </View>
         )}
       </Pressable>
+      {error ? (
+        <HelperText type="error" visible padding="none" style={styles.errorText}>
+          {error}
+        </HelperText>
+      ) : null}
     </View>
   );
 }

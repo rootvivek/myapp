@@ -19,10 +19,10 @@ import { withTimeout } from './helpers';
 import { createLabourAccount, resetLabourPassword } from './LabourService';
 import {
   loadProfileWithRetry,
-  updateProfileName as svcUpdateProfileName,
-  updateShopName as svcUpdateShopName,
+  updateProfileDetails as svcUpdateProfileDetails,
+  updateProfileLogo as svcUpdateProfileLogo,
 } from './ProfileService';
-import type { AuthContextValue } from './types';
+import type { AuthContextValue, UserProfile } from './types';
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
@@ -46,7 +46,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loadProfile = useCallback(
     async (userId: string) => {
-      const p = await loadProfileWithRetry(userId);
+      let p: UserProfile | null = null;
+      try {
+        p = await loadProfileWithRetry(userId);
+      } catch (err) {
+        // Never let a transient profile/propagation failure drop the session or
+        // leave the account without a profile: retry once more before giving up.
+        logger.warn('[AuthProvider] profile load failed, retrying once:', err);
+        try {
+          p = await loadProfileWithRetry(userId, 3);
+        } catch (retryErr) {
+          logger.warn('[AuthProvider] profile load failed after retry:', retryErr);
+        }
+      }
       if (!mountedRef.current) return;
 
       dispatch({ type: 'SET_PROFILE', payload: p });
@@ -120,10 +132,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [configured, loadProfile]);
 
   const signIn = useCallback(
-    async (email: string, password: string) => {
+    async (identifier: string, password: string) => {
       validatingLoginRef.current = true;
       try {
-        const result = await signInUser(email, password);
+        const result = await signInUser(identifier, password);
         if (mountedRef.current) {
           dispatch({
             type: 'SET_AUTH_DATA',
@@ -141,10 +153,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const signUp = useCallback(
-    async (email: string, password: string, name: string) => {
+    async (phone: string, password: string, name: string, shopName?: string) => {
       validatingLoginRef.current = true;
       try {
-        const result = await signUpUser(email, password, name);
+        const result = await signUpUser(phone, password, name, shopName);
         if (mountedRef.current && result.session) {
           dispatch({
             type: 'SET_AUTH_DATA',
@@ -153,13 +165,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               profile: result.profile,
             },
           });
+          if (result.session.user?.id) {
+            await loadProfile(result.session.user.id);
+          }
         }
-        return { needsEmailConfirm: result.needsEmailConfirm };
+        return { needsPhoneConfirm: result.needsPhoneConfirm };
       } finally {
         validatingLoginRef.current = false;
       }
     },
-    []
+    [loadProfile]
   );
 
   const signOut = useCallback(async () => {
@@ -167,8 +182,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
   }, []);
 
-  const isOwner = state.profile?.role === 'owner';
+  const isOwner = state.profile?.role ? state.profile.role === 'owner' : true;
   const isLabour = state.profile?.role === 'labour';
+  const isAdmin = state.profile?.role === 'admin';
 
   const handleCreateLabourAccount = useCallback(
     async (username: string, password: string, phone: string) => {
@@ -184,26 +200,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [isOwner]
   );
 
-  const handleUpdateProfileName = useCallback(
-    async (newName: string) => {
-      if (!state.session?.user?.id) {
-        throw new Error('Not authenticated.');
+  const handleUpdateProfileLogo = useCallback(
+    async (logoUrl: string | null) => {
+      if (state.session?.user?.id) {
+        await svcUpdateProfileLogo(state.session.user.id, logoUrl);
+        await refreshProfile().catch(() => {});
       }
-      await svcUpdateProfileName(state.session.user.id, newName);
-      await refreshProfile();
     },
     [state.session, refreshProfile]
   );
 
-  const handleUpdateShopName = useCallback(
-    async (newShopName: string) => {
-      if (!state.profile?.shopId || !isOwner) {
-        throw new Error('Only the shop owner can update the shop name.');
+  const handleUpdateProfileDetails = useCallback(
+    async (name: string, shopName: string) => {
+      if (state.session?.user?.id) {
+        await svcUpdateProfileDetails(
+          state.session.user.id,
+          name,
+          state.profile?.shopId || '',
+          shopName,
+          isOwner
+        );
+        await refreshProfile();
       }
-      await svcUpdateShopName(state.profile.shopId, newShopName);
-      await refreshProfile();
     },
-    [state.profile, isOwner, refreshProfile]
+    [state.session, state.profile, isOwner, refreshProfile]
   );
 
   const value = useMemo(
@@ -215,14 +235,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       profile: state.profile,
       isOwner,
       isLabour,
+      isAdmin,
       signIn,
       signUp,
       signOut,
-      refreshProfile,
       createLabourAccount: handleCreateLabourAccount,
       resetLabourPassword: handleResetLabourPassword,
-      updateProfileName: handleUpdateProfileName,
-      updateShopName: handleUpdateShopName,
+      updateProfileLogo: handleUpdateProfileLogo,
+      updateProfileDetails: handleUpdateProfileDetails,
     }),
     [
       state.configured,
@@ -231,14 +251,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       state.profile,
       isOwner,
       isLabour,
+      isAdmin,
       signIn,
       signUp,
       signOut,
-      refreshProfile,
       handleCreateLabourAccount,
       handleResetLabourPassword,
-      handleUpdateProfileName,
-      handleUpdateShopName,
+      handleUpdateProfileLogo,
+      handleUpdateProfileDetails,
     ]
   );
 

@@ -8,6 +8,7 @@ loadDotenv(__dirname);
 
 module.exports = ({ config }) => ({
   ...config,
+  scheme: 'myapp',
   ios: {
     ...config.ios,
     infoPlist: {

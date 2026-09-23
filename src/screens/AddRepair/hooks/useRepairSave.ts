@@ -1,27 +1,30 @@
 import { useCallback, useRef, useState } from 'react';
 import { Alert } from 'react-native';
-<<<<<<< HEAD
 import { repairService } from '../../../services/repairService';
-=======
-import { deductInventoryStock, getRepairById, insertRepair, updateRepair } from '../../../db/database';
->>>>>>> 59d5b3f0e76670e4b0b8d54687271a6ec0dd3ad9
+import { deductInventoryStock } from '../../../db/database';
 import type { RepairImageSlot, RepairInput } from '../../../types/repair';
 import { emptyImageState } from '../../../utils/repairImages';
 import { resolveImagesForSaveCloud } from '../../../utils/repairImageUpload';
 import {
   normalizeImeiInput,
   normalizePhoneInput,
-  validateRepairFormFields,
+  validateRepairFormErrors,
+  type RepairFormErrors,
 } from '../../../utils/repairValidation';
 import { shareReceiptPdfToWhatsAppContact } from '../../../utils/receipt';
 import { useRepairActions } from '../../../context/RepairsContext';
 import type { RepairFormState } from '../types';
-import { parseMoney, showDatabaseError, showValidationError } from '../utils';
+import { parseMoney, showDatabaseError } from '../utils';
 
 type SaveOptions = {
   isEdit: boolean;
   repairId?: number;
   initialImagesRef: React.MutableRefObject<Record<RepairImageSlot, string>>;
+  /**
+   * Called with one message per invalid field so the screen can highlight the
+   * matching inputs inline (no popup).
+   */
+  onValidationError?: (errors: RepairFormErrors) => void;
   onSuccess: () => void;
 };
 
@@ -37,10 +40,10 @@ export function useRepairSave() {
       savingRef.current = true;
       setSaving(true);
 
-      const { isEdit, repairId, initialImagesRef, onSuccess } = options;
+      const { isEdit, repairId, initialImagesRef, onValidationError, onSuccess } = options;
 
       try {
-        const formErr = validateRepairFormFields({
+        const formErrors = validateRepairFormErrors({
           customerName: state.customerName,
           phone: state.phone,
           deviceModel: state.deviceModel,
@@ -48,8 +51,8 @@ export function useRepairSave() {
           images: state.images,
         });
 
-        if (formErr) {
-          showValidationError(formErr);
+        if (Object.keys(formErrors).length > 0) {
+          onValidationError?.(formErrors);
           savingRef.current = false;
           setSaving(false);
           return;
@@ -60,7 +63,7 @@ export function useRepairSave() {
         const shouldAutoSendWhatsApp = !isEdit && state.sendWhatsAppInvoice;
 
         if (shouldAutoSendWhatsApp && ph.length !== 10) {
-          showValidationError('Enter a valid 10-digit WhatsApp number.');
+          onValidationError?.({ phone: 'Enter a valid 10-digit WhatsApp number.' });
           savingRef.current = false;
           setSaving(false);
           return;
@@ -94,29 +97,6 @@ export function useRepairSave() {
         let savedRepairId = repairId ?? 0;
 
         if (isEdit && repairId != null) {
-<<<<<<< HEAD
-          const resolved = await resolveImagesForSaveCloud(
-            repairId,
-            state.images,
-            initialImagesRef.current
-          );
-          await repairService.update({ ...base, id: repairId, ...resolved });
-          savedRepairId = repairId;
-        } else {
-          const newId = await repairService.create(base);
-          const resolved = await resolveImagesForSaveCloud(newId, state.images, emptyImageState());
-          await repairService.update({ ...base, id: newId, ...resolved });
-          savedRepairId = newId;
-        }
-
-        // Fetch single created/updated record and update local cache atomically
-        const savedRepair = await repairService.getById(savedRepairId);
-        if (savedRepair) {
-          upsertRepairInState(savedRepair);
-        }
-
-        if (shouldAutoSendWhatsApp && savedRepair) {
-=======
           let resolvedImages = {
             imagePhoneFront: initialImagesRef.current.front || '',
             imagePhoneBack: initialImagesRef.current.back || '',
@@ -130,10 +110,8 @@ export function useRepairSave() {
               state.images,
               initialImagesRef.current
             );
-          } catch (imgErr) {
-            console.warn('[useRepairSave] Image upload failed on edit, keeping existing images:', imgErr);
-          }
-          await updateRepair({ ...base, id: repairId, ...resolvedImages });
+          } catch {}
+          await repairService.update({ ...base, id: repairId, ...resolvedImages });
           savedRepairId = repairId;
         } else {
           let resolvedImages = {
@@ -143,13 +121,11 @@ export function useRepairSave() {
             imageId1: '',
             imageId2: '',
           };
-          const newId = await insertRepair(base);
+          const newId = await repairService.create(base);
           try {
             resolvedImages = await resolveImagesForSaveCloud(newId, state.images, emptyImageState());
-          } catch (imgErr) {
-            console.warn('[useRepairSave] Image upload failed on create, repair record created:', imgErr);
-          }
-          await updateRepair({ ...base, id: newId, ...resolvedImages });
+          } catch {}
+          await repairService.update({ ...base, id: newId, ...resolvedImages });
           savedRepairId = newId;
         }
 
@@ -159,8 +135,13 @@ export function useRepairSave() {
           }
         }
 
-        if (shouldAutoSendWhatsApp) {
->>>>>>> 59d5b3f0e76670e4b0b8d54687271a6ec0dd3ad9
+        // Fetch single created/updated record and update local cache atomically
+        const savedRepair = await repairService.getById(savedRepairId);
+        if (savedRepair) {
+          upsertRepairInState(savedRepair);
+        }
+
+        if (shouldAutoSendWhatsApp && savedRepair) {
           try {
             await shareReceiptPdfToWhatsAppContact(savedRepair, ph);
           } catch (err: any) {

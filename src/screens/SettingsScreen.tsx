@@ -3,65 +3,66 @@ import {
   ActivityIndicator,
   Alert,
   Linking,
+  Pressable,
   ScrollView,
   Text,
   View,
 } from 'react-native';
-import { Crown } from 'lucide-react-native';
+import { Crown, ShieldAlert } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { checkAppUpdate, CURRENT_VERSION_NAME } from '../components/AutoUpdater';
+import { logger } from '../utils/logger';
 import { launchLibraryForImage } from '../utils/pickImage';
 import {
   clearShopLogo,
   getShopBranding,
-  saveShopBranding,
   setShopLogoFromPickerUri,
+  uploadShopLogoFromPickerUri,
 } from '../utils/shopSettings';
 
 import { AccountCard } from './Settings/AccountCard';
 import { AppearanceCard } from './Settings/AppearanceCard';
 import { BrandingAndProfileCard } from './Settings/BrandingAndProfileCard';
+import { ProfileEditCard } from './Settings/ProfileEditCard';
 import { createStyles } from './Settings/styles';
 import { TeamCard } from './Settings/TeamCard';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
 
 export function SettingsScreen({ navigation }: Props) {
-  const { user, signOut, isOwner, profile, updateProfileName, updateShopName } = useAuth();
+  const {
+    user,
+    signOut,
+    isOwner,
+    isAdmin,
+    profile,
+    updateProfileLogo,
+    updateProfileDetails,
+  } = useAuth();
   const { colors, mode, setMode } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
-  const [shopName, setShopName] = useState('');
-  const [shopPhone, setShopPhone] = useState('');
   const [logoUri, setLogoUri] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [logoBusy, setLogoBusy] = useState(false);
+  const [profileBusy, setProfileBusy] = useState(false);
 
-  const [profileName, setProfileName] = useState(profile?.name || '');
   const [checkingUpdate, setCheckingUpdate] = useState(false);
-
-  useEffect(() => {
-    if (profile) {
-      setProfileName(profile.name || '');
-    }
-  }, [profile]);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const b = await getShopBranding();
-      setShopName(profile?.shopName || b.shopName);
-      setLogoUri(b.logoUri);
-      setShopPhone(b.shopPhone);
+      const scopeKey = profile?.shopId || user?.id;
+      const b = await getShopBranding(scopeKey);
+      setLogoUri(profile?.shopLogoUrl || b.logoUri);
     } finally {
       setLoading(false);
     }
-  }, [profile]);
+  }, [profile, user]);
 
   useEffect(() => {
     void load();
@@ -99,50 +100,20 @@ export function SettingsScreen({ navigation }: Props) {
     }
   }
 
-  async function onSaveAllDetails() {
-    const nameTrimmed = shopName.trim();
-    const phoneTrimmed = shopPhone.trim();
-    const profileNameTrimmed = profileName.trim();
-
-    if (!profileNameTrimmed) {
-      Alert.alert('Name required', 'Please enter your name.');
-      return;
-    }
-
-    if (isOwner && !nameTrimmed) {
-      Alert.alert('Shop name', 'Please enter a shop name.');
-      return;
-    }
-
-    setSaving(true);
-    try {
-      // 1. Save Profile Name
-      await updateProfileName(profileNameTrimmed);
-
-      // 2. Save Shop Details (if Owner)
-      if (isOwner) {
-        await updateShopName(nameTrimmed);
-        await saveShopBranding({ shopName: nameTrimmed, shopPhone: phoneTrimmed });
-        setShopName(nameTrimmed);
-        setShopPhone(phoneTrimmed);
-      }
-
-      Alert.alert('Saved', 'Details updated successfully.');
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error occurred.';
-      Alert.alert('Failed to save details', msg);
-    } finally {
-      setSaving(false);
-    }
-  }
-
   async function onPickLogo() {
     setLogoBusy(true);
     try {
       const uri = await launchLibraryForImage();
       if (!uri) return;
-      await setShopLogoFromPickerUri(uri);
-      const b = await getShopBranding();
+      const scopeKey = profile?.shopId || user?.id;
+      const logoUrl = await uploadShopLogoFromPickerUri(uri);
+      await setShopLogoFromPickerUri(logoUrl, scopeKey);
+      try {
+        await updateProfileLogo(logoUrl);
+      } catch (dbNotice) {
+        logger.warn('[SettingsScreen] Non-blocking logo DB save notice:', dbNotice);
+      }
+      const b = await getShopBranding(scopeKey);
       setLogoUri(b.logoUri);
     } catch {
       Alert.alert('Logo', 'Could not save the logo. Try another image.');
@@ -154,10 +125,28 @@ export function SettingsScreen({ navigation }: Props) {
   async function onRemoveLogo() {
     setLogoBusy(true);
     try {
-      await clearShopLogo();
+      const scopeKey = profile?.shopId || user?.id;
+      await clearShopLogo(scopeKey);
+      try {
+        await updateProfileLogo(null);
+      } catch (dbNotice) {
+        logger.warn('[SettingsScreen] Non-blocking logo DB clear notice:', dbNotice);
+      }
       setLogoUri(null);
     } finally {
       setLogoBusy(false);
+    }
+  }
+
+  async function onSaveProfileDetails(name: string, shopName: string) {
+    setProfileBusy(true);
+    try {
+      await updateProfileDetails(name, shopName);
+      Alert.alert('Saved', 'Profile details updated.');
+    } catch (err) {
+      Alert.alert('Save failed', err instanceof Error ? err.message : 'Could not update profile details.');
+    } finally {
+      setProfileBusy(false);
     }
   }
 
@@ -205,8 +194,8 @@ export function SettingsScreen({ navigation }: Props) {
             </Text>
             <View style={styles.roleBadge}>
               <Text style={styles.roleBadgeText}>
-                {isOwner ? '👑 Shop Owner' : '👷 Team Member'}
-                {shopName ? ` · ${shopName}` : ''}
+              {isOwner ? '👑 Shop Owner' : '👷 Team Member'}
+                {profile?.shopName ? ` · ${profile.shopName}` : ''}
               </Text>
             </View>
           </View>
@@ -219,21 +208,22 @@ export function SettingsScreen({ navigation }: Props) {
           colors={colors}
         />
 
-        {/* Card 2: Profile & Shop Details Container */}
+        {/* Card 2: Shop Branding */}
         <BrandingAndProfileCard
-          shopName={shopName}
-          setShopName={setShopName}
-          shopPhone={shopPhone}
-          setShopPhone={setShopPhone}
-          profileName={profileName}
-          setProfileName={setProfileName}
           logoUri={logoUri}
           logoBusy={logoBusy}
-          saving={saving}
           isOwner={isOwner}
           onPickLogo={() => void onPickLogo()}
           onRemoveLogo={() => void onRemoveLogo()}
-          onSaveAllDetails={() => void onSaveAllDetails()}
+          colors={colors}
+        />
+
+        <ProfileEditCard
+          name={profile?.name || ''}
+          shopName={profile?.shopName || ''}
+          isOwner={isOwner}
+          busy={profileBusy}
+          onSave={(name, shopName) => void onSaveProfileDetails(name, shopName)}
           colors={colors}
         />
 
@@ -243,6 +233,54 @@ export function SettingsScreen({ navigation }: Props) {
             onManageLabour={() => navigation.navigate('ManageLabour')}
             colors={colors}
           />
+        )}
+
+        {/* Admin Dashboard Card (Admin only) */}
+        {isAdmin && (
+          <View
+            style={{
+              backgroundColor: colors.surface,
+              borderRadius: 16,
+              borderWidth: 1,
+              borderColor: colors.border,
+              overflow: 'hidden',
+              marginBottom: 12,
+            }}
+          >
+            <Pressable
+              onPress={() => navigation.navigate('AdminDashboard')}
+              android_ripple={{ color: 'rgba(0,0,0,0.05)' }}
+              style={{
+                paddingHorizontal: 16,
+                paddingVertical: 14,
+                flexDirection: 'row',
+                alignItems: 'center',
+              }}
+            >
+              <View
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 12,
+                  backgroundColor: '#DC262620',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  marginRight: 12,
+                }}
+              >
+                <ShieldAlert size={20} color="#DC2626" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text }}>
+                  Admin Dashboard
+                </Text>
+                <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 2 }}>
+                  Manage shops, users & system data
+                </Text>
+              </View>
+              <Text style={{ color: colors.textMuted, fontSize: 18 }}>›</Text>
+            </Pressable>
+          </View>
         )}
 
         {/* Card 4: Account & App */}

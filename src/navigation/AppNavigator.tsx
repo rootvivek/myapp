@@ -12,6 +12,7 @@ import { SearchScreen } from '../screens/SearchScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { ManageLabourScreen } from '../screens/ManageLabourScreen';
 import { FinanceScreen } from '../screens/FinanceScreen';
+import { AdminDashboard } from '../screens/AdminDashboard';
 import { ScanQrScreen } from '../screens/ScanQrScreen';
 
 import type { RootStackParamList } from './types';
@@ -67,6 +68,7 @@ export function AppNavigator() {
         <Stack.Screen name="ScanImei" component={ScanImeiScreen} options={{ title: 'Scan IMEI' }} />
         <Stack.Screen name="ScanQr" component={ScanQrScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Finance" component={FinanceScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="AdminDashboard" component={AdminDashboard} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

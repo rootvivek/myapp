@@ -47,18 +47,103 @@ function validatePhone10(phone: string): string | null {
   return null;
 }
 
-export function validateRepairFormFields(params: {
+/**
+ * Every required field of the repair form, keyed exactly like the form state
+ * (`customerName`, `phone`, `deviceModel`, `problem`) plus the two required
+ * photo slots. Used to attach an inline error under the matching input.
+ */
+export type RepairFormField =
+  | 'customerName'
+  | 'phone'
+  | 'deviceModel'
+  | 'problem'
+  | 'imageFront'
+  | 'imageBack';
+
+export type RepairFormErrors = Partial<Record<RepairFormField, string>>;
+
+/** Visual order of the fields — the first entry is the top-most input. */
+export const REPAIR_FORM_FIELD_ORDER: readonly RepairFormField[] = [
+  'customerName',
+  'phone',
+  'deviceModel',
+  'problem',
+  'imageFront',
+  'imageBack',
+];
+
+const REPAIR_FORM_FIELDS: readonly string[] = REPAIR_FORM_FIELD_ORDER;
+
+/** Type guard: does this form-state key also carry a validation message? */
+export function isRepairFormField(key: string): key is RepairFormField {
+  return REPAIR_FORM_FIELDS.includes(key);
+}
+
+export type RepairFormFieldValues = {
   customerName: string;
   phone: string;
   deviceModel: string;
   problem: string;
   images: Record<RepairImageSlot, string>;
-}): string | null {
-  const nameErr = validateCustomerName(params.customerName);
-  if (nameErr) return nameErr;
-  const phoneErr = validatePhone10(params.phone);
-  if (phoneErr) return phoneErr;
-  if (!params.deviceModel.trim()) return 'Device model is required.';
-  if (!params.problem.trim()) return 'Problem / notes is required.';
+};
+
+/**
+ * Message for one field, or `null` when that field is valid. Used both for the
+ * whole-form check and to re-validate a single input while the user types (so
+ * the red state only goes away once the value is actually valid).
+ */
+export function validateRepairFormField(
+  field: RepairFormField,
+  params: RepairFormFieldValues
+): string | null {
+  switch (field) {
+    case 'customerName':
+      return validateCustomerName(params.customerName);
+    case 'phone':
+      return validatePhone10(params.phone);
+    case 'deviceModel':
+      return params.deviceModel.trim() ? null : 'Device model is required.';
+    case 'problem':
+      return params.problem.trim() ? null : 'Problem / notes is required.';
+    case 'imageFront':
+      return params.images.front?.trim() ? null : 'Front device photo is required.';
+    case 'imageBack':
+      return params.images.back?.trim() ? null : 'Back device photo is required.';
+    default:
+      return null;
+  }
+}
+
+/**
+ * Validates the whole repair form and returns one message per invalid field.
+ * An empty object means the form is valid. Nothing is thrown/shown here so
+ * callers can render the messages inline instead of in a popup.
+ */
+export function validateRepairFormErrors(params: RepairFormFieldValues): RepairFormErrors {
+  const errors: RepairFormErrors = {};
+
+  for (const field of REPAIR_FORM_FIELD_ORDER) {
+    const message = validateRepairFormField(field, params);
+    if (message) errors[field] = message;
+  }
+
+  return errors;
+}
+
+/** First invalid field in visual order, or `null` when there is none. */
+export function firstInvalidRepairField(errors: RepairFormErrors): RepairFormField | null {
+  for (const field of REPAIR_FORM_FIELD_ORDER) {
+    if (errors[field]) return field;
+  }
   return null;
+}
+
+/**
+ * Message of the first invalid field, or `null` when the form is valid.
+ * Kept for callers that only need a single message.
+ */
+export function validateRepairFormFields(params: RepairFormFieldValues): string | null {
+  const errors = validateRepairFormErrors(params);
+  const field = firstInvalidRepairField(errors);
+  return field ? errors[field] ?? null : null;
 }

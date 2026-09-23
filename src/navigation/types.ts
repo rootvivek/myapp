@@ -13,4 +13,5 @@ export type RootStackParamList = {
   Settings: undefined;
   ManageLabour: undefined;
   Finance: undefined;
+  AdminDashboard: undefined;
 };

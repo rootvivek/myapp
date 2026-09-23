@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert, Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { FileText } from 'lucide-react-native';
 import type { AppColors } from '../../theme';
@@ -35,23 +35,13 @@ export const ActionButtons = React.memo(function ActionButtons({
           </View>
         </LinearGradient>
       </Pressable>
-
-      {/* Edit & Delete */}
       {canModify && (
         <View style={{ flexDirection: 'row', gap: 10 }}>
-          <Pressable
-            onPress={onEdit}
-            style={[styles.actionBtnSecondary, { flex: 1 }]}
-          >
+          <Pressable onPress={onEdit} style={[styles.actionBtnSecondary, { flex: 1 }]}>
             <Text style={styles.actionBtnSecondaryText}>Edit job</Text>
           </Pressable>
           <Pressable
-            onPress={() => {
-              Alert.alert('Delete Repair', 'Are you sure? This cannot be undone.', [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Delete', style: 'destructive', onPress: onDelete },
-              ]);
-            }}
+            onPress={onDelete}
             style={[
               styles.actionBtnSecondary,
               {

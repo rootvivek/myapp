@@ -57,7 +57,9 @@ function buildReceiptHtml(
   branding: ShopBranding,
   logoDataUrl: string | null
 ): string {
-  const shopPhone = escapeHtml(branding.shopPhone);
+  const shopPhone = branding.shopPhone.trim();
+  // Omit the line entirely rather than printing a blank/placeholder number.
+  const phoneLine = shopPhone ? `<p class="shop-phone">${escapeHtml(shopPhone)}</p>` : '';
   const balance = Math.max(0, repair.repairCost - repair.advanceAmount);
   const paidLine = repair.isPaid ? 'Paid in full' : `Balance due: ${formatCurrency(balance)}`;
   const shop = escapeHtml(branding.shopName);
@@ -108,7 +110,7 @@ function buildReceiptHtml(
           ${logoBlock}
           <div>
             <p class="shop-name">${shop}</p>
-            <p class="shop-phone">${shopPhone}</p>
+            ${phoneLine}
             <p class="invoice-tag">Service invoice</p>
           </div>
         </div>
@@ -177,9 +179,10 @@ async function generateInvoicePdf(repair: Repair): Promise<string> {
   }
   const html = buildReceiptHtml(repair, branding, logoDataUrl);
 
+  const timestamp = Date.now();
   const file = await generatePDF({
     html,
-    fileName: `MCA_Phone_Wala_Invoice_${repair.orderCode.replace(/[^a-zA-Z0-9]/g, '_')}`,
+    fileName: `MCA_Phone_Wala_Invoice_${repair.orderCode.replace(/[^a-zA-Z0-9]/g, '_')}_${timestamp}`,
     forceReset: true,
   });
 
@@ -206,15 +209,19 @@ export async function shareReceiptPdf(repair: Repair): Promise<void> {
 
 /** Generate a PDF invoice and share directly via WhatsApp.
  *  WhatsApp will show its contact picker with the PDF attached. */
-export async function shareReceiptPdfToWhatsAppContact(repair: Repair, _phone: string): Promise<void> {
+export async function shareReceiptPdfToWhatsAppContact(repair: Repair, phone: string): Promise<void> {
   const filePath = await generateInvoicePdf(repair);
+
+  // Format phone for WhatsApp: must include country code without + or leading zeros
+  const whatsAppNumber = phone.length === 10 ? `91${phone}` : phone.replace(/^\+/, '');
 
   try {
     await RNShare.shareSingle({
       social: Social.Whatsapp,
+      whatsAppNumber,
       url: `file://${filePath}`,
       type: 'application/pdf',
-    });
+    } as any);
   } catch (err: any) {
     const msg = String(err?.message || err).toLowerCase();
     const isCancel = msg.includes('user did not share') || msg.includes('cancel') || msg.includes('abort');

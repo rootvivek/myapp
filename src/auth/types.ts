@@ -11,7 +11,6 @@ export interface AuthState {
 }
 
 export type AuthAction =
-  | { type: 'SET_CONFIGURED'; payload: boolean }
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_SESSION'; payload: Session | null }
   | { type: 'SET_PROFILE'; payload: UserProfile | null }
@@ -32,16 +31,17 @@ export interface AuthContextValue {
   profile: UserProfile | null;
   isOwner: boolean;
   isLabour: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
+  isAdmin: boolean;
+  signIn: (identifier: string, password: string) => Promise<void>;
   signUp: (
-    email: string,
+    phone: string,
     password: string,
-    name: string
-  ) => Promise<{ needsEmailConfirm: boolean }>;
+    name: string,
+    shopName?: string
+  ) => Promise<{ needsPhoneConfirm: boolean }>;
   signOut: () => Promise<void>;
-  refreshProfile: () => Promise<void>;
   createLabourAccount: (name: string, password: string, phone: string) => Promise<void>;
   resetLabourPassword: (labourUserId: string, newPassword: string) => Promise<void>;
-  updateProfileName: (name: string) => Promise<void>;
-  updateShopName: (shopName: string) => Promise<void>;
+  updateProfileLogo: (logoUrl: string | null) => Promise<void>;
+  updateProfileDetails: (name: string, shopName: string) => Promise<void>;
 }

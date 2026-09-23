@@ -1,9 +1,10 @@
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { Switch as PaperSwitch, TextInput as PaperInput } from 'react-native-paper';
+import { Switch as PaperSwitch } from 'react-native-paper';
 import { CreditCard, MessageSquare } from 'lucide-react-native';
 import type { AppColors } from '../../../theme';
 import { accentAlpha } from '../../../theme';
+import { FormTextInput } from '../../../components/FormTextInput';
 import { formatCurrency } from '../../../utils/format';
 import type { AddRepairStyles } from '../styles';
 
@@ -59,47 +60,23 @@ export const PaymentSection = React.memo(function PaymentSection({
 
       {/* Row 1: Cost & Advance side-by-side */}
       <View style={styles.billingRow}>
-        <PaperInput
+        <FormTextInput
           label="Total Cost (₹)"
           placeholder="0"
           value={repairCost}
           onChangeText={onChangeRepairCost}
           keyboardType="decimal-pad"
-          mode="outlined"
-          dense={true}
-          outlineColor={colors.border}
-          activeOutlineColor={colors.accent}
-          textColor={colors.text}
-          placeholderTextColor={colors.textMuted}
-          theme={{
-            colors: {
-              background: colors.surface2,
-              placeholder: colors.textMuted,
-            },
-          }}
-          style={[styles.paperInput, { flex: 1 }]}
+          containerStyle={[styles.inputFlex, styles.inputStack]}
           accessibilityLabel="Repair cost"
         />
 
-        <PaperInput
+        <FormTextInput
           label="Advance Paid (₹)"
           placeholder="0"
           value={advanceAmount}
           onChangeText={onChangeAdvanceAmount}
           keyboardType="decimal-pad"
-          mode="outlined"
-          dense={true}
-          outlineColor={colors.border}
-          activeOutlineColor={colors.accent}
-          textColor={colors.text}
-          placeholderTextColor={colors.textMuted}
-          theme={{
-            colors: {
-              background: colors.surface2,
-              placeholder: colors.textMuted,
-            },
-          }}
-          style={[styles.paperInput, { flex: 1 }]}
+          containerStyle={[styles.inputFlex, styles.inputStack]}
           accessibilityLabel="Advance amount"
         />
       </View>

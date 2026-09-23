@@ -11,12 +11,33 @@ export async function requireUserId(): Promise<string> {
 
 export async function requireUserContext(): Promise<{ userId: string; shopId: string }> {
   const userId = await requireUserId();
-  const { data } = await supabase
+
+  const { data: profileData } = await supabase
     .from('profiles')
     .select('shop_id')
     .eq('id', userId)
     .maybeSingle();
-  const shopId = data?.shop_id ?? '';
+
+  let shopId = profileData?.shop_id ?? '';
+
+  if (!shopId) {
+    const { data: shopData, error: shopError } = await supabase
+      .from('shops')
+      .select('id')
+      .eq('owner_id', userId)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (!shopError && shopData?.id) {
+      shopId = String(shopData.id);
+      await supabase
+        .from('profiles')
+        .upsert({ id: userId, shop_id: shopId }, { onConflict: 'id' })
+        .select('shop_id');
+    }
+  }
+
   return { userId, shopId };
 }
 
@@ -87,10 +108,12 @@ export async function safeUpdate(id: number, payload: Record<string, unknown>, r
   if (retryCount > 10) {
     throw new Error('Too many schema discrepancy retries');
   }
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('repairs')
     .update(payload as any)
-    .eq('id', id);
+    .eq('id', id)
+    .select('id')
+    .maybeSingle();
 
   if (error) {
     const columnName = getMissingColumn(error.message);
@@ -100,5 +123,9 @@ export async function safeUpdate(id: number, payload: Record<string, unknown>, r
       return safeUpdate(id, nextPayload, retryCount + 1);
     }
     throw error;
+  }
+
+  if (!data) {
+    throw new Error('Repair could not be updated. Check your session and repair permissions.');
   }
 }

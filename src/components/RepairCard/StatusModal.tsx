@@ -1,6 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Modal, Portal } from 'react-native-paper';
+import { Pressable, StyleSheet, Text, View, Modal } from 'react-native';
 
 import type { AppColors } from '../../theme';
 import type { RepairStatus } from '../../types/repair';
@@ -29,31 +28,6 @@ export const StatusModal = React.memo(function StatusModal({
   colors,
 }: Props) {
   return (
-<<<<<<< HEAD
-    <Portal>
-      <Modal
-        visible={visible}
-        onDismiss={onClose}
-        contentContainerStyle={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'transparent' }}
-      >
-        <View style={styles.modalWrap}>
-          <Pressable
-            style={StyleSheet.absoluteFill}
-            onPress={onClose}
-            accessibilityRole="button"
-            accessibilityLabel={LABELS.CLOSE}
-          />
-          <View style={styles.modalOuter}>
-            <View style={styles.modalSheet}>
-              <Text style={styles.modalTitle}>{LABELS.SET_STATUS}</Text>
-              <Text style={styles.modalSub}>{deviceModel}</Text>
-              {REPAIR_STATUSES.map((s) => {
-                const isCurrent = s.value === currentStatus;
-                return (
-                  <Pressable
-                    key={s.value}
-                    onPress={() => onSelect(s.value)}
-=======
     <Modal
       visible={visible}
       transparent
@@ -77,7 +51,6 @@ export const StatusModal = React.memo(function StatusModal({
                 <View key={s.value} style={{ marginBottom: 4 }}>
                   <Pressable
                     onPress={() => onSelect(s.value, false)}
->>>>>>> 59d5b3f0e76670e4b0b8d54687271a6ec0dd3ad9
                     style={[styles.modalRow, isCurrent && styles.modalRowCur]}
                     android_ripple={{ color: 'rgba(124,58,237,0.12)' }}
                     accessibilityRole="button"
@@ -94,19 +67,6 @@ export const StatusModal = React.memo(function StatusModal({
                       {isCurrent ? '  ✓' : ''}
                     </Text>
                   </Pressable>
-<<<<<<< HEAD
-                );
-              })}
-              <Pressable
-                onPress={onClose}
-                style={styles.modalCancel}
-                accessibilityRole="button"
-                accessibilityLabel={LABELS.CANCEL}
-              >
-                <Text style={styles.modalCancelText}>{LABELS.CANCEL}</Text>
-              </Pressable>
-            </View>
-=======
                   {(s.value === 'completed' || s.value === 'delivered') && !isCurrent ? (
                     <Pressable
                       onPress={() => onSelect(s.value, true)}
@@ -139,10 +99,9 @@ export const StatusModal = React.memo(function StatusModal({
             >
               <Text style={styles.modalCancelText}>{LABELS.CANCEL}</Text>
             </Pressable>
->>>>>>> 59d5b3f0e76670e4b0b8d54687271a6ec0dd3ad9
           </View>
         </View>
+      </View>
       </Modal>
-    </Portal>
   );
 });

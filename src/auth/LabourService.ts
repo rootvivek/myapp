@@ -41,17 +41,22 @@ export async function createLabourAccount(
     throw new Error(ERROR_MESSAGES.ACCOUNT_CREATED_NO_ID);
   }
 
-  const { error: profileError } = await supabase.from('profiles').insert({
-    id: newUserId,
-    name: username.trim(),
-    username: loginUsername,
-    phone: phone.trim(),
-    role: 'labour',
-    shop_id: ownerProfile.shopId,
-  });
+  // Upsert: the `on_auth_user_created` DB trigger already creates a minimal
+  // profile row for this user, so a plain insert would fail with a duplicate key.
+  const { error: profileError } = await supabase.from('profiles').upsert(
+    {
+      id: newUserId,
+      name: username.trim(),
+      username: loginUsername,
+      phone: phone.trim(),
+      role: 'labour',
+      shop_id: ownerProfile.shopId,
+    },
+    { onConflict: 'id' }
+  );
 
   if (profileError) {
-    throw new Error(ERROR_MESSAGES.PROFILE_SETUP_FAILED);
+    throw new Error(`${ERROR_MESSAGES.PROFILE_SETUP_FAILED} ${profileError.message}`);
   }
 }
 

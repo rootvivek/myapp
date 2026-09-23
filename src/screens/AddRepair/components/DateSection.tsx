@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Platform, Pressable, Text, View } from 'react-native';
-import { TextInput as PaperInput } from 'react-native-paper';
+import { FormTextInput } from '../../../components/FormTextInput';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Calendar } from 'lucide-react-native';
 import type { AppColors } from '../../../theme';
@@ -40,23 +40,10 @@ export const DateSection = React.memo(function DateSection({
         accessibilityHint="Opens date picker"
       >
         <View pointerEvents="none">
-          <PaperInput
+          <FormTextInput
             value={dateReceived}
             editable={false}
-            mode="outlined"
-            dense={true}
-            outlineColor={colors.border}
-            activeOutlineColor={colors.accent}
-            textColor={colors.text}
-            placeholderTextColor={colors.textMuted}
-            theme={{
-              colors: {
-                background: colors.surface2,
-                placeholder: colors.textMuted,
-              },
-            }}
-            style={[styles.paperInput, { marginBottom: 0 }]}
-            right={<PaperInput.Icon icon={() => <Calendar color={colors.accent} size={18} />} />}
+            rightIcon={Calendar}
           />
         </View>
       </Pressable>

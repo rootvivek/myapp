@@ -207,39 +207,6 @@ export function createStyles(colors: AppColors) {
       gap: 6,
     },
 
-    /* Form Fields - Compressed */
-    label: {
-      color: colors.textMuted,
-      fontSize: 10.5,
-      fontWeight: '800',
-      textTransform: 'uppercase',
-      letterSpacing: 0.5,
-      marginTop: 4,
-      marginBottom: 4,
-    },
-    inputContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: colors.surface2,
-      borderRadius: radius.md,
-      borderWidth: 1,
-      borderColor: colors.border,
-      paddingHorizontal: 10,
-      marginBottom: 6,
-      height: 40,
-    },
-    inputIconBox: {
-      marginRight: 6,
-    },
-    input: {
-      flex: 1,
-      height: '100%',
-      color: colors.text,
-      fontSize: 13.5,
-      fontWeight: '600',
-      paddingVertical: 0,
-    },
-
     /* Save Button */
     saveBtn: {
       borderRadius: radius.md,

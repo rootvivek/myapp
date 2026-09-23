@@ -94,3 +94,27 @@ export async function deleteInventoryItem(id: number): Promise<void> {
     handleRepositoryError(err, 'Failed to delete inventory item');
   }
 }
+
+export async function deductInventoryStock(inventoryItemId: number, quantity = 1): Promise<void> {
+  try {
+    // Read current stock
+    const { data, error } = await supabase
+      .from('inventory')
+      .select('stock_count')
+      .eq('id', inventoryItemId)
+      .single();
+
+    if (error || !data) {
+      return;
+    }
+
+    const currentStock = Number(data.stock_count) || 0;
+    const newStock = Math.max(0, currentStock - quantity);
+
+    const { error: updateErr } = await supabase
+      .from('inventory')
+      .update({ stock_count: newStock, updated_at: getNowIso() })
+      .eq('id', inventoryItemId);
+
+  } catch {}
+}

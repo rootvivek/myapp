@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
-import { TextInput as PaperInput } from 'react-native-paper';
 import { ScanLine, Smartphone } from 'lucide-react-native';
 import type { AppColors } from '../../../theme';
-import { normalizeImeiInput } from '../../../utils/repairValidation';
+import { FormTextInput } from '../../../components/FormTextInput';
+import { normalizeImeiInput, type RepairFormErrors } from '../../../utils/repairValidation';
 import { DEVICE_BRANDS } from '../constants';
 import type { AddRepairStyles } from '../styles';
 
 type Props = {
   deviceModel: string;
   imei: string;
+  /** Inline validation messages keyed by field. */
+  errors?: RepairFormErrors;
   onChangeDeviceModel: (model: string) => void;
   onChangeImei: (imei: string) => void;
   onScanImei: () => void;
@@ -20,6 +22,7 @@ type Props = {
 export const DeviceSection = React.memo(function DeviceSection({
   deviceModel,
   imei,
+  errors,
   onChangeDeviceModel,
   onChangeImei,
   onScanImei,
@@ -48,7 +51,7 @@ export const DeviceSection = React.memo(function DeviceSection({
       </View>
 
       <View style={{ position: 'relative', zIndex: 9 }}>
-        <PaperInput
+        <FormTextInput
           label="Device Model"
           placeholder="e.g. Samsung Galaxy S23"
           value={deviceModel}
@@ -57,20 +60,9 @@ export const DeviceSection = React.memo(function DeviceSection({
             setShowBrandDropdown(true);
           }}
           onFocus={() => setShowBrandDropdown(true)}
-          mode="outlined"
-          dense={true}
-          outlineColor={colors.border}
-          activeOutlineColor={colors.accent}
-          textColor={colors.text}
-          placeholderTextColor={colors.textMuted}
-          theme={{
-            colors: {
-              background: colors.surface2,
-              placeholder: colors.textMuted,
-            },
-          }}
-          style={styles.paperInput}
-          left={<PaperInput.Icon icon={() => <Smartphone color={colors.accent} size={18} />} />}
+          error={errors?.deviceModel}
+          icon={Smartphone}
+          containerStyle={styles.inputStack}
           accessibilityLabel="Device Model"
         />
 
@@ -99,26 +91,14 @@ export const DeviceSection = React.memo(function DeviceSection({
 
       {/* IMEI Row */}
       <View style={styles.imeiRow}>
-        <PaperInput
+        <FormTextInput
           label="IMEI (15 digits)"
           placeholder="Enter IMEI number"
           value={imei}
           onChangeText={(t) => onChangeImei(normalizeImeiInput(t))}
           keyboardType="number-pad"
           maxLength={15}
-          mode="outlined"
-          dense={true}
-          outlineColor={colors.border}
-          activeOutlineColor={colors.accent}
-          textColor={colors.text}
-          placeholderTextColor={colors.textMuted}
-          theme={{
-            colors: {
-              background: colors.surface2,
-              placeholder: colors.textMuted,
-            },
-          }}
-          style={styles.imeiInput}
+          containerStyle={styles.inputFlex}
           accessibilityLabel="IMEI Number"
         />
 

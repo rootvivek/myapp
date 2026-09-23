@@ -44,10 +44,6 @@ export function RepairsProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-<<<<<<< HEAD
-  // Initial fetch / manual pull-to-refresh
-  const refresh = useCallback(async () => {
-=======
   const refresh = useCallback(async (force = false) => {
     const now = Date.now();
     // Throttle automatic focus refetches to once every 10 seconds unless forced
@@ -55,7 +51,6 @@ export function RepairsProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
->>>>>>> 59d5b3f0e76670e4b0b8d54687271a6ec0dd3ad9
     const currentRequestId = ++requestIdRef.current;
     setLoading(true);
     try {

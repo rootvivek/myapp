@@ -9,9 +9,6 @@ export const initialAuthState: AuthState = {
 
 export function authReducer(state: AuthState, action: AuthAction): AuthState {
   switch (action.type) {
-    case 'SET_CONFIGURED':
-      return { ...state, configured: action.payload };
-
     case 'SET_LOADING':
       return { ...state, loading: action.payload };
 
