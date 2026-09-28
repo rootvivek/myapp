@@ -145,7 +145,29 @@ myapp/
    - Removed obsolete components (`OfflineBanner.tsx`, `ThreeDIcon.tsx`, and dead finance subcomponents consolidated into `FinanceScreen.tsx`).
    - Removed temporary logs (`assemble.log`, `compile.log`, `window_dump.xml`).
 
-5. **Typecheck Status**:
+5. **Auto-Update System (Android)**:
+   - `src/services/autoUpdate.ts`: checks a backend endpoint, downloads the APK to the
+     Downloads directory (`react-native-fs`) and prompts installation (`react-native-file-viewer`).
+     Supports optional CodePush (`ENABLE_CODE_PUSH`).
+   - `src/components/AutoUpdateInitializer.tsx`: mounted in `App.tsx`; configures the service
+     from `.env` and starts periodic checks. Also exports an `UpdateBanner` component.
+   - `src/services/updateApiSpec.ts`: API contract/docs for `POST /app/update/check`.
+   - `backend/otp-server.js`: implements `POST /app/update/check` (version served from `backend/.env`).
+   - **Publishing:** manual — build locally (`npm run build:apk`), then create/update a GitHub Release
+     and attach the APK so the asset URL matches `backend/.env`'s `APP_DOWNLOAD_URL_ANDROID`
+     (e.g. `https://github.com/rootvivek/myapp/releases/download/v1.0.5/app-release.apk`).
+     NOTE: the `android/` folder is **not tracked in git** (`.gitignore` line 48), so GitHub Actions
+     cannot build the APK — CI-based releases are not possible without committing `android/`.
+   - Env config uses **`react-native-dotenv`** (`@env` imports) — NOT `react-native-config`.
+     Types live in `src/types/env.d.ts`. Required vars: `UPDATE_API_URL`, `UPDATE_CHECK_INTERVAL`,
+     `ENABLE_CODE_PUSH`, `ENABLE_APK_UPDATE`, `AUTO_DOWNLOAD_APK`, `SHOW_RELEASE_NOTES`,
+     `APP_VERSION_NAME`, `APP_VERSION_CODE` (see `.env`).
+
+6. **Testing & Tooling**:
+   - Jest + `@testing-library/react-native` configured (`jest.config.js`, `jest.setup.js`).
+   - Run tests with `npm test`. Typecheck with `npx tsc --noEmit`.
+
+7. **Typecheck Status**:
    - `npx tsc --noEmit` passes with 0 errors.
 
 ---
@@ -209,13 +231,71 @@ MSG91_AUTH_KEY=<optional-msg91-key>
 
 ## 7. Next Steps & Recommendations for Incoming Agent
 
-1. **Staged Changes Review & Commit**:
-   - Run `git status` and stage relevant source modifications (`App.tsx`, `MainTabScreen.tsx`, `HomeDashboardScreen.tsx`, `BottomNavBar.tsx`, refactored utilities).
-   - Verify if `patches/@msg91comm+sendotp-react-native+3.0.0.patch` should be trimmed or kept (check if binary artifacts inside the patch can be excluded).
-2. **Jest Test Setup**:
-   - `npm test` fails with `jest: command not found` because Jest CLI isn't installed in `node_modules` or `package.json` test script needs configuration. Consider installing `@testing-library/react-native` and `jest` if automated test coverage is prioritized.
-3. **Android Build Verification**:
+1. **Commit the Auto-Update Feature**:
+   - Stage and commit the auto-update work: `src/services/autoUpdate.ts`,
+     `src/components/AutoUpdateInitializer.tsx`, `src/services/updateApiSpec.ts`,
+     `src/types/env.d.ts`, `src/types/codepush.d.ts`, `backend/.env.example`,
+     `backend/otp-server.js`, `scripts/test-update-check.js`,
+     `jest.config.js`, `jest.setup.js`, `src/__tests__/`, and the `.env` template.
+   - Keep `patches/@msg91comm+sendotp-react-native+3.0.0.patch` (Android build fix).
+2. **Configure Production Update Endpoint**:
+   - Set `UPDATE_API_URL` in `.env` to a URL the phone can reach. `localhost` only works on an
+     Android *emulator* via `adb reverse tcp:3001 tcp:3001`; a physical device needs your LAN IP
+     (e.g. `http://192.168.x.x:3001`) or a deployed backend.
+   - Keep `backend/.env`'s `APP_LATEST_VERSION_*` and `APP_DOWNLOAD_URL_ANDROID` in sync with the
+     GitHub Release you publish. **VersionCode must strictly increase** or no update is detected.
+   - Env vars are read via `react-native-dotenv`; adding a new var requires restarting Metro
+     with a cache reset (`npm start -- --reset-cache`).
+3. **Release Checklist** (manual, since `android/` is not in git):
+   - Bump `versionName`/`versionCode` in `android/app/build.gradle`, plus `app.json`,
+     `package.json`, `.env` (`APP_VERSION_*`).
+   - `npm run build:apk`
+   - Create a GitHub Release tagged `v<version>` and attach
+     `android/app/build/outputs/apk/release/app-release.apk`.
+   - Update `backend/.env` (`APP_LATEST_VERSION_NAME`, `APP_LATEST_VERSION_CODE`,
+     `APP_DOWNLOAD_URL_ANDROID`) and restart the backend.
+4. **Jest**:
+   - Configured (`jest.config.js` + `jest.setup.js`); run `npm test`. Note: component tests that
+     import `react-native` require `babel-jest` instead of `ts-jest` (currently only pure
+     TypeScript util tests are wired).
+5. **Android Build Verification**:
    - Ensure `npm run sync:jdk` has been executed if running Gradle tasks locally on macOS.
-4. **Service Tiles Completion**:
+   - Do NOT reintroduce `react-native-config` without its Gradle plugin — the plugin
+     (`com.lugg:react-native-config-gradle-plugin`) is not resolvable in this environment.
+6. **Service Tiles Completion**:
    - `HomeDashboardScreen.tsx` currently has `Repair` live; other tiles trigger `showComingSoon()`. Future roadmap will wire accessories, battery, and trade-in workflows.
+
+---
+
+## 8. Troubleshooting: Android Release Build (`npm run build:apk`)
+
+The build runs Hermes bytecode compilation, which is memory-hungry. Two failures seen and their fixes:
+
+1. **`Process 'hermesc' finished with non-zero exit value 137`**
+   - Cause: the OS killed `hermesc` due to low memory (137 = SIGKILL).
+   - Free memory before building: close the Android emulator (`adb emu kill`, then
+     `pkill -9 -f qemu-system-aarch64`) and stale Gradle daemons
+     (`./gradlew --stop`). Verify with `vm_stat` that free + inactive memory is healthy
+     (build needs several GB).
+   - `android/gradle.properties` already sets `org.gradle.jvmargs=-Xmx4096m`.
+
+2. **`Couldn't determine Hermesc location ... node_modules/react-native/sdks/hermesc/%OS-BIN%/hermesc`**
+   - Cause: `node_modules/react-native/sdks/hermesc/osx-bin/hermesc` was missing (only
+     `hermes` / `hermes-lit` present).
+   - Fix (restore from the official package tarball):
+     ```bash
+     cd /tmp && mkdir rn-restore && cd rn-restore
+     curl -sL "https://registry.npmjs.org/react-native/-/react-native-0.79.2.tgz" -o rn.tgz
+     tar xzf rn.tgz package/sdks/hermesc/osx-bin/hermesc
+     cp package/sdks/hermesc/osx-bin/hermesc \
+       /Users/vivek/Downloads/myapp/node_modules/react-native/sdks/hermesc/osx-bin/
+     chmod +x /Users/vivek/Downloads/myapp/node_modules/react-native/sdks/hermesc/osx-bin/hermesc
+     ```
+   - Alternatively, reinstall the package: `npm install react-native@0.79.2 --legacy-peer-deps`.
+
+3. **Hermes disabled path**: setting `hermesEnabled=false` in `android/gradle.properties`
+   avoids `hermesc` entirely (uses JSC) but changes the runtime engine — prefer fixing memory
+   or restoring `hermesc` instead.
+
+Output APK: `android/app/build/outputs/apk/release/app-release.apk`.
 

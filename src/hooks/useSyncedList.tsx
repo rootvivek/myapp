@@ -90,7 +90,8 @@ function createSyncedList<T>(options: SyncedListOptions<T>) {
               setItems((current) => upsertItem(current, item, keyExtractor));
             } else if (eventType === 'UPDATE' && newRow) {
               const item = rowToItem(newRow as Record<string, unknown>);
-              setItems((current) => updateItem(current, item.id, item, keyExtractor));
+              const itemKey = item[keyExtractor];
+              setItems((current) => updateItem(current, itemKey as number, item, keyExtractor));
             } else if (eventType === 'DELETE' && oldRow?.id) {
               const id = Number(oldRow.id);
               setItems((current) => removeItem(current, id, keyExtractor));

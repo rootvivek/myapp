@@ -1,8 +1,8 @@
 /**
  * Auto-Update API Specification
- * 
+ *
  * POST /app/update/check
- * 
+ *
  * Request Body:
  * {
  *   "platform": "android" | "ios",
@@ -10,55 +10,44 @@
  *   "currentVersionName": "1.0.4",
  *   "packageName": "com.myapp"
  * }
- * 
+ *
  * Response (Update Available):
  * {
  *   "hasUpdate": true,
  *   "versionName": "1.0.5",
  *   "versionCode": 6,
- *   "downloadUrl": "https://your-cdn.com/app-release-v1.0.5.apk",
+ *   "downloadUrl": "https://github.com/username/repo/releases/download/v1.0.5/app-release.apk",
  *   "releaseNotes": "- Fixed login issue\n- Added dark mode\n- Performance improvements",
  *   "mandatory": false,
  *   "minVersionCode": 4
  * }
- * 
+ *
  * Response (No Update):
  * {
  *   "hasUpdate": false
  * }
- * 
- * 
- * Backend Implementation Example (Node.js/Express):
- * 
- * app.post('/app/update/check', (req, res) => {
- *   const { platform, currentVersionCode, packageName } = req.body;
- *   
- *   // Get latest version from your database/config
- *   const latest = getLatestVersion(platform);
- *   
- *   if (latest.versionCode > currentVersionCode) {
- *     return res.json({
- *       hasUpdate: true,
- *       versionName: latest.versionName,
- *       versionCode: latest.versionCode,
- *       downloadUrl: latest.downloadUrl,
- *       releaseNotes: latest.releaseNotes,
- *       mandatory: latest.mandatory,
- *       minVersionCode: latest.minVersionCode,
- *     });
- *   }
- *   
- *   res.json({ hasUpdate: false });
- * });
- * 
- * 
- * APK Hosting Options:
- * 1. GitHub Releases (free, but rate limited)
- * 2. AWS S3 + CloudFront (scalable, paid)
- * 3. Firebase Hosting (free tier available)
- * 4. Your own server/CDN
- * 
- * For GitHub Releases, use: https://github.com/username/repo/releases/download/v1.0.5/app-release.apk
+ *
+ *
+ * Backend Implementation:
+ *
+ * The endpoint is implemented in `backend/otp-server.js` at `/app/update/check`.
+ * Configuration via environment variables in `backend/.env`:
+ * - APP_LATEST_VERSION_NAME
+ * - APP_LATEST_VERSION_CODE
+ * - APP_DOWNLOAD_URL_ANDROID
+ * - APP_DOWNLOAD_URL_IOS
+ * - APP_RELEASE_NOTES
+ * - APP_MANDATORY_UPDATE
+ * - APP_MIN_VERSION_CODE
+ *
+ * Deployment:
+ * 1. Set UPDATE_API_URL=http://your-backend:3001 in client .env
+ * 2. Update backend/.env with new version info
+ * 3. Restart backend server
+ *
+ * GitHub Actions (auto on tag push):
+ * - `.github/workflows/release.yml` builds APK and creates GitHub Release
+ * - Update backend/.env with new version after release
  */
 
 // Example: Version tracking in a simple JSON file (host on your CDN/server)
@@ -66,7 +55,7 @@ export const versionManifest = {
   android: {
     versionName: '1.0.5',
     versionCode: 6,
-    downloadUrl: 'https://your-cdn.com/app-release-v1.0.5.apk',
+    downloadUrl: 'https://github.com/rootvivek/myapp/releases/download/v1.0.5/app-release.apk',
     releaseNotes: '- Added auto-update feature\n- Fixed customer screen UI\n- Improved performance',
     mandatory: false,
     minVersionCode: 4,
@@ -75,7 +64,7 @@ export const versionManifest = {
   ios: {
     versionName: '1.0.5',
     buildNumber: '6',
-    appStoreUrl: 'https://apps.apple.com/app/idXXXXXXXXX',
+    appStoreUrl: 'https://apps.apple.com/app/idYOUR_APP_ID',
     releaseNotes: '- Added auto-update feature\n- Fixed customer screen UI\n- Improved performance',
     mandatory: false,
   },

@@ -1,6 +1,20 @@
 import React, { useEffect } from 'react';
-import { View } from 'react-native';
-import { useAutoUpdate, startAutoUpdateCheck, configureAutoUpdate } from '../services/autoUpdate';
+import { View, Text, Pressable } from 'react-native';
+import {
+  useAutoUpdate,
+  startAutoUpdateCheck,
+  configureAutoUpdate,
+} from '../services/autoUpdate';
+
+// @ts-ignore react-native-dotenv exposes the app's build-time environment values.
+import {
+  UPDATE_API_URL,
+  UPDATE_CHECK_INTERVAL,
+  ENABLE_CODE_PUSH,
+  ENABLE_APK_UPDATE,
+  AUTO_DOWNLOAD_APK,
+  SHOW_RELEASE_NOTES,
+} from '@env';
 
 /**
  * AutoUpdateInitializer
@@ -8,24 +22,26 @@ import { useAutoUpdate, startAutoUpdateCheck, configureAutoUpdate } from '../ser
  * Drop this component at the root of your app (inside AuthProvider) to enable
  * automatic update checking on app start and periodically.
  * 
- * Usage:
- * <AuthProvider>
- *   <AutoUpdateInitializer />
- *   <Navigation />
- * </AuthProvider>
+ * Configuration via .env:
+ * - UPDATE_API_URL: Your update check API endpoint
+ * - UPDATE_CHECK_INTERVAL: Check interval in ms (default 4 hours)
+ * - ENABLE_CODE_PUSH: Enable CodePush for JS updates
+ * - ENABLE_APK_UPDATE: Enable APK update checks
+ * - AUTO_DOWNLOAD_APK: Auto-download APK when update found
+ * - SHOW_RELEASE_NOTES: Show release notes in update dialog
  */
 export function AutoUpdateInitializer() {
   const { checkForUpdates } = useAutoUpdate();
 
   useEffect(() => {
-    // Configure with your actual API endpoint
+    // Configure from environment variables (.env via react-native-dotenv)
     configureAutoUpdate({
-      apiUrl: 'https://api.yourdomain.com', // Replace with your API
-      checkInterval: 4 * 60 * 60 * 1000, // 4 hours
-      enableCodePush: false, // Set true if using CodePush
-      enableApkUpdate: true,
-      autoDownloadApk: true,
-      showReleaseNotes: true,
+      apiUrl: UPDATE_API_URL || 'https://api.yourdomain.com',
+      checkInterval: parseInt(UPDATE_CHECK_INTERVAL || '14400000', 10),
+      enableCodePush: ENABLE_CODE_PUSH === 'true',
+      enableApkUpdate: ENABLE_APK_UPDATE !== 'false',
+      autoDownloadApk: AUTO_DOWNLOAD_APK !== 'false',
+      showReleaseNotes: SHOW_RELEASE_NOTES !== 'false',
     });
 
     // Start periodic checks
@@ -83,6 +99,3 @@ export function UpdateBanner() {
     </View>
   );
 }
-
-// Need to import Text and Pressable
-import { Text, Pressable } from 'react-native';

@@ -1,7 +1,18 @@
-import { Platform, Alert, Linking, AppRegistry } from 'react-native';
+import { Platform, Alert, Linking } from 'react-native';
 import RNFS from 'react-native-fs';
-import { AppVersion, Build } from 'react-native-config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// @ts-ignore react-native-dotenv exposes the app's build-time environment values.
+import {
+  UPDATE_API_URL,
+  UPDATE_CHECK_INTERVAL,
+  ENABLE_CODE_PUSH,
+  ENABLE_APK_UPDATE,
+  AUTO_DOWNLOAD_APK,
+  SHOW_RELEASE_NOTES,
+  APP_VERSION_NAME,
+  APP_VERSION_CODE,
+} from '@env';
 
 // ============================================================================
 // Types
@@ -42,13 +53,13 @@ export interface UpdateConfig {
 // ============================================================================
 
 const DEFAULT_CONFIG: UpdateConfig = {
-  apiUrl: 'https://api.yourdomain.com', // Replace with your API
+  apiUrl: UPDATE_API_URL || 'https://api.yourdomain.com',
   codePushKey: undefined, // Add CodePush deployment key if using
-  checkInterval: 4 * 60 * 60 * 1000, // 4 hours
-  enableCodePush: false,
-  enableApkUpdate: true,
-  autoDownloadApk: true,
-  showReleaseNotes: true,
+  checkInterval: parseInt(UPDATE_CHECK_INTERVAL || '14400000', 10),
+  enableCodePush: ENABLE_CODE_PUSH === 'true',
+  enableApkUpdate: ENABLE_APK_UPDATE !== 'false',
+  autoDownloadApk: AUTO_DOWNLOAD_APK !== 'false',
+  showReleaseNotes: SHOW_RELEASE_NOTES !== 'false',
 };
 
 let config: UpdateConfig = { ...DEFAULT_CONFIG };
@@ -73,9 +84,9 @@ export function getUpdateConfig(): UpdateConfig {
 
 async function getCurrentVersion(): Promise<{ versionName: string; versionCode: number }> {
   try {
-    // Try to get from native build config
-    const versionName = AppVersion?.versionName || '1.0.0';
-    const versionCode = Build?.versionCode || 1;
+    // Provided at bundle time from .env via react-native-dotenv
+    const versionName = APP_VERSION_NAME || '1.0.0';
+    const versionCode = APP_VERSION_CODE || 1;
     return { versionName, versionCode: parseInt(versionCode.toString(), 10) };
   } catch {
     // Fallback to package.json
@@ -253,7 +264,9 @@ export function addUpdateListener(
 ) {
   listeners.add(cb);
   cb(updateState, updateProgress, latestUpdateInfo);
-  return () => listeners.delete(cb);
+  return () => {
+    listeners.delete(cb);
+  };
 }
 
 export function getUpdateState() {
@@ -302,14 +315,14 @@ export async function checkForUpdates(showAlert = true): Promise<{
         notifyListeners();
 
         if (config.autoDownloadApk) {
-          await downloadAndPrepareApk(apkUpdate);
+          await downloadAndPrepareApk(apkUpdate, showAlert);
         } else if (showAlert) {
           showUpdateAlert(
             'App Update Available',
             apkUpdate.releaseNotes
               ? `Version ${apkUpdate.versionName} is available.\n\n${apkUpdate.releaseNotes}`
               : `Version ${apkUpdate.versionName} is available.`,
-            () => downloadAndPrepareApk(apkUpdate),
+            () => downloadAndPrepareApk(apkUpdate, true),
             apkUpdate.mandatory
           );
         }
@@ -331,7 +344,7 @@ export async function checkForUpdates(showAlert = true): Promise<{
   }
 }
 
-async function downloadAndPrepareApk(info: UpdateInfo) {
+async function downloadAndPrepareApk(info: UpdateInfo, showAlert = true) {
   updateState = 'downloading';
   updateProgress = 0;
   notifyListeners();
@@ -448,12 +461,12 @@ export function useAutoUpdate() {
 
   useEffect(() => {
     const unsubscribe = addUpdateListener((s, p, i) => setState({ state: s, progress: p, info: i }));
-    return unsubscribe;
+    return () => unsubscribe();
   }, []);
 
   return {
     ...state,
-    checkForUpdates: () => checkForUpdates(true),
+    checkForUpdates: (showAlert?: boolean) => checkForUpdates(showAlert ?? true),
     installPendingUpdate,
     startAutoCheck: startAutoUpdateCheck,
     stopAutoCheck: stopAutoUpdateCheck,

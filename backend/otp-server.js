@@ -341,8 +341,70 @@ app.post('/api/signup-with-otp', async (req, res) => {
   }
 });
 
+// ── App Update Check Endpoint ─────────────────────────────────────────
+app.post('/app/update/check', (req, res) => {
+  try {
+    const { platform, currentVersionCode, currentVersionName, packageName } = req.body;
+
+    // Validate required fields
+    if (!platform || currentVersionCode === undefined) {
+      return res.status(400).json({ error: 'Missing required fields: platform, currentVersionCode' });
+    }
+
+    // Get latest version from environment or fallback
+    // In production, you could fetch this from a database or config file
+    const releaseNotes = (process.env.APP_RELEASE_NOTES ||
+      '- Auto-update feature added\n- Fixed customer screen UI\n- Performance improvements')
+      // .env files store "\n" as two literal characters; convert them to real newlines.
+      .replace(/\\n/g, '\n');
+
+    const LATEST_VERSION = {
+      android: {
+        versionName: process.env.APP_LATEST_VERSION_NAME || '1.0.5',
+        versionCode: parseInt(process.env.APP_LATEST_VERSION_CODE || '6', 10),
+        downloadUrl: process.env.APP_DOWNLOAD_URL_ANDROID || 'https://github.com/rootvivek/myapp/releases/download/v1.0.5/app-release.apk',
+        releaseNotes,
+        mandatory: process.env.APP_MANDATORY_UPDATE === 'true',
+        minVersionCode: parseInt(process.env.APP_MIN_VERSION_CODE || '4', 10),
+      },
+      ios: {
+        versionName: process.env.APP_LATEST_VERSION_NAME || '1.0.5',
+        buildNumber: process.env.APP_LATEST_VERSION_CODE || '6',
+        appStoreUrl: process.env.APP_DOWNLOAD_URL_IOS || 'https://apps.apple.com/app/idYOUR_APP_ID',
+        releaseNotes,
+        mandatory: process.env.APP_MANDATORY_UPDATE === 'true',
+      },
+    };
+
+    const latest = LATEST_VERSION[platform] || LATEST_VERSION.android;
+
+    if (latest.versionCode > currentVersionCode) {
+      return res.json({
+        hasUpdate: true,
+        versionName: latest.versionName,
+        versionCode: latest.versionCode,
+        downloadUrl: latest.downloadUrl,
+        releaseNotes: latest.releaseNotes,
+        mandatory: latest.mandatory,
+        minVersionCode: latest.minVersionCode,
+      });
+    }
+
+    res.json({ hasUpdate: false });
+  } catch (error) {
+    console.error('[Update Check] Error:', error);
+    res.status(500).json({ error: 'Update check failed' });
+  }
+});
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 app.listen(port, () => {
   console.log(`OTP server running on http://localhost:${port}`);
+  console.log(`Update check endpoint: POST http://localhost:${port}/app/update/check`);
   if (!hasSupabaseConfig) {
     console.warn('Signup is disabled until SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are configured.');
   }

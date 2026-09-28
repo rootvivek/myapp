@@ -1,6 +1,6 @@
 {
   "name": "myapp-otp-server",
-  "version": "1.0.0",
+  "version": "1.0.5",
   "private": true,
   "main": "otp-server.js",
   "scripts": {
@@ -13,5 +13,14 @@
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
     "express": "^4.19.2"
+  },
+  "config": {
+    "appVersionName": "1.0.5",
+    "appVersionCode": 6,
+    "appDownloadUrlAndroid": "https://github.com/rootvivek/myapp/releases/download/v1.0.5/app-release.apk",
+    "appDownloadUrlIos": "https://apps.apple.com/app/idYOUR_APP_ID",
+    "appReleaseNotes": "Auto-update feature added\nFixed customer screen UI\nPerformance improvements",
+    "appMandatoryUpdate": false,
+    "appMinVersionCode": 4
   }
 }
