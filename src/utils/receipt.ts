@@ -1,5 +1,6 @@
 import { generatePDF } from 'react-native-html-to-pdf';
 import RNShare, { Social } from 'react-native-share';
+import RNFS from 'react-native-fs';
 
 import type { Repair } from '../types/repair';
 import { logger } from './logger';
@@ -24,32 +25,84 @@ function monogramLetter(shopName: string): string {
   const t = shopName.trim();
   const ch = t[0];
   if (ch) {
-    try {
-      if (/\p{L}/u.test(ch)) return escapeHtml(ch.toUpperCase());
-    } catch {
-      if (/[a-zA-Z]/.test(ch)) return escapeHtml(ch.toUpperCase());
-    }
+    // Use simple ASCII check instead of Unicode regex for compatibility
+    if (/[a-zA-Z]/.test(ch)) return escapeHtml(ch.toUpperCase());
   }
   return '◆';
 }
 
+/**
+ * Convert a file URI (local or remote) to base64 data URL for embedding in PDF.
+ * Handles: file://, content://, https:// (Supabase Storage), and other local URIs.
+ */
 async function readUriAsDataUrl(uri: string): Promise<string | null> {
   try {
-    const res = await fetch(uri);
-    if (!res.ok) return null;
-    const blob = await res.blob();
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        resolve(reader.result as string);
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
+    // Remote URL (Supabase Storage, etc.) - fetch and convert to base64
+    if (uri.startsWith('http://') || uri.startsWith('https://')) {
+      const response = await fetch(uri);
+      if (!response.ok) {
+        logger.warn('Failed to fetch remote logo:', response.status);
+        return null;
+      }
+      const blob = await response.blob();
+      const base64 = await blobToBase64(blob);
+      const mimeType = blob.type || 'image/png';
+      return `data:${mimeType};base64,${base64}`;
+    }
+
+    // Local file URI - use react-native-fs
+    let filePath = uri;
+    if (uri.startsWith('file://')) {
+      filePath = uri.replace('file://', '');
+    } else if (uri.startsWith('content://')) {
+      // Content URIs need to be copied to a local file first
+      // For now, try to fetch via fetch() which works with content:// on Android
+      try {
+        const response = await fetch(uri);
+        if (response.ok) {
+          const blob = await response.blob();
+          const base64 = await blobToBase64(blob);
+          const mimeType = blob.type || 'image/png';
+          return `data:${mimeType};base64,${base64}`;
+        }
+      } catch (e) {
+        logger.warn('Failed to fetch content:// URI:', e);
+      }
+    }
+
+    // Check if file exists (for file:// paths)
+    const exists = await RNFS.exists(filePath);
+    if (!exists) {
+      logger.warn('Logo file does not exist:', filePath);
+      return null;
+    }
+
+    // Read as base64
+    const base64 = await RNFS.readFile(filePath, 'base64');
+
+    // Detect MIME type from extension
+    const ext = filePath.split('.').pop()?.toLowerCase();
+    const mimeType = ext === 'png' ? 'image/png' : ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : 'image/png';
+
+    return `data:${mimeType};base64,${base64}`;
   } catch (err) {
     logger.warn('Failed to read logo image as data URL:', err);
     return null;
   }
+}
+
+/** Convert Blob to base64 string (React Native compatible). */
+async function blobToBase64(blob: Blob): Promise<string> {
+  // In React Native, use arrayBuffer instead of FileReader
+  const arrayBuffer = await blob.arrayBuffer();
+  const bytes = new Uint8Array(arrayBuffer);
+  
+  // Convert to base64
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
 }
 
 function buildReceiptHtml(
@@ -76,15 +129,16 @@ function buildReceiptHtml(
     * { box-sizing: border-box; }
     body { margin: 0; padding: 10px 10px 10px; font-family: system-ui, sans-serif; color: #0f172a; background: #f1f5f9; }
     .sheet { max-width: 440px; margin: 0 auto; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(15, 23, 42, 0.08); border: 1px solid #e2e8f0; }
-    .hero { background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 55%, #172554 100%); color: #f8fafc; padding: 14px 18px; }
-    .hero-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-    .hero-left { display: flex; align-items: center; gap: 14px; min-width: 0; flex: 1; }
-    .hero-right { text-align: right; margin-left: auto; flex-shrink: 0; }
-    .logo-img { width: 50px; height: 50px; object-fit: contain; border-radius: 10px; background: rgba(255,255,255,0.12); flex-shrink: 0; }
-    .logo-fallback { width: 50px; height: 50px; border-radius: 10px; background: linear-gradient(145deg, #3b82f6, #1d4ed8); display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; color: #fff; flex-shrink: 0; }
+    .hero { background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 55%, #172554 100%); color: #f8fafc; padding: 14px 18px; text-align: center; }
+    .hero-logo { display: flex; justify-content: center; margin-bottom: 8px; }
+    .logo-img { width: 64px; height: 64px; object-fit: contain; border-radius: 12px; background: rgba(255,255,255,0.12); }
+    .logo-fallback { width: 64px; height: 64px; border-radius: 12px; background: linear-gradient(145deg, #3b82f6, #1d4ed8); display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 800; color: #fff; }
     .shop-name { font-size: 18px; font-weight: 800; margin: 0; }
     .invoice-tag { margin: 3px 0 0; font-size: 9px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: #cbd5e1; }
     .shop-phone { margin: 3px 0 0; font-size: 12px; color: #cbd5e1; }
+    .hero-order { margin-top: 8px; }
+    .hero-order-label { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #cbd5e1; margin: 0; }
+    .hero-order-value { font-size: 20px; font-weight: 800; color: #fff; margin: 4px 0 0; }
     .body { padding: 12px 18px 12px; }
     table.meta { width: 100%; border-collapse: collapse; font-size: 12px; }
     table.meta tr { border-bottom: 1px solid #f1f5f9; }
@@ -105,19 +159,15 @@ function buildReceiptHtml(
 <body>
   <div class="sheet">
     <header class="hero">
-      <div class="hero-top">
-        <div class="hero-left">
-          ${logoBlock}
-          <div>
-            <p class="shop-name">${shop}</p>
-            ${phoneLine}
-            <p class="invoice-tag">Service invoice</p>
-          </div>
-        </div>
-        <div class="hero-right">
-          <p style="font-size: 10px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #cbd5e1; margin: 0;">Order ID</p>
-          <p style="font-size: 20px; font-weight: 800; color: #fff; margin: 4px 0 0;">${escapeHtml(repair.orderCode)}</p>
-        </div>
+      <div class="hero-logo">
+        ${logoBlock}
+      </div>
+      <p class="shop-name">${shop}</p>
+      ${phoneLine}
+      <p class="invoice-tag">Service invoice</p>
+      <div class="hero-order">
+        <p class="hero-order-label">Order ID</p>
+        <p class="hero-order-value">${escapeHtml(repair.orderCode)}</p>
       </div>
     </header>
     <div class="body">
@@ -221,6 +271,8 @@ export async function shareReceiptPdfToWhatsAppContact(repair: Repair, phone: st
       whatsAppNumber,
       url: `file://${filePath}`,
       type: 'application/pdf',
+      message: `Invoice for repair ${repair.orderCode}`,
+      title: `Invoice ${repair.orderCode}`,
     } as any);
   } catch (err: any) {
     const msg = String(err?.message || err).toLowerCase();

@@ -24,6 +24,7 @@ import type { DirectoryCustomer } from '../types/customer';
 import type { Repair } from '../types/repair';
 import { REPAIR_STATUSES } from '../types/repair';
 import { formatCurrency } from '../utils/format';
+import { dialPhone } from '../utils/phone';
 import { WhatsAppIcon } from './WhatsAppIcon';
 
 type Props = {
@@ -146,8 +147,7 @@ export function CustomerHistoryModal({
 
   const handleCall = useCallback(() => {
     if (!customer?.phone) return;
-    const dial = customer.phone.replace(/[^\d+]/g, '');
-    void Linking.openURL(`tel:${dial}`);
+    void dialPhone(customer.phone);
   }, [customer?.phone]);
 
   const handleWhatsApp = useCallback(() => {

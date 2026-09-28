@@ -1,5 +1,6 @@
 import { Alert, Linking } from 'react-native';
 
+/** Dials a phone number, handling permissions and error cases gracefully. */
 export async function dialPhone(phone: string): Promise<void> {
   const raw = phone.trim();
   if (!raw) {

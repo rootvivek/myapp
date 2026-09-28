@@ -17,6 +17,15 @@ export function formatDateDisplay(isoDate: string): string {
   });
 }
 
+export function parseMoney(value: string | number): number {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+  if (!value || typeof value !== 'string') return 0;
+  const trimmed = value.trim();
+  if (!trimmed) return 0;
+  const cleaned = parseFloat(trimmed.replace(/[^0-9.]/g, ''));
+  return Number.isFinite(cleaned) ? cleaned : 0;
+}
+
 export function todayISODate(): string {
   const d = new Date();
   const y = d.getFullYear();

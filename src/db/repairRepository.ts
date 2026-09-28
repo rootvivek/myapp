@@ -74,9 +74,11 @@ export function mapInputToRow(input: RepairInput): Record<string, any> {
 
 export async function deleteRepair(repairId: number): Promise<void> {
   try {
-    const userId = await requireUserId();
-    await removeAllRepairImages(userId, repairId);
-    const { error } = await supabase.from('repairs').delete().eq('id', repairId);
+    const ctx = await requireUserContext();
+    await removeAllRepairImages(ctx.userId, repairId);
+    let query = supabase.from('repairs').delete().eq('id', repairId);
+    query = applyShopOrUserFilter(query, ctx);
+    const { error } = await query;
     if (error) throw error;
   } catch (err) {
     handleRepositoryError(err, 'Failed to delete repair');
@@ -90,7 +92,8 @@ export async function getAllRepairs(): Promise<Repair[]> {
       .from('repairs')
       .select('*')
       .order('date_received', { ascending: false })
-      .order('id', { ascending: false });
+      .order('id', { ascending: false })
+      .limit(5000);
 
     query = applyShopOrUserFilter(query, ctx);
 
@@ -153,7 +156,7 @@ export async function getPaginatedRepairs(page = 1, limit = 50): Promise<{ data:
 export async function searchRepairs(query: string): Promise<Repair[]> {
   try {
     const sanitized = query.replace(/[%_,]/g, '').trim();
-    if (!sanitized) return getAllRepairs();
+    if (!sanitized) return [];
     await requireUserId();
     const { data, error } = await supabase.rpc('search_repairs_for_user', { p_query: sanitized });
     if (error) throw error;
@@ -165,11 +168,15 @@ export async function searchRepairs(query: string): Promise<Repair[]> {
 
 export async function getRepairById(id: number): Promise<Repair | null> {
   try {
-    const { data, error } = await supabase
+    const ctx = await requireUserContext();
+    let query = supabase
       .from('repairs')
       .select('*')
-      .eq('id', id)
-      .maybeSingle();
+      .eq('id', id);
+
+    query = applyShopOrUserFilter(query, ctx);
+
+    const { data, error } = await query.maybeSingle();
     if (error) throw error;
     if (!data) return null;
     const repair = rowToRepair(data as Record<string, unknown>);
@@ -221,6 +228,7 @@ export async function updateRepairStatus(
   paymentUpdate?: { isPaid: boolean; paymentType?: 'cash' | 'online' }
 ): Promise<void> {
   try {
+    const ctx = await requireUserContext();
     const now = getNowIso();
     const updatePayload: Record<string, any> = { status, updated_at: now };
     if (paymentUpdate) {
@@ -230,7 +238,10 @@ export async function updateRepairStatus(
       }
     }
 
-    const { error } = await supabase.from('repairs').update(updatePayload).eq('id', id);
+    let query = supabase.from('repairs').update(updatePayload).eq('id', id);
+    query = applyShopOrUserFilter(query, ctx);
+
+    const { error } = await query;
     if (error) throw error;
   } catch (err) {
     handleRepositoryError(err, 'Failed to update repair status');
@@ -239,6 +250,7 @@ export async function updateRepairStatus(
 
 export async function updateRepair(input: RepairInput & { id: number }): Promise<void> {
   try {
+    const ctx = await requireUserContext();
     const now = getNowIso();
 
     const payload = {
@@ -247,7 +259,13 @@ export async function updateRepair(input: RepairInput & { id: number }): Promise
       updated_at: now,
     };
 
-    await safeUpdate(input.id, payload);
+    // Apply shop filter to prevent cross-shop updates
+    const { error } = await supabase
+      .from('repairs')
+      .update(payload)
+      .eq('id', input.id)
+      .eq('shop_id', ctx.shopId || null);
+    if (error) throw error;
   } catch (err) {
     handleRepositoryError(err, 'Failed to update repair');
   }

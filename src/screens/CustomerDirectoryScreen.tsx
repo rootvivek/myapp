@@ -2,9 +2,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
-  Linking,
   Platform,
   Pressable,
   StyleSheet,
@@ -15,8 +13,9 @@ import { Searchbar } from 'react-native-paper';
 import LinearGradient from 'react-native-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Search, X } from 'lucide-react-native';
+import { Search, X, ArrowLeft } from 'lucide-react-native';
 import { useTheme } from '../context/ThemeContext';
+import { dialPhone } from '../utils/phone';
 import { useRepairs } from '../context/RepairsContext';
 import type { RootStackParamList } from '../navigation/types';
 import type { AppColors } from '../theme';
@@ -34,21 +33,33 @@ function sortCustomers(list: DirectoryCustomer[]): DirectoryCustomer[] {
   });
 }
 
-function telUri(phone: string): string | null {
-  const d = phone.replace(/\D/g, '');
-  return d.length > 0 ? `tel:${d}` : null;
-}
-
 function createStyles(colors: AppColors): ReturnType<typeof StyleSheet.create> {
   return StyleSheet.create({
     safe: {
       flex: 1,
       backgroundColor: colors.bgGradient[0] || colors.bg,
     },
+    headerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: spacing.md,
+      paddingTop: spacing.sm,
+      paddingBottom: spacing.xs,
+      gap: spacing.sm,
+    },
+    backBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 8,
+      backgroundColor: colors.surface2,
+      borderWidth: 1,
+      borderColor: colors.border,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
     searchbar: {
-      marginHorizontal: 16,
-      marginTop: 8,
-      marginBottom: spacing.sm,
+      flex: 1,
+      height: 44,
       backgroundColor: colors.surface2,
       borderRadius: 12,
       borderWidth: 1,
@@ -161,17 +172,8 @@ export function CustomerDirectoryScreen({ navigation }: Props) {
     return sortCustomers(out);
   }, [repairs]);
 
-  const handleCall = useCallback(async (href: string) => {
-    try {
-      const canOpen = await Linking.canOpenURL(href);
-      if (canOpen) {
-        await Linking.openURL(href);
-      } else {
-        Alert.alert('Call Error', 'Phone calls are not supported on this device.');
-      }
-    } catch {
-      Alert.alert('Call Error', 'Could not place phone call.');
-    }
+  const handleCall = useCallback((phone: string) => {
+    void dialPhone(phone);
   }, []);
 
   const filtered = useMemo(() => {
@@ -190,8 +192,6 @@ export function CustomerDirectoryScreen({ navigation }: Props) {
     ({ item }: { item: DirectoryCustomer }) => {
       const name = item.customerName.trim() || '—';
       const initial = (name === '—' ? '?' : name).slice(0, 1).toUpperCase();
-      const href = telUri(item.phone);
-
       const jobCount = repairs.filter((r) => {
         if (item.phone && matchPhone(r.phone, item.phone)) return true;
         if (item.customerName && r.customerName.trim().toLowerCase() === item.customerName.trim().toLowerCase()) return true;
@@ -220,9 +220,9 @@ export function CustomerDirectoryScreen({ navigation }: Props) {
               </Text>
             </View>
           </Pressable>
-          {href ? (
+          {item.phone ? (
             <Pressable
-              onPress={() => void handleCall(href)}
+              onPress={() => handleCall(item.phone)}
               style={styles.callBtn}
               android_ripple={{ color: colors.border }}
             >
@@ -247,17 +247,28 @@ export function CustomerDirectoryScreen({ navigation }: Props) {
           height: '100%',
         }}
       />
-      <Searchbar
-        placeholder="Search name or number"
-        placeholderTextColor={colors.textMuted}
-        onChangeText={setQuery}
-        value={query}
-        style={[styles.searchbar, { height: 46, justifyContent: 'center' }]}
-        icon={({ size }) => <Search size={18} color={colors.accent} />}
-        clearIcon={({ size }) => <X size={18} color={colors.textMuted} />}
-        inputStyle={{ color: colors.text, fontSize: 14, minHeight: 0, paddingVertical: 0, alignSelf: 'center' }}
-        theme={{ colors: { elevation: { level3: colors.surface } } }}
-      />
+      <View style={styles.headerRow}>
+        <Pressable
+          onPress={() => navigation.goBack()}
+          style={styles.backBtn}
+          android_ripple={{ color: 'rgba(255,255,255,0.1)' }}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
+          <ArrowLeft size={20} color={colors.text} strokeWidth={2} />
+        </Pressable>
+        <Searchbar
+          placeholder="Search name or number"
+          placeholderTextColor={colors.textMuted}
+          onChangeText={setQuery}
+          value={query}
+          style={styles.searchbar}
+          icon={({ size }) => <Search size={18} color={colors.accent} />}
+          clearIcon={({ size }) => <X size={18} color={colors.textMuted} />}
+          inputStyle={{ color: colors.text, fontSize: 14, minHeight: 0, paddingVertical: 0, alignSelf: 'center' }}
+          theme={{ colors: { elevation: { level3: colors.surface } } }}
+        />
+      </View>
       {loading && customers.length === 0 ? (
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={colors.accent} />

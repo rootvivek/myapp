@@ -73,7 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (state.session?.user?.id) {
       await loadProfile(state.session.user.id);
     }
-  }, [state.session, loadProfile]);
+  }, [state.session?.user?.id, loadProfile]);
 
   useEffect(() => {
     if (!configured) {
@@ -186,11 +186,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isLabour = state.profile?.role === 'labour';
   const isAdmin = state.profile?.role === 'admin';
 
+  // Use refs for values needed inside callbacks to avoid recreating callbacks on every state change.
+  const profileRef = useRef(state.profile);
+  profileRef.current = state.profile;
+  const sessionRef = useRef(state.session);
+  sessionRef.current = state.session;
+
   const handleCreateLabourAccount = useCallback(
     async (username: string, password: string, phone: string) => {
-      await createLabourAccount(state.profile, username, password, phone);
+      await createLabourAccount(profileRef.current, username, password, phone);
     },
-    [state.profile]
+    []
   );
 
   const handleResetLabourPassword = useCallback(
@@ -202,28 +208,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const handleUpdateProfileLogo = useCallback(
     async (logoUrl: string | null) => {
-      if (state.session?.user?.id) {
-        await svcUpdateProfileLogo(state.session.user.id, logoUrl);
+      const userId = sessionRef.current?.user?.id;
+      if (userId) {
+        await svcUpdateProfileLogo(userId, logoUrl);
         await refreshProfile().catch(() => {});
       }
     },
-    [state.session, refreshProfile]
+    [refreshProfile]
   );
 
   const handleUpdateProfileDetails = useCallback(
     async (name: string, shopName: string) => {
-      if (state.session?.user?.id) {
+      const userId = sessionRef.current?.user?.id;
+      if (userId) {
         await svcUpdateProfileDetails(
-          state.session.user.id,
+          userId,
           name,
-          state.profile?.shopId || '',
+          profileRef.current?.shopId || '',
           shopName,
           isOwner
         );
         await refreshProfile();
       }
     },
-    [state.session, state.profile, isOwner, refreshProfile]
+    [isOwner, refreshProfile]
   );
 
   const value = useMemo(

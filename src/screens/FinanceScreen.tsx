@@ -25,20 +25,13 @@ import { useAuth } from '../context/AuthContext';
 import { updateRepair } from '../db/database';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
-import { formatCurrency, formatDateDisplay } from '../utils/format';
+import { formatCurrency, formatDateDisplay, parseMoney } from '../utils/format';
+import { dialPhone } from '../utils/phone';
 import type { Repair } from '../types/repair';
 
 // ------------------------------------------------------------------
 // REUSABLE FINANCE HELPERS
 // ------------------------------------------------------------------
-
-function parseMoney(value: string): number {
-  if (typeof value !== 'string') return 0;
-  const trimmed = value.trim();
-  if (!trimmed) return 0;
-  const parsed = parseFloat(trimmed);
-  return Number.isNaN(parsed) ? 0 : parsed;
-}
 
 function calculateDue(cost: number, advance: number): number {
   const due = cost - advance;
@@ -241,21 +234,8 @@ export function FinanceScreen({ navigation }: Props) {
   // ACTION HANDLERS
   // ------------------------------------------------------------------
 
-  const handleCall = useCallback(async (phone: string) => {
-    const raw = phone.trim();
-    if (!raw) return;
-    const dial = raw.replace(/[^\d+]/g, '');
-    const url = `tel:${dial}`;
-    try {
-      const canOpen = await Linking.canOpenURL(url);
-      if (canOpen) {
-        await Linking.openURL(url);
-      } else {
-        Alert.alert('Call Error', 'Phone calls are not supported on this device.');
-      }
-    } catch {
-      Alert.alert('Call Error', 'Could not place phone call.');
-    }
+  const handleCall = useCallback((phone: string) => {
+    void dialPhone(phone);
   }, []);
 
   const handleMarkPaid = useCallback(

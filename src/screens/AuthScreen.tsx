@@ -11,12 +11,13 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import { Eye, EyeOff, Lock, LogIn, Mail, Phone, ShieldAlert, Store, User, UserPlus, Wrench } from 'lucide-react-native';
 
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useTab } from './MainTabScreen';
 import type { AppColors } from '../theme';
 import { radius, spacing } from '../theme';
 import { normalizePhone, sendOtp, verifyOtp } from '../services/msg91Service';
@@ -224,6 +225,19 @@ function createStyles(colors: AppColors): ReturnType<typeof StyleSheet.create> {
       lineHeight: 19,
       textAlign: 'center',
     },
+    homeBtnLayer: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    backToHomeText: {
+      color: colors.accent,
+      fontSize: 14,
+      fontWeight: '700',
+      textDecorationLine: 'underline',
+    },
   });
 }
 
@@ -231,6 +245,8 @@ export function AuthScreen() {
   const { configured, signIn, signUp } = useAuth();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const { setActiveTab } = useTab();
+  const insets = useSafeAreaInsets();
 
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [name, setName] = useState('');
@@ -782,6 +798,23 @@ export function AuthScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* ── Back to home link (bottom center) ── */}
+      <View
+        pointerEvents="auto"
+        style={[
+          styles.homeBtnLayer,
+          { bottom: Math.max(insets.bottom, spacing.lg) },
+        ]}
+      >
+        <Pressable
+          onPress={() => setActiveTab('home')}
+          accessibilityRole="button"
+          accessibilityLabel="Back to home"
+        >
+          <Text style={styles.backToHomeText}>Back to home</Text>
+        </Pressable>
+      </View>
     </SafeAreaView>
   );
 }

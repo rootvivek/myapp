@@ -17,12 +17,14 @@ import type { StatusFilter } from '../components/HomeHeader';
 import { RepairCard } from '../components/RepairCard';
 import { RepairCardSkeleton } from '../components/Skeleton';
 
+import { useAuth } from '../context/AuthContext';
 import {
   useFilteredRepairs,
   useRepairActions,
   useRepairsState,
 } from '../context/RepairsContext';
 import { useTheme } from '../context/ThemeContext';
+import { useTab } from './MainTabScreen';
 import { repairService } from '../services/repairService';
 import type { RootStackParamList } from '../navigation/types';
 import type { AppColors } from '../theme';
@@ -30,6 +32,8 @@ import { spacing } from '../theme';
 import type { Repair, RepairStatus } from '../types/repair';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
+
+const gradientStyle = StyleSheet.absoluteFillObject;
 
 function createStyles(colors: AppColors) {
   const s = StyleSheet.create({
@@ -47,6 +51,8 @@ export function HomeScreen({ navigation }: Props) {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { repairs, loading } = useRepairsState();
   const { refresh, updateRepairInState } = useRepairActions();
+  const { session } = useAuth();
+  const { setActiveTab } = useTab();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('pending');
   const [refreshing, setRefreshing] = useState(false);
 
@@ -95,16 +101,28 @@ export function HomeScreen({ navigation }: Props) {
     [repairs, updateRepairInState]
   );
 
+  // Guests must log in before opening a repair card.
+  const handleOpenRepair = useCallback(
+    (repairId: number) => {
+      if (!session) {
+        setActiveTab('settings'); // User tab → login / sign-up screen
+        return;
+      }
+      navigation.navigate('RepairDetail', { repairId });
+    },
+    [session, navigation, setActiveTab]
+  );
+
   const renderItem = useCallback(
     ({ item, index }: { item: Repair; index: number }) => (
       <RepairCard
         repair={item}
         index={index}
-        onPress={() => navigation.navigate('RepairDetail', { repairId: item.id })}
+        onPress={() => handleOpenRepair(item.id)}
         onStatusChange={handleStatusChange}
       />
     ),
-    [navigation, handleStatusChange]
+    [handleOpenRepair, handleStatusChange]
   );
 
   const keyExtractor = useCallback((item: Repair) => String(item.id), []);
@@ -114,11 +132,7 @@ export function HomeScreen({ navigation }: Props) {
       <View style={styles.main}>
         <LinearGradient
           colors={colors.bgGradient}
-          style={{
-            position: 'absolute',
-            width: '100%',
-            height: '100%',
-          }}
+          style={gradientStyle}
         />
         <HomeHeader
           navigation={navigation}

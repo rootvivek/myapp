@@ -95,6 +95,8 @@ export async function safeInsert(payload: Record<string, unknown>, retryCount = 
   if (error) {
     const columnName = getMissingColumn(error.message);
     if (columnName) {
+      // Log warning so silent data loss is visible in logs
+      console.warn(`[safeInsert] Dropping missing column "${columnName}" from insert payload`);
       const nextPayload = { ...payload };
       delete nextPayload[columnName];
       return safeInsert(nextPayload, retryCount + 1);
@@ -118,6 +120,8 @@ export async function safeUpdate(id: number, payload: Record<string, unknown>, r
   if (error) {
     const columnName = getMissingColumn(error.message);
     if (columnName) {
+      // Log warning so silent data loss is visible in logs
+      console.warn(`[safeUpdate] Dropping missing column "${columnName}" from update payload`);
       const nextPayload = { ...payload };
       delete nextPayload[columnName];
       return safeUpdate(id, nextPayload, retryCount + 1);

@@ -19,6 +19,9 @@ if (__DEV__ && (!supabaseUrl || !supabaseAnonKey)) {
 export const isSupabaseConfigured = () =>
   supabaseUrl.length > 0 && supabaseAnonKey.length > 0 && supabaseUrl.startsWith('http');
 
+// WARNING: The anon key is embedded in the client bundle and can be extracted from the APK.
+// This is expected for Supabase, but ALL tables MUST have Row Level Security (RLS) enabled
+// with proper policies. Never expose the service role key in client code.
 export const supabase = isSupabaseConfigured() ? createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     storage: getSupabaseAuthStorage(),

@@ -7,7 +7,7 @@ import {
   requireUserContext,
 } from './helpers';
 
-function rowToInventory(row: Record<string, unknown>): InventoryItem {
+export function rowToInventory(row: Record<string, unknown>): InventoryItem {
   return {
     id: Number(row.id),
     name: String(row.name ?? ''),
@@ -65,6 +65,7 @@ export async function insertInventoryItem(input: InventoryInput): Promise<number
 
 export async function updateInventoryItem(input: InventoryInput & { id: number }): Promise<void> {
   try {
+    const ctx = await requireUserContext();
     const now = getNowIso();
 
     const payload = {
@@ -75,11 +76,10 @@ export async function updateInventoryItem(input: InventoryInput & { id: number }
       updated_at: now,
     };
 
-    const { error } = await supabase
-      .from('inventory')
-      .update(payload)
-      .eq('id', input.id);
+    let query = supabase.from('inventory').update(payload).eq('id', input.id);
+    query = applyShopOrUserFilter(query, ctx);
 
+    const { error } = await query;
     if (error) throw error;
   } catch (err) {
     handleRepositoryError(err, 'Failed to update inventory item');
@@ -88,7 +88,11 @@ export async function updateInventoryItem(input: InventoryInput & { id: number }
 
 export async function deleteInventoryItem(id: number): Promise<void> {
   try {
-    const { error } = await supabase.from('inventory').delete().eq('id', id);
+    const ctx = await requireUserContext();
+    let query = supabase.from('inventory').delete().eq('id', id);
+    query = applyShopOrUserFilter(query, ctx);
+
+    const { error } = await query;
     if (error) throw error;
   } catch (err) {
     handleRepositoryError(err, 'Failed to delete inventory item');
@@ -97,12 +101,15 @@ export async function deleteInventoryItem(id: number): Promise<void> {
 
 export async function deductInventoryStock(inventoryItemId: number, quantity = 1): Promise<void> {
   try {
-    // Read current stock
-    const { data, error } = await supabase
+    const ctx = await requireUserContext();
+    // Read current stock with shop filter
+    let query = supabase
       .from('inventory')
       .select('stock_count')
-      .eq('id', inventoryItemId)
-      .single();
+      .eq('id', inventoryItemId);
+    query = applyShopOrUserFilter(query, ctx);
+
+    const { data, error } = await query.single();
 
     if (error || !data) {
       return;
@@ -116,5 +123,12 @@ export async function deductInventoryStock(inventoryItemId: number, quantity = 1
       .update({ stock_count: newStock, updated_at: getNowIso() })
       .eq('id', inventoryItemId);
 
-  } catch {}
+    if (updateErr) {
+      // Non-fatal: stock update failure shouldn't block the repair save
+      console.warn('[deductInventoryStock] Failed to update stock:', updateErr.message);
+    }
+  } catch {
+    // Non-fatal — ignore silently
+  }
 }
+

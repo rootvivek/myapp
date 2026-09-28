@@ -61,7 +61,7 @@ export function AppNavigator() {
         <Stack.Screen
           name="CustomerDirectory"
           component={CustomerDirectoryScreen}
-          options={{ title: 'Customers' }}
+          options={{ title: 'Customers', headerShown: false }}
         />
         <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Shop & invoice' }} />
         <Stack.Screen name="ManageLabour" component={ManageLabourScreen} options={{ headerShown: false }} />

@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import {
-  ClipboardList,
+  Home,
   IndianRupee,
   Package,
   Plus,
@@ -22,18 +22,28 @@ export function BottomNavBar() {
   const insets = useSafeAreaInsets();
   const { colors, mode } = useTheme();
   const { activeTab, setActiveTab } = useTab();
-  const { isLabour } = useAuth();
+  const { isLabour, session } = useAuth();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+
+  // Guests must log in before creating or opening repair jobs.
+  const handleNewRepair = () => {
+    if (!session) {
+      setActiveTab('settings'); // User tab → login / sign-up screen
+      return;
+    }
+    navigation.navigate('AddRepair', {});
+  };
 
   const allTabs: { key: TabType; label: string; icon: React.ComponentType<any> }[] = useMemo(() => {
     const base: { key: TabType; label: string; icon: React.ComponentType<any> }[] = [
-      { key: 'jobs', label: 'Jobs', icon: ClipboardList },
+      // Home opens the repair list, exactly like the original home tab.
+      { key: 'jobs', label: 'Home', icon: Home },
       { key: 'inventory', label: 'Inventory', icon: Package },
     ];
     if (!isLabour) {
       base.push({ key: 'finance', label: 'Finance', icon: IndianRupee });
     }
-    base.push({ key: 'settings', label: 'Profile', icon: User });
+    base.push({ key: 'settings', label: 'User', icon: User });
     return base;
   }, [isLabour]);
 
@@ -103,7 +113,7 @@ export function BottomNavBar() {
       {/* Center Floating Plus Button */}
       <View style={styles.centerButtonContainer}>
         <Pressable
-          onPress={() => navigation.navigate('AddRepair', {})}
+          onPress={handleNewRepair}
           style={styles.centerPressable}
           android_ripple={{ color: 'rgba(255, 255, 255, 0.3)', borderless: true, radius: 26 }}
           accessibilityRole="button"

@@ -3,7 +3,6 @@ import { Pressable, Text, View } from 'react-native';
 import { Switch as PaperSwitch } from 'react-native-paper';
 import { CreditCard, MessageSquare } from 'lucide-react-native';
 import type { AppColors } from '../../../theme';
-import { accentAlpha } from '../../../theme';
 import { FormTextInput } from '../../../components/FormTextInput';
 import { formatCurrency } from '../../../utils/format';
 import type { AddRepairStyles } from '../styles';
@@ -58,7 +57,7 @@ export const PaymentSection = React.memo(function PaymentSection({
         </View>
       </View>
 
-      {/* Row 1: Cost & Advance side-by-side */}
+      {/* Row 1: Cost, Expense & Advance side-by-side */}
       <View style={styles.billingRow}>
         <FormTextInput
           label="Total Cost (₹)"
@@ -70,6 +69,18 @@ export const PaymentSection = React.memo(function PaymentSection({
           accessibilityLabel="Repair cost"
         />
 
+        <FormTextInput
+          label="Expense (₹)"
+          placeholder="0"
+          value={expense}
+          onChangeText={onChangeExpense}
+          keyboardType="decimal-pad"
+          containerStyle={[styles.inputFlex, styles.inputStack]}
+          accessibilityLabel="Expense amount"
+        />
+      </View>
+
+      <View style={styles.billingRow}>
         <FormTextInput
           label="Advance Paid (₹)"
           placeholder="0"
@@ -96,44 +107,7 @@ export const PaymentSection = React.memo(function PaymentSection({
         </Text>
       </View>
 
-      {/* Payment Method Selector */}
-      <Text style={styles.fieldLabel}>Payment Mode</Text>
-      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
-        {(['cash', 'online'] as const).map((method) => {
-          const isSelected = paymentType === method;
-          return (
-            <Pressable
-              key={method}
-              onPress={() => onChangePaymentType(method)}
-              style={{
-                flex: 1,
-                height: 38,
-                borderRadius: 8,
-                borderWidth: 1,
-                borderColor: isSelected ? colors.accent : colors.border,
-                backgroundColor: isSelected ? accentAlpha(colors.accent, 0.15) : colors.surface2,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 6,
-              }}
-              accessibilityRole="button"
-              accessibilityLabel={`Payment method ${method}`}
-              accessibilityState={{ selected: isSelected }}
-            >
-              <Text
-                style={{
-                  color: isSelected ? colors.accent : colors.textMuted,
-                  fontSize: 12.5,
-                  fontWeight: isSelected ? '700' : '600',
-                }}
-              >
-                {method === 'cash' ? '💵 Cash' : '📱 Online / UPI'}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+
 
       {/* WhatsApp Invoice Toggle */}
       {!isEdit && (

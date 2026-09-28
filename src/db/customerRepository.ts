@@ -14,7 +14,7 @@ export async function getDirectoryCustomers(limit = 300): Promise<DirectoryCusto
 
     query = applyShopOrUserFilter(query, ctx);
 
-    const { data, error } = await query;
+    const { data, error } = await query.limit(safeLimit);
     if (error || !data) return [];
 
     const seen = new Set<string>();

@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 
+import { useAuth } from './AuthContext';
 import { repairService } from '../services/repairService';
 import { rowToRepair } from '../db/database';
 import { supabase } from '../lib/supabase';
@@ -33,9 +34,13 @@ export function RepairsProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [ready, setReady] = useState(false);
 
+  const { session } = useAuth();
+  const userId = session?.user?.id;
+
   const requestIdRef = useRef(0);
   const lastFetchTimeRef = useRef(0);
   const mountedRef = useRef(true);
+  const lastUserIdRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -69,9 +74,21 @@ export function RepairsProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // Initial load + user change detection — merged to prevent double-fetch.
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    const prevUserId = lastUserIdRef.current;
+    lastUserIdRef.current = userId;
+
+    if (userId && userId !== prevUserId) {
+      // User changed or first login — bypass throttle and fetch immediately.
+      lastFetchTimeRef.current = 0;
+      void refresh(true);
+    } else if (!userId && prevUserId) {
+      // Signed out — clear the stale list.
+      setRepairs([]);
+      setReady(false);
+    }
+  }, [userId, refresh]);
 
   // Realtime Subscription (Syncs INSERT, UPDATE, DELETE across devices without full table refetch)
   useEffect(() => {

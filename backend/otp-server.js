@@ -2,13 +2,41 @@ require('dotenv').config();
 
 const express = require('express');
 const cors = require('cors');
+const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 const port = process.env.PORT || 3001;
 
-app.use(cors());
-app.use(express.json());
+// ── Security: Restrict CORS to known origins ──────────────────────
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '*').split(',');
+app.use(cors({
+  origin: (origin, callback) => {
+    if (ALLOWED_ORIGINS.includes('*') || !origin || ALLOWED_ORIGINS.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+}));
+
+app.use(express.json({ limit: '10kb' })); // Limit payload size
+
+// ── Security: HTTPS enforcement (behind reverse proxy) ─────────────
+app.use((req, res, next) => {
+  if (process.env.NODE_ENV === 'production' && req.headers['x-forwarded-proto'] !== 'https') {
+    return res.status(403).json({ error: 'HTTPS required' });
+  }
+  next();
+});
+
+// ── Security: Basic security headers ──────────────────────────────
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  next();
+});
 
 const hasSupabaseConfig = Boolean(
   process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -21,7 +49,66 @@ const supabaseAdmin = hasSupabaseConfig
   : null;
 
 const otpStore = new Map();
+const otpAttempts = new Map(); // Track failed OTP attempts per phone
 
+// ── Rate limiting ──────────────────────────────────────────────────
+const rateLimitStore = new Map();
+const RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const RATE_LIMIT_MAX_REQUESTS = 5;
+
+function checkRateLimit(key) {
+  const now = Date.now();
+  const entry = rateLimitStore.get(key);
+  if (!entry) {
+    rateLimitStore.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return true;
+  }
+  if (now > entry.resetAt) {
+    rateLimitStore.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return true;
+  }
+  entry.count++;
+  return entry.count <= RATE_LIMIT_MAX_REQUESTS;
+}
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of rateLimitStore) {
+    if (now > entry.resetAt) rateLimitStore.delete(key);
+  }
+}, RATE_LIMIT_WINDOW_MS);
+
+// ── OTP brute-force protection ────────────────────────────────────
+const MAX_OTP_ATTEMPTS = 5;
+const OTP_LOCKOUT_MS = 15 * 60 * 1000; // 15 minutes
+
+function checkOtpAttempts(phone) {
+  const entry = otpAttempts.get(phone);
+  if (!entry) return { allowed: true };
+  if (entry.lockedUntil && Date.now() < entry.lockedUntil) {
+    return { allowed: false, retryAfter: Math.ceil((entry.lockedUntil - Date.now()) / 1000) };
+  }
+  if (Date.now() > entry.lockedUntil) {
+    otpAttempts.delete(phone);
+    return { allowed: true };
+  }
+  return { allowed: entry.count < MAX_OTP_ATTEMPTS };
+}
+
+function recordOtpAttempt(phone, success) {
+  if (success) {
+    otpAttempts.delete(phone);
+    return;
+  }
+  const entry = otpAttempts.get(phone) || { count: 0, lockedUntil: null };
+  entry.count++;
+  if (entry.count >= MAX_OTP_ATTEMPTS) {
+    entry.lockedUntil = Date.now() + OTP_LOCKOUT_MS;
+  }
+  otpAttempts.set(phone, entry);
+}
+
+// ── Helpers ────────────────────────────────────────────────────────
 function normalizePhone(raw) {
   const digits = String(raw || '').replace(/\D/g, '');
   if (!digits) return '';
@@ -32,14 +119,28 @@ function normalizePhone(raw) {
 }
 
 function generateOtp() {
-  return String(Math.floor(100000 + Math.random() * 900000));
+  return String(crypto.randomInt(100000, 1000000));
 }
 
+function sanitizeString(value, maxLength = 200) {
+  return String(value || '').trim().slice(0, maxLength);
+}
+
+function isValidPhone(phone) {
+  return /^\+91\d{10}$/.test(phone);
+}
+
+// ── Routes ─────────────────────────────────────────────────────────
 app.post('/api/send-otp', async (req, res) => {
   try {
+    const rateKey = `send-otp:${req.ip}`;
+    if (!checkRateLimit(rateKey)) {
+      return res.status(429).json({ error: 'Too many requests. Please try again later.' });
+    }
+
     const phone = normalizePhone(req.body.phone);
-    if (!phone) {
-      return res.status(400).json({ error: 'Phone number is required.' });
+    if (!isValidPhone(phone)) {
+      return res.status(400).json({ error: 'Valid Indian phone number is required.' });
     }
 
     const otp = generateOtp();
@@ -49,11 +150,15 @@ app.post('/api/send-otp', async (req, res) => {
     });
 
     if (!process.env.MSG91_AUTHKEY) {
-      return res.json({
-        ok: true,
-        message: 'OTP sent successfully in development mode.',
-        demoOtp: otp,
-      });
+      // Only return OTP in development mode
+      if (process.env.NODE_ENV === 'development') {
+        return res.json({
+          ok: true,
+          message: 'OTP sent successfully in development mode.',
+          demoOtp: otp,
+        });
+      }
+      return res.json({ ok: true, message: 'OTP sent successfully.' });
     }
 
     const url =
@@ -78,8 +183,29 @@ app.post('/api/send-otp', async (req, res) => {
 
 app.post('/api/verify-otp', (req, res) => {
   try {
+    const rateKey = `verify-otp:${req.ip}`;
+    if (!checkRateLimit(rateKey)) {
+      return res.status(429).json({ error: 'Too many requests. Please try again later.' });
+    }
+
     const phone = normalizePhone(req.body.phone);
     const otp = String(req.body.otp || '').trim();
+
+    if (!isValidPhone(phone)) {
+      return res.status(400).json({ error: 'Valid Indian phone number is required.' });
+    }
+    if (!otp || otp.length !== 6) {
+      return res.status(400).json({ error: 'Valid 6-digit OTP is required.' });
+    }
+
+    // Check brute-force lockout
+    const attemptCheck = checkOtpAttempts(phone);
+    if (!attemptCheck.allowed) {
+      return res.status(429).json({
+        error: `Too many failed attempts. Try again in ${attemptCheck.retryAfter} seconds.`,
+      });
+    }
+
     const entry = otpStore.get(phone);
 
     if (!entry) {
@@ -92,9 +218,11 @@ app.post('/api/verify-otp', (req, res) => {
     }
 
     if (entry.otp !== otp) {
+      recordOtpAttempt(phone, false);
       return res.status(400).json({ error: 'OTP is invalid.' });
     }
 
+    recordOtpAttempt(phone, true);
     otpStore.delete(phone);
     return res.json({ ok: true, message: 'OTP verified successfully.' });
   } catch (error) {
@@ -104,6 +232,11 @@ app.post('/api/verify-otp', (req, res) => {
 
 app.post('/api/signup-with-otp', async (req, res) => {
   try {
+    const rateKey = `signup:${req.ip}`;
+    if (!checkRateLimit(rateKey)) {
+      return res.status(429).json({ error: 'Too many requests. Please try again later.' });
+    }
+
     if (!supabaseAdmin) {
       return res.status(503).json({
         error: 'Backend is not configured. Add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to backend/.env.',
@@ -127,8 +260,11 @@ app.post('/api/signup-with-otp', async (req, res) => {
       return res.status(400).json({ error: 'OTP is invalid.' });
     }
 
-    if (!name?.trim() || !shopName?.trim() || !password || password.length < 6) {
-      return res.status(400).json({ error: 'Name, shop name, and password are required.' });
+    const sanitizedName = sanitizeString(name, 100);
+    const sanitizedShopName = sanitizeString(shopName, 150);
+
+    if (!sanitizedName || !sanitizedShopName || !password || password.length < 6) {
+      return res.status(400).json({ error: 'Name, shop name, and password (min 6 chars) are required.' });
     }
 
     const aliasEmail = `${normalizedPhone.replace(/\D/g, '')}@msg91.local`;
@@ -138,9 +274,9 @@ app.post('/api/signup-with-otp', async (req, res) => {
       password,
       email_confirm: true,
       user_metadata: {
-        name: name.trim(),
+        name: sanitizedName,
         phone: normalizedPhone,
-        shop_name: shopName.trim(),
+        shop_name: sanitizedShopName,
       },
     });
 
@@ -148,8 +284,6 @@ app.post('/api/signup-with-otp', async (req, res) => {
       return res.status(400).json({ error: userError.message });
     }
 
-    // The `on_auth_user_created` DB trigger already creates the shop + profile
-    // row for a new auth user, so only create what is missing and upsert.
     const { data: existingShop, error: shopLookupError } = await supabaseAdmin
       .from('shops')
       .select('id')
@@ -168,7 +302,7 @@ app.post('/api/signup-with-otp', async (req, res) => {
       const { data: shopData, error: shopError } = await supabaseAdmin
         .from('shops')
         .insert({
-          shop_name: shopName.trim(),
+          shop_name: sanitizedShopName,
           owner_id: userData.user.id,
         })
         .select('id')
@@ -183,7 +317,7 @@ app.post('/api/signup-with-otp', async (req, res) => {
     const { error: profileError } = await supabaseAdmin.from('profiles').upsert(
       {
         id: userData.user.id,
-        name: name.trim(),
+        name: sanitizedName,
         phone: normalizedPhone,
         role: 'owner',
         shop_id: shopId,

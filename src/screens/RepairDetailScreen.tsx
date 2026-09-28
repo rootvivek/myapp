@@ -20,11 +20,13 @@ import { PhotoGrid } from '../components/PhotoGrid';
 import { useAuth } from '../context/AuthContext';
 import { useRepairs } from '../context/RepairsContext';
 import { useTheme } from '../context/ThemeContext';
+import { useTab } from './MainTabScreen';
 import { repairService } from '../services/repairService';
 import type { RootStackParamList } from '../navigation/types';
 import type { Repair } from '../types/repair';
 import { ACCESSORY_ITEMS, REPAIR_STATUSES } from '../types/repair';
 import { shareReceiptPdf } from '../utils/receipt';
+import { dialPhone } from '../utils/phone';
 
 import { ActionButtons } from './RepairDetail/ActionButtons';
 import { PaymentCard } from './RepairDetail/PaymentCard';
@@ -38,6 +40,7 @@ export function RepairDetailScreen({ navigation, route }: Props) {
   const { colors, mode } = useTheme();
   const { repairs, deleteRepair, updateRepairInState } = useRepairs();
   const { isOwner, user } = useAuth();
+  const { setActiveTab } = useTab();
   const styles = useMemo(() => createStyles(colors, mode), [colors, mode]);
   const { repairId } = route.params;
 
@@ -92,14 +95,8 @@ export function RepairDetailScreen({ navigation, route }: Props) {
   }
 
   function handleCall(): void {
-    if (!repair) return;
-    const url = `tel:${repair.phone}`;
-    Linking.canOpenURL(url)
-      .then((ok) => {
-        if (ok) Linking.openURL(url);
-        else Alert.alert('Error', 'Cannot make calls on this device.');
-      })
-      .catch(() => Alert.alert('Error', 'Failed to initiate call.'));
+    if (!repair?.phone) return;
+    void dialPhone(repair.phone);
   }
 
   function handleNotifyWhatsApp(): void {
@@ -198,7 +195,7 @@ export function RepairDetailScreen({ navigation, route }: Props) {
       {/* Header */}
       <View style={styles.header}>
         <Pressable
-          onPress={() => navigation.goBack()}
+          onPress={() => setActiveTab('home')}
           style={styles.headerBtn}
           android_ripple={{ color: 'rgba(255,255,255,0.1)' }}
         >

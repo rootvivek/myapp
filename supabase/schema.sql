@@ -201,8 +201,7 @@ begin
         update public.shops set phone = v_phone where id = v_shop_id and phone = '';
       end if;
     exception when others then
-      raise warning 'handle_new_user: shop setup failed for % (%): %', new.id, v_role, sqlerrm;
-      v_shop_id := null;
+      raise exception 'handle_new_user: shop setup failed for % (%): %', new.id, v_role, sqlerrm;
     end;
   end if;
 
@@ -269,6 +268,7 @@ alter table public.repairs add column if not exists user_id uuid references auth
 create index if not exists repairs_user_id_idx on public.repairs (user_id);
 create index if not exists repairs_shop_id_idx on public.repairs (shop_id);
 create index if not exists repairs_date_received_idx on public.repairs (date_received desc);
+create index if not exists repairs_created_by_idx on public.repairs (created_by);
 
 alter table public.repairs enable row level security;
 
@@ -320,8 +320,6 @@ create policy "repairs_delete_shop" on public.repairs
     )
   );
 
--- Storage bucket (must exist before policies). App uses bucket id `repair-images` + getPublicUrl.
--- Storage bucket (must exist before policies). App uses bucket id `repair-images` with signed URLs for security.
 -- 🔐 SECURITY: Bucket is private (`public = false`). Access is granted via RLS policies and signed URLs.
 insert into storage.buckets (id, name, public)
 values ('repair-images', 'repair-images', false)
@@ -394,7 +392,7 @@ create or replace function public.search_repairs_for_user(p_query text)
 returns setof public.repairs
 language plpgsql
 stable
-security invoker
+security definer
 set search_path = public
 as $$
 declare
@@ -416,11 +414,7 @@ begin
     from public.repairs r
     where r.shop_id = public.get_user_shop_id(auth.uid())
     and (
-      r.customer_name ilike '%' || p_query || '%'
-      or r.phone ilike '%' || p_query || '%'
-      or r.imei ilike '%' || p_query || '%'
-      or r.order_code ilike '%' || p_query || '%'
-      or r.customer_name ilike '%' || v_safe || '%'
+      r.customer_name ilike '%' || v_safe || '%'
       or r.phone ilike '%' || v_safe || '%'
       or r.imei ilike '%' || v_safe || '%'
       or r.order_code ilike '%' || v_safe || '%'

@@ -125,6 +125,9 @@ export async function signInUser(
   let session: Session | null = null;
   let lastError: unknown = null;
 
+  // Clear any stale session/tokens before trying candidates to prevent token confusion.
+  await supabase.auth.signOut().catch(() => undefined);
+
   // Try every alias the account may have been created with (owner phone alias
   // and/or team-member username across both internal domains).
   for (const email of candidates) {
@@ -209,13 +212,8 @@ async function handleExistingUserSignUp(
     try {
       userProfile = await loadProfileWithRetry(loginData.user.id, 2, supabase);
     } catch {
-      // Retry with main client if temp client fails
-      try {
-        userProfile = await loadProfileWithRetry(loginData.user.id, 2, supabase);
-      } catch {
-        // Non-fatal: profile/shop will be created on next app load
-        userProfile = null;
-      }
+      // Non-fatal: profile/shop will be created on next app load
+      userProfile = null;
     }
   }
 
@@ -282,6 +280,10 @@ export async function signUpUser(
           '[AuthService] signup returned no session; email confirmation is likely enabled:',
           confirmErr
         );
+        // If handleExistingUserSignUp already handled this (returned a result), use it
+        if (confirmErr instanceof Error && confirmErr.message.includes('already registered')) {
+          throw confirmErr;
+        }
         return {
           needsPhoneConfirm: true,
           session: null,

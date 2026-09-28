@@ -6,9 +6,10 @@ import {
   Text,
   View,
 } from 'react-native';
-import { QrCode, Search } from 'lucide-react-native';
+import { ArrowLeft, QrCode, Search } from 'lucide-react-native';
 
 import { useTheme } from '../context/ThemeContext';
+import { useTab } from '../screens/MainTabScreen';
 import type { AppColors } from '../theme';
 import { accentAlpha, radius, spacing } from '../theme';
 import type { RootStackParamList } from '../navigation/types';
@@ -65,6 +66,16 @@ function createStyles(colors: AppColors) {
       paddingTop: spacing.sm,
       paddingBottom: spacing.xs,
       gap: spacing.sm,
+    },
+    backBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: radius.md,
+      backgroundColor: colors.surface2,
+      borderWidth: 1,
+      borderColor: colors.border,
+      justifyContent: 'center',
+      alignItems: 'center',
     },
     searchBar: {
       flex: 1,
@@ -142,6 +153,7 @@ function createStyles(colors: AppColors) {
 
 export function HomeHeader({ navigation, statusFilter, onStatusFilterChange, searchVisible = true }: Props) {
   const { colors, mode } = useTheme();
+  const { setActiveTab } = useTab();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   return (
@@ -149,6 +161,15 @@ export function HomeHeader({ navigation, statusFilter, onStatusFilterChange, sea
       {/* ── Search Bar & QR Scanner ── */}
       {searchVisible && (
         <View style={styles.searchRow}>
+          <Pressable
+            onPress={() => setActiveTab('home')}
+            style={styles.backBtn}
+            android_ripple={{ color: 'rgba(255,255,255,0.1)' }}
+            accessibilityRole="button"
+            accessibilityLabel="Back to home"
+          >
+            <ArrowLeft size={20} color={colors.text} strokeWidth={2} />
+          </Pressable>
           <Pressable
             onPress={() => navigation.navigate('Search')}
             style={styles.searchBar}

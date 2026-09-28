@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import { Alert } from 'react-native';
 
 import { inventoryService } from '../services/inventoryService';
+import { rowToInventory } from '../db/inventoryRepository';
 import { supabase } from '../lib/supabase';
 import type { InventoryItem } from '../types/inventory';
 import { appendItem, removeItem, updateItem, upsertItem } from '../utils/cacheHelpers';
@@ -32,6 +33,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
 
   const requestIdRef = useRef(0);
   const mountedRef = useRef(true);
+  const lastFetchTimeRef = useRef(0);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -40,13 +42,20 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (force = false) => {
+    const now = Date.now();
+    // Throttle automatic refetches to once every 10 seconds unless forced
+    if (!force && lastFetchTimeRef.current > 0 && now - lastFetchTimeRef.current < 10000) {
+      return;
+    }
+
     const currentRequestId = ++requestIdRef.current;
     setLoading(true);
     try {
       const list = await inventoryService.getAll();
       if (currentRequestId === requestIdRef.current && mountedRef.current) {
         setInventory(list);
+        lastFetchTimeRef.current = Date.now();
       }
     } catch (err) {
       logger.warn('[InventoryContext] Error fetching inventory:', err);
@@ -58,7 +67,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    void refresh();
+    void refresh(true);
   }, [refresh]);
 
   // Realtime Subscription
@@ -73,26 +82,10 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
           const { eventType, new: newRow, old: oldRow } = payload;
 
           if (eventType === 'INSERT' && newRow) {
-            const item: InventoryItem = {
-              id: Number(newRow.id),
-              name: String(newRow.name ?? ''),
-              sku: String(newRow.sku ?? ''),
-              stockCount: Number(newRow.stock_count ?? 0),
-              price: Number(newRow.price ?? 0),
-              createdAt: String(newRow.created_at ?? ''),
-              updatedAt: String(newRow.updated_at ?? ''),
-            };
+            const item = rowToInventory(newRow as Record<string, unknown>);
             setInventory((current) => upsertItem(current, item, 'id'));
           } else if (eventType === 'UPDATE' && newRow) {
-            const item: InventoryItem = {
-              id: Number(newRow.id),
-              name: String(newRow.name ?? ''),
-              sku: String(newRow.sku ?? ''),
-              stockCount: Number(newRow.stock_count ?? 0),
-              price: Number(newRow.price ?? 0),
-              createdAt: String(newRow.created_at ?? ''),
-              updatedAt: String(newRow.updated_at ?? ''),
-            };
+            const item = rowToInventory(newRow as Record<string, unknown>);
             setInventory((current) => updateItem(current, item.id, item, 'id'));
           } else if (eventType === 'DELETE' && oldRow?.id) {
             const id = Number(oldRow.id);

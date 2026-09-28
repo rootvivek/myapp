@@ -3,6 +3,24 @@ import type { UserProfile, UserRole } from '../types/profile';
 import { logger } from '../utils/logger';
 import { requireUserContext } from './helpers';
 
+/**
+ * Verify the target user belongs to the caller's shop.
+ * Returns the caller's shop_id if authorized, null otherwise.
+ */
+async function requireSameShop(labourUserId: string): Promise<string | null> {
+  const ctx = await requireUserContext();
+  if (!ctx.shopId) return null;
+
+  const { data: target } = await supabase
+    .from('profiles')
+    .select('shop_id')
+    .eq('id', labourUserId)
+    .maybeSingle();
+
+  if (!target || String(target.shop_id) !== ctx.shopId) return null;
+  return ctx.shopId;
+}
+
 export async function getShopLabourList(): Promise<UserProfile[]> {
   const { shopId } = await requireUserContext();
   if (!shopId) return [];
@@ -39,17 +57,25 @@ export async function getShopLabourList(): Promise<UserProfile[]> {
 }
 
 export async function deleteLabourUser(labourUserId: string): Promise<void> {
+  const shopId = await requireSameShop(labourUserId);
+  if (!shopId) throw new Error('Unauthorized: user does not belong to your shop');
+
   const { error } = await supabase
     .from('profiles')
     .delete()
-    .eq('id', labourUserId);
+    .eq('id', labourUserId)
+    .eq('shop_id', shopId);
   if (error) throw new Error('Failed to remove labour: ' + error.message);
 }
 
 export async function updateLabourUser(labourUserId: string, name: string, phone: string): Promise<void> {
+  const shopId = await requireSameShop(labourUserId);
+  if (!shopId) throw new Error('Unauthorized: user does not belong to your shop');
+
   const { error } = await supabase
     .from('profiles')
     .update({ name: name.trim(), phone: phone.trim() })
-    .eq('id', labourUserId);
+    .eq('id', labourUserId)
+    .eq('shop_id', shopId);
   if (error) throw new Error('Failed to update labour: ' + error.message);
 }
