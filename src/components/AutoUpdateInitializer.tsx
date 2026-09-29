@@ -4,6 +4,7 @@ import {
   useAutoUpdate,
   startAutoUpdateCheck,
   configureAutoUpdate,
+  checkForUpdates,
 } from '../services/autoUpdate';
 
 // @ts-ignore react-native-dotenv exposes the app's build-time environment values.
@@ -31,8 +32,6 @@ import {
  * - SHOW_RELEASE_NOTES: Show release notes in update dialog
  */
 export function AutoUpdateInitializer() {
-  const { checkForUpdates } = useAutoUpdate();
-
   useEffect(() => {
     // Configure from environment variables (.env via react-native-dotenv)
     configureAutoUpdate({
@@ -47,14 +46,14 @@ export function AutoUpdateInitializer() {
     // Start periodic checks
     startAutoUpdateCheck();
 
-    // Initial check
-    checkForUpdates(false);
+    // Initial check (run once — `checkForUpdates` is a stable module import)
+    void checkForUpdates(false);
 
     // Cleanup on unmount (rarely needed for root component)
     return () => {
       // stopAutoUpdateCheck() if needed
     };
-  }, [checkForUpdates]);
+  }, []);
 
   return <View />;
 }

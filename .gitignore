@@ -40,6 +40,15 @@ android.sdk
 *.jdk
 jdk-17.0.12.jdk/
 
+# Android release signing (never commit)
+android/keystore.properties
+android/release.keystore
+keystore.properties
+*.keystore
+
+# Local release artifacts (large APKs)
+releases/
+
 # typescript
 *.tsbuildinfo
 

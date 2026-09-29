@@ -1,8 +1,11 @@
 {
   "name": "myapp-otp-server",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "private": true,
   "main": "otp-server.js",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "start": "node otp-server.js",
     "migrate:phone": "node migrate-users-to-phone.js",
@@ -15,9 +18,9 @@
     "express": "^4.19.2"
   },
   "config": {
-    "appVersionName": "1.0.5",
-    "appVersionCode": 6,
-    "appDownloadUrlAndroid": "https://github.com/rootvivek/myapp/releases/download/v1.0.5/app-release.apk",
+    "appVersionName": "1.0.6",
+    "appVersionCode": 7,
+    "appDownloadUrlAndroid": "https://github.com/rootvivek/myapp/releases/download/v1.0.6/app-release.apk",
     "appDownloadUrlIos": "https://apps.apple.com/app/idYOUR_APP_ID",
     "appReleaseNotes": "Auto-update feature added\nFixed customer screen UI\nPerformance improvements",
     "appMandatoryUpdate": false,

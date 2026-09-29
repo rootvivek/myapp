@@ -8,8 +8,13 @@ const { createClient } = require('@supabase/supabase-js');
 const app = express();
 const port = process.env.PORT || 3001;
 
+// Running behind a reverse proxy (Render, Fly, nginx, ...) — trust the first hop
+// so `req.ip` reflects the real client instead of the proxy (rate limiting).
+app.set('trust proxy', 1);
+app.disable('x-powered-by');
+
 // ── Security: Restrict CORS to known origins ──────────────────────
-const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '*').split(',');
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '*').split(',').map((o) => o.trim());
 app.use(cors({
   origin: (origin, callback) => {
     if (ALLOWED_ORIGINS.includes('*') || !origin || ALLOWED_ORIGINS.includes(origin)) {
@@ -24,6 +29,8 @@ app.use(express.json({ limit: '10kb' })); // Limit payload size
 
 // ── Security: HTTPS enforcement (behind reverse proxy) ─────────────
 app.use((req, res, next) => {
+  // Platform health checks may arrive over the internal network; never block them.
+  if (req.path === '/health') return next();
   if (process.env.NODE_ENV === 'production' && req.headers['x-forwarded-proto'] !== 'https') {
     return res.status(403).json({ error: 'HTTPS required' });
   }
@@ -402,10 +409,14 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-app.listen(port, () => {
-  console.log(`OTP server running on http://localhost:${port}`);
-  console.log(`Update check endpoint: POST http://localhost:${port}/app/update/check`);
+app.listen(port, '0.0.0.0', () => {
+  const env = process.env.NODE_ENV || 'development';
+  console.log(`OTP/update server listening on 0.0.0.0:${port} (${env})`);
+  console.log(`Update check endpoint: POST /app/update/check`);
   if (!hasSupabaseConfig) {
     console.warn('Signup is disabled until SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are configured.');
+  }
+  if (!process.env.MSG91_AUTHKEY) {
+    console.warn('OTP delivery is in demo mode until MSG91_AUTHKEY is configured.');
   }
 });

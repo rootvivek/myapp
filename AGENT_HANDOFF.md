@@ -146,9 +146,17 @@ myapp/
    - Removed temporary logs (`assemble.log`, `compile.log`, `window_dump.xml`).
 
 5. **Auto-Update System (Android)**:
-   - `src/services/autoUpdate.ts`: checks a backend endpoint, downloads the APK to the
-     Downloads directory (`react-native-fs`) and prompts installation (`react-native-file-viewer`).
-     Supports optional CodePush (`ENABLE_CODE_PUSH`).
+   - `src/services/autoUpdate.ts`: checks a backend endpoint, downloads the APK into the app's
+     private files dir (`RNFS.DocumentDirectoryPath`, always writable under scoped storage) and
+     hands it to the system installer via `react-native-file-viewer` (whose FileProvider exposes
+     `<files-path>`). Supports optional CodePush (`ENABLE_CODE_PUSH`).
+   - **Native requirements** (in `android/app/src/main/`):
+     - `AndroidManifest.xml`: `android.permission.REQUEST_INSTALL_PACKAGES` (installer prompt)
+       and `android:networkSecurityConfig="@xml/network_security_config"`.
+     - `res/xml/network_security_config.xml`: permits cleartext only for `localhost`, `127.0.0.1`
+       and `10.0.2.2` (the local HTTP backend); production must use HTTPS.
+   - The download runs with `background: false` on purpose — RNFS's `background: true` uses
+     Android's DownloadManager, which can only write to public external storage.
    - `src/components/AutoUpdateInitializer.tsx`: mounted in `App.tsx`; configures the service
      from `.env` and starts periodic checks. Also exports an `UpdateBanner` component.
    - `src/services/updateApiSpec.ts`: API contract/docs for `POST /app/update/check`.

@@ -1,0 +1,59 @@
+# Render Blueprint — deploys the OTP + auto-update backend as a web service.
+#
+# Usage:
+#   1. Push this repo to GitHub.
+#   2. Render Dashboard → New → Blueprint → select this repo.
+#   3. Render reads this file, creates `myapp-otp-server`, and prompts for the
+#      `sync: false` secrets (Supabase service role key, MSG91 auth key).
+#   4. Copy the service URL (https://<name>.onrender.com) into the app's
+#      UPDATE_API_URL.
+#
+# The free plan spins down after inactivity (first request is a ~30s cold start).
+# Upgrade `plan` to `starter` for an always-on production service.
+
+services:
+  - type: web
+    name: myapp-otp-server
+    runtime: node
+    plan: free
+    region: singapore
+    rootDir: backend
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+      # ── Secrets: set these in the Render dashboard (not committed) ──
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: MSG91_AUTHKEY
+        sync: false
+
+      # ── Non-secret configuration ──
+      - key: MSG91_SENDER
+        value: MCAFONE
+      # Native apps send no Origin header, so CORS does not gate them. Keep this
+      # strict (no "*") and add origins only if you build a web client.
+      - key: ALLOWED_ORIGINS
+        value: http://localhost:8081
+
+      # ── Auto-update manifest: update these on every release ──
+      - key: APP_LATEST_VERSION_NAME
+        value: 1.0.6
+      - key: APP_LATEST_VERSION_CODE
+        value: 7
+      - key: APP_DOWNLOAD_URL_ANDROID
+        value: https://github.com/rootvivek/myapp/releases/download/v1.0.6/app-release.apk
+      - key: APP_DOWNLOAD_URL_IOS
+        value: https://apps.apple.com/app/idYOUR_APP_ID
+      - key: APP_RELEASE_NOTES
+        value: Auto-update feature added\nFixed customer screen UI\nPerformance improvements
+      - key: APP_MANDATORY_UPDATE
+        value: false
+      - key: APP_MIN_VERSION_CODE
+        value: 4

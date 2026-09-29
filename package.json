@@ -6,10 +6,13 @@
     "start": "react-native start",
     "android": "node scripts/run-with-jdk.js npx react-native run-android && sed -i '' 's/-webkit-appearance: button/-webkit-appearance: button; appearance: button/g; s/-webkit-appearance: textfield/-webkit-appearance: textfield; appearance: textfield/g; s/-webkit-appearance: none/-webkit-appearance: none; appearance: none/g' android/build/reports/problems/problems-report.html 2>/dev/null || true",
     "apk": "node scripts/run-with-jdk.js ./gradlew assembleRelease",
+    "build": "node scripts/run-with-jdk.js ./gradlew assembleRelease",
     "ios": "react-native run-ios",
     "test": "jest",
     "sync:jdk": "node scripts/sync-android-jdk.js",
     "build:apk": "node scripts/run-with-jdk.js ./gradlew assembleRelease",
+    "deploy:backend": "node scripts/deploy-backend.js",
+    "verify:prod": "node scripts/verify-production.js",
     "postinstall": "patch-package"
   },
   "dependencies": {
