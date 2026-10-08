@@ -37,17 +37,18 @@ export const RepairActions = React.memo(function RepairActions({
       {/* ── Status Pill ── */}
       <AppChip
         variant="default"
+        dense
         showSelectedCheck={false}
         icon={() => <Text style={styles.statusIcon}>{pill.icon}</Text>}
         onPress={onStatusChipPress}
         disabled={!onStatusChipPress}
         accessibilityLabel={`Status: ${statusLabel}. Tap to change.`}
-        containerStyle={{ backgroundColor: pill.bg, borderColor: pill.border, flexShrink: 1, paddingHorizontal: 2, paddingVertical: 2 }}
-        labelStyle={{ color: pill.text, fontWeight: '700', fontSize: 10 }}
+        containerStyle={{ backgroundColor: pill.bg, borderColor: pill.border, flexShrink: 1, paddingHorizontal: 6, paddingVertical: 1 }}
+        labelStyle={{ color: pill.text, fontWeight: '700', fontSize: 9 }}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
           <Text style={{ color: pill.text, fontWeight: '700' }}>{statusLabel}</Text>
-          <ChevronDown size={14} color={pill.text} strokeWidth={2.5} />
+          <ChevronDown size={10} color={pill.text} strokeWidth={2.5} />
         </View>
       </AppChip>
 

@@ -11,6 +11,8 @@ export interface AppChipProps extends Omit<ChipProps, 'mode' | 'textStyle' | 'th
   children: ReactNode;
   containerStyle?: StyleProp<ViewStyle>;
   labelStyle?: StyleProp<TextStyle>;
+  /** Use smaller minHeight (18 instead of 22). */
+  dense?: boolean;
 }
 
 /**
@@ -24,6 +26,7 @@ function AppChip({
   labelStyle,
   disabled,
   style,
+  dense = false,
   ...rest
 }: AppChipProps) {
   const { colors } = useAppTheme();
@@ -45,7 +48,7 @@ function AppChip({
   const chipStyle: StyleProp<ViewStyle> = [
     {
       borderRadius: radius.sm,
-      minHeight: 22,
+      minHeight: dense ? 18 : 22,
       backgroundColor: disabled ? colors.surfaceDisabled : fill,
       borderWidth: isFilled ? 0 : sizes.hairline,
       borderColor: colors.border,
