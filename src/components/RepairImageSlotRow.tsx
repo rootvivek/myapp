@@ -6,7 +6,7 @@ import { HelperText } from 'react-native-paper';
 
 import { useTheme } from '../context/ThemeContext';
 import type { AppColors } from '../theme';
-import { radius, spacing } from '../theme';
+import { radius, sizes, spacing } from '../theme';
 import { launchCameraForImage, launchLibraryForImage } from '../utils/pickImage';
 
 type Props = {
@@ -69,7 +69,7 @@ function createCellStyles(colors: AppColors) {
       aspectRatio: 1,
       borderRadius: radius.md,
       backgroundColor: colors.surface2,
-      borderWidth: 1,
+      borderWidth: sizes.hairline,
       borderColor: colors.border,
       borderStyle: 'dashed',
       alignItems: 'center',

@@ -1,13 +1,10 @@
 import React from 'react';
-import {
-  ActivityIndicator,
-  Image,
-  Pressable,
-  Text,
-  View,
-} from 'react-native';
+import { Image, Text, View } from 'react-native';
 import { Store, UploadCloud } from 'lucide-react-native';
 import type { AppColors } from '../../theme';
+import { AppActivityIndicator } from '../../components/ui/AppActivityIndicator';
+import { AppButton } from '../../components/ui/AppButton';
+import { AppCard } from '../../components/ui/AppCard';
 import { createStyles } from './styles';
 
 type Props = {
@@ -30,7 +27,7 @@ export const BrandingAndProfileCard = React.memo(function BrandingAndProfileCard
   const styles = createStyles(colors);
 
   return (
-    <View style={styles.card}>
+    <AppCard>
       <View style={styles.cardHeader}>
         <View style={styles.iconBox}>
           <Store size={18} color={colors.accent} />
@@ -45,7 +42,7 @@ export const BrandingAndProfileCard = React.memo(function BrandingAndProfileCard
       <View style={styles.logoRow}>
         <View style={styles.logoCircleWrapper}>
           {logoBusy ? (
-            <ActivityIndicator size="small" color={colors.accent} />
+            <AppActivityIndicator size="small" color={colors.accent} />
           ) : logoUri ? (
             <Image source={{ uri: logoUri }} style={styles.logoCircleImage} resizeMode="cover" />
           ) : (
@@ -61,39 +58,34 @@ export const BrandingAndProfileCard = React.memo(function BrandingAndProfileCard
 
           {isOwner && (
             <View style={styles.logoSideActions}>
-              <Pressable
+              <AppButton
+                variant="secondary"
                 onPress={onPickLogo}
-                style={({ pressed }) => [styles.logoMiniBtn, pressed && { opacity: 0.7 }]}
-                android_ripple={{ color: colors.border }}
-                accessibilityRole="button"
                 accessibilityLabel="Upload shop logo"
+                leftIcon={<UploadCloud size={14} color={colors.text} strokeWidth={2} />}
+                style={styles.inlineBtn}
+                contentStyle={styles.inlineBtn}
+                labelStyle={styles.inlineBtnLabel}
               >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                  <UploadCloud size={12} color={colors.text} />
-                  <Text style={styles.logoMiniBtnText}>{logoUri ? 'Change' : 'Upload'}</Text>
-                </View>
-              </Pressable>
+                {logoUri ? 'Change' : 'Upload'}
+              </AppButton>
 
               {logoUri && (
-                <Pressable
+                <AppButton
+                  variant="danger"
                   onPress={onRemoveLogo}
-                  style={({ pressed }) => [
-                    styles.logoMiniBtn,
-                    styles.logoMiniBtnDanger,
-                    pressed && { opacity: 0.7 },
-                  ]}
-                  android_ripple={{ color: colors.border }}
-                  accessibilityRole="button"
                   accessibilityLabel="Remove shop logo"
+                  style={styles.inlineBtn}
+                  contentStyle={styles.inlineBtn}
+                  labelStyle={styles.inlineBtnLabel}
                 >
-                  <Text style={[styles.logoMiniBtnText, styles.logoMiniBtnDangerText]}>Remove</Text>
-                </Pressable>
+                  Remove
+                </AppButton>
               )}
             </View>
           )}
         </View>
       </View>
-    </View>
+    </AppCard>
   );
 });
-

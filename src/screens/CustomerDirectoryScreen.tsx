@@ -1,7 +1,6 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   Platform,
   Pressable,
@@ -9,19 +8,20 @@ import {
   Text,
   View,
 } from 'react-native';
-import { Searchbar } from 'react-native-paper';
-import LinearGradient from 'react-native-linear-gradient';
+import { Appbar, Searchbar } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Search, X, ArrowLeft } from 'lucide-react-native';
+import { Search, X, ArrowLeft, Phone } from 'lucide-react-native';
+import { AppActivityIndicator } from '../components/ui/AppActivityIndicator';
+import { AppIconButton } from '../components/ui/AppIconButton';
 import { useTheme } from '../context/ThemeContext';
 import { dialPhone } from '../utils/phone';
 import { useRepairs } from '../context/RepairsContext';
 import type { RootStackParamList } from '../navigation/types';
 import type { AppColors } from '../theme';
-import { spacing } from '../theme';
+import { radius, sizes, spacing } from '../theme';
 import type { DirectoryCustomer } from '../types/customer';
-import { CustomerHistoryModal, matchPhone } from '../components/CustomerHistoryModal';
+import { CustomerHistoryModal } from '../components/CustomerHistoryModal';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CustomerDirectory'>;
 
@@ -37,32 +37,15 @@ function createStyles(colors: AppColors): ReturnType<typeof StyleSheet.create> {
   return StyleSheet.create({
     safe: {
       flex: 1,
-      backgroundColor: colors.bgGradient[0] || colors.bg,
-    },
-    headerRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: spacing.md,
-      paddingTop: spacing.sm,
-      paddingBottom: spacing.xs,
-      gap: spacing.sm,
-    },
-    backBtn: {
-      width: 40,
-      height: 40,
-      borderRadius: 8,
-      backgroundColor: colors.surface2,
-      borderWidth: 1,
-      borderColor: colors.border,
-      justifyContent: 'center',
-      alignItems: 'center',
+      backgroundColor: colors.bg,
     },
     searchbar: {
       flex: 1,
       height: 44,
+      marginHorizontal: spacing.sm,
       backgroundColor: colors.surface2,
-      borderRadius: 12,
-      borderWidth: 1,
+      borderRadius: radius.md,
+      borderWidth: sizes.hairline,
       borderColor: colors.border,
     },
     centered: {
@@ -102,9 +85,9 @@ function createStyles(colors: AppColors): ReturnType<typeof StyleSheet.create> {
     avatar: {
       width: 44,
       height: 44,
-      borderRadius: 22,
+      borderRadius: radius.full,
       backgroundColor: colors.surface2,
-      borderWidth: 1,
+      borderWidth: sizes.hairline,
       borderColor: colors.border,
       alignItems: 'center',
       justifyContent: 'center',
@@ -136,18 +119,17 @@ function createStyles(colors: AppColors): ReturnType<typeof StyleSheet.create> {
       marginTop: 4,
     },
     callBtn: {
-      justifyContent: 'center',
-      paddingHorizontal: spacing.md,
-      borderLeftWidth: StyleSheet.hairlineWidth,
-      borderLeftColor: colors.border,
-      backgroundColor: colors.surface2,
-    },
-    callBtnText: {
-      color: colors.accent,
-      fontWeight: '800',
-      fontSize: 14,
+      alignSelf: 'center',
+      marginRight: spacing.sm,
     },
   });
+}
+
+/** Last-10-digit key, consistent with matchPhone() in CustomerHistoryModal. */
+function phoneKey(phone: string): string {
+  const digits = (phone || '').replace(/\D/g, '');
+  if (!digits) return '';
+  return digits.length >= 10 ? digits.slice(-10) : digits;
 }
 
 export function CustomerDirectoryScreen({ navigation }: Props) {
@@ -157,10 +139,29 @@ export function CustomerDirectoryScreen({ navigation }: Props) {
   const [query, setQuery] = useState('');
 
   const customers = useMemo(() => {
+    // Pre-index repair ids by phone/name so each customer's job count is a cheap
+    // set union instead of scanning the whole repairs array per row (O(n*m)).
+    const byPhone = new Map<string, Set<number>>();
+    const byName = new Map<string, Set<number>>();
+    const addTo = (map: Map<string, Set<number>>, key: string, id: number) => {
+      if (!key) return;
+      let set = map.get(key);
+      if (!set) {
+        set = new Set<number>();
+        map.set(key, set);
+      }
+      set.add(id);
+    };
+
     const seen = new Set<string>();
     const out: DirectoryCustomer[] = [];
+
     for (const r of repairs) {
       const p = (r.phone || '').trim();
+      const nameKey = (r.customerName || '').trim().toLowerCase();
+      addTo(byPhone, phoneKey(p), r.id);
+      addTo(byName, nameKey, r.id);
+
       if (!p || seen.has(p)) continue;
       seen.add(p);
       out.push({
@@ -169,7 +170,15 @@ export function CustomerDirectoryScreen({ navigation }: Props) {
         deviceModel: r.deviceModel || '',
       });
     }
-    return sortCustomers(out);
+
+    return sortCustomers(out).map((c) => {
+      const ids = new Set<number>();
+      byPhone.get(phoneKey(c.phone))?.forEach((id) => ids.add(id));
+      if (c.customerName) {
+        byName.get(c.customerName.trim().toLowerCase())?.forEach((id) => ids.add(id));
+      }
+      return { ...c, jobCount: ids.size };
+    });
   }, [repairs]);
 
   const handleCall = useCallback((phone: string) => {
@@ -192,11 +201,7 @@ export function CustomerDirectoryScreen({ navigation }: Props) {
     ({ item }: { item: DirectoryCustomer }) => {
       const name = item.customerName.trim() || '—';
       const initial = (name === '—' ? '?' : name).slice(0, 1).toUpperCase();
-      const jobCount = repairs.filter((r) => {
-        if (item.phone && matchPhone(r.phone, item.phone)) return true;
-        if (item.customerName && r.customerName.trim().toLowerCase() === item.customerName.trim().toLowerCase()) return true;
-        return false;
-      }).length;
+      const jobCount = item.jobCount ?? 0;
 
       return (
         <View style={styles.row}>
@@ -221,42 +226,33 @@ export function CustomerDirectoryScreen({ navigation }: Props) {
             </View>
           </Pressable>
           {item.phone ? (
-            <Pressable
+            <AppIconButton
+              variant="secondary"
+              icon={<Phone size={20} color={colors.accent} />}
               onPress={() => handleCall(item.phone)}
-              style={styles.callBtn}
-              android_ripple={{ color: colors.border }}
-            >
-              <Text style={styles.callBtnText}>Call</Text>
-            </Pressable>
+              accessibilityLabel={`Call ${item.phone}`}
+              containerStyle={styles.callBtn}
+            />
           ) : null}
         </View>
       );
     },
-    [colors, handleCall, styles, repairs]
+    [colors, handleCall, styles]
   );
 
   const keyExtractor = useCallback((item: DirectoryCustomer) => item.phone, []);
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      <LinearGradient
-        colors={colors.bgGradient}
-        style={{
-          position: 'absolute',
-          width: '100%',
-          height: '100%',
-        }}
-      />
-      <View style={styles.headerRow}>
-        <Pressable
+    <SafeAreaView style={styles.safe} edges={['bottom']}>
+      <Appbar.Header
+        mode="center-aligned"
+        style={{ backgroundColor: colors.surface, elevation: 0 }}
+      >
+        <Appbar.Action
+          icon={() => <ArrowLeft size={22} color={colors.text} />}
           onPress={() => navigation.goBack()}
-          style={styles.backBtn}
-          android_ripple={{ color: 'rgba(255,255,255,0.1)' }}
-          accessibilityRole="button"
           accessibilityLabel="Go back"
-        >
-          <ArrowLeft size={20} color={colors.text} strokeWidth={2} />
-        </Pressable>
+        />
         <Searchbar
           placeholder="Search name or number"
           placeholderTextColor={colors.textMuted}
@@ -268,10 +264,10 @@ export function CustomerDirectoryScreen({ navigation }: Props) {
           inputStyle={{ color: colors.text, fontSize: 14, minHeight: 0, paddingVertical: 0, alignSelf: 'center' }}
           theme={{ colors: { elevation: { level3: colors.surface } } }}
         />
-      </View>
+      </Appbar.Header>
       {loading && customers.length === 0 ? (
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={colors.accent} />
+          <AppActivityIndicator size="large" color={colors.accent} />
         </View>
       ) : (
         <FlatList

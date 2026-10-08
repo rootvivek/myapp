@@ -1,26 +1,21 @@
 import React, { useMemo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import LinearGradient from 'react-native-linear-gradient';
-import {
-  Home,
-  IndianRupee,
-  Package,
-  Plus,
-  User,
-} from 'lucide-react-native';
+import { FAB } from 'react-native-paper';
+import { Home, IndianRupee, Package, Plus, User } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { useTab, type TabType } from '../screens/MainTabScreen';
+import { useTab, type TabType } from '../context/TabContext';
 import type { RootStackParamList } from '../navigation/types';
-import { accentAlpha, radius, spacing } from '../theme';
+import { radius, sizes, spacing } from '../theme';
+import { AppIconButton } from './ui/AppIconButton';
 
 export function BottomNavBar() {
   const insets = useSafeAreaInsets();
-  const { colors, mode } = useTheme();
+  const { colors } = useTheme();
   const { activeTab, setActiveTab } = useTab();
   const { isLabour, session } = useAuth();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -52,47 +47,26 @@ export function BottomNavBar() {
   const leftTabs = allTabs.slice(0, midpoint);
   const rightTabs = allTabs.slice(midpoint);
 
-  const renderTab = (tab: typeof allTabs[0]) => {
+  const renderTab = (tab: (typeof allTabs)[number]) => {
     const isActive = activeTab === tab.key;
     const Icon = tab.icon;
 
     return (
-      <Pressable
-        key={tab.key}
-        onPress={() => setActiveTab(tab.key)}
-        style={styles.tabBtn}
-        android_ripple={{ color: accentAlpha(colors.accent, 0.12), borderless: true, radius: 24 }}
-        accessibilityRole="tab"
-        accessibilityState={{ selected: isActive }}
-        accessibilityLabel={tab.label}
-      >
-        <View
-          style={[
-            styles.iconWrap,
-            isActive && {
-              backgroundColor: accentAlpha(colors.accent, 0.14),
-            },
-          ]}
-        >
-          <Icon
-            size={20}
-            color={isActive ? colors.accent : colors.textMuted}
-            strokeWidth={isActive ? 2.5 : 2.0}
-          />
-        </View>
-        <Text
-          style={[
-            styles.label,
-            {
-              color: isActive ? colors.accent : colors.textMuted,
-              fontWeight: isActive ? '700' : '500',
-            },
-          ]}
-          numberOfLines={1}
-        >
+      <View style={styles.tabBtn}>
+        <AppIconButton
+          key={tab.key}
+          variant={isActive ? 'primary' : 'ghost'}
+          size={36}
+          icon={<Icon size={20} color={isActive ? '#FFFFFF' : colors.textMuted} strokeWidth={2.2} />}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: isActive }}
+          accessibilityLabel={tab.label}
+          onPress={() => setActiveTab(tab.key)}
+        />
+        <Text style={[styles.tabLabel, { color: isActive ? colors.accent : colors.textMuted }]}>
           {tab.label}
         </Text>
-      </Pressable>
+      </View>
     );
   };
 
@@ -101,7 +75,7 @@ export function BottomNavBar() {
       style={[
         styles.bar,
         {
-          backgroundColor: mode === 'dark' ? 'rgba(15, 23, 42, 0.96)' : 'rgba(255, 255, 255, 0.96)',
+          backgroundColor: colors.surface,
           borderColor: colors.border,
           paddingBottom: Math.max(insets.bottom, 10),
         },
@@ -112,22 +86,19 @@ export function BottomNavBar() {
 
       {/* Center Floating Plus Button */}
       <View style={styles.centerButtonContainer}>
-        <Pressable
+        <FAB
           onPress={handleNewRepair}
-          style={styles.centerPressable}
-          android_ripple={{ color: 'rgba(255, 255, 255, 0.3)', borderless: true, radius: 26 }}
-          accessibilityRole="button"
           accessibilityLabel="Add New Repair Job"
-        >
-          <LinearGradient
-            colors={['#8B5CF6', '#6366F1']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.centerGradient}
-          >
-            <Plus size={24} color="#FFFFFF" strokeWidth={2.8} />
-          </LinearGradient>
-        </Pressable>
+          style={styles.centerFab}
+          color={colors.accent}
+          icon={(props) => (
+            <View style={styles.fabIconWrapper}>
+              <Plus size={props.size} color={props.color} strokeWidth={2.4} />
+            </View>
+          )}
+        />
+
+        {/* Label below the FAB */}
         <Text style={[styles.centerLabel, { color: colors.accent }]}>New</Text>
       </View>
 
@@ -145,31 +116,20 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    borderTopWidth: 1,
-    paddingTop: 6,
-    shadowColor: '#000',
+    borderTopWidth: sizes.hairline,
+    paddingTop: 2,
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.06,
     shadowRadius: 12,
-    elevation: 10,
+    elevation: 3,
   },
   tabBtn: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 4,
-  },
-  iconWrap: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 44,
-    height: 28,
-    borderRadius: radius.full,
-    marginBottom: 2,
-  },
-  label: {
-    fontSize: 11,
-    letterSpacing: 0.1,
+    paddingVertical: spacing.xs,
+    gap: 2,
   },
   centerButtonContainer: {
     flex: 1,
@@ -177,18 +137,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: -16,
   },
-  centerPressable: {
-    borderRadius: 24,
-    shadowColor: '#7C3AED',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.38,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  centerGradient: {
+  centerFab: {
     width: 48,
     height: 48,
-    borderRadius: 24,
+    borderRadius: radius.full,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fabIconWrapper: {
+    width: '100%',
+    height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -198,5 +156,9 @@ const styles = StyleSheet.create({
     marginTop: 3,
     letterSpacing: 0.1,
   },
+  tabLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 1,
+  },
 });
-

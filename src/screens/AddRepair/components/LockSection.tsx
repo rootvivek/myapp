@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
-import { Chip as PaperChip } from 'react-native-paper';
+import { StyleSheet, Text, View } from 'react-native';
 import { Lock } from 'lucide-react-native';
 import { PatternDrawingModal, PatternPreview } from '../../../components/PatternDrawingModal';
-import type { AppColors } from '../../../theme';
-import { accentAlpha } from '../../../theme';
+import { radius, sizes, type AppColors } from '../../../theme';
 import { FormTextInput } from '../../../components/FormTextInput';
 import type { LockType } from '../../../types/repair';
 import { LOCK_TYPES } from '../../../types/repair';
 import type { AddRepairStyles } from '../styles';
+import { AppButton } from '../../../components/ui/AppButton';
+import { AppCard } from '../../../components/ui/AppCard';
+import { AppChip } from '../../../components/ui/AppChip';
 
 type Props = {
   lockType: LockType;
@@ -29,25 +30,39 @@ export const LockSection = React.memo(function LockSection({
 }: Props) {
   const [isPatternModalVisible, setIsPatternModalVisible] = useState(false);
 
-  return (
-    <View style={styles.formCard}>
-      <View style={styles.cardHeader}>
-        <View style={styles.cardHeaderIcon}>
-          <Lock size={16} color={colors.accent} />
-        </View>
-        <View style={styles.cardHeaderInfo}>
-          <Text style={styles.cardTitle}>Device Security Lock</Text>
-        </View>
-      </View>
+  const localStyles = StyleSheet.create({
+    typesRow: {
+      flexDirection: 'row',
+      gap: 6,
+      marginBottom: lockType ? 8 : 0,
+    },
+    patternRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      marginTop: 2,
+    },
+    previewBox: {
+      padding: 3,
+      backgroundColor: colors.surface2,
+      borderRadius: radius.md,
+      borderWidth: sizes.hairline,
+      borderColor: colors.border,
+    },
+  });
 
-      <View style={styles.lockTypeRow}>
+  return (
+    <AppCard>
+      <Text style={styles.fieldLabel}>Device Security Lock</Text>
+
+      <View style={localStyles.typesRow}>
         {LOCK_TYPES.map((lt) => {
           const isSelected = lockType === lt.value;
           return (
-            <PaperChip
+            <AppChip
               key={lt.value}
+              variant={isSelected ? 'primary' : 'default'}
               selected={isSelected}
-              mode="outlined"
               showSelectedCheck={false}
               onPress={() => {
                 if (isSelected) {
@@ -58,69 +73,58 @@ export const LockSection = React.memo(function LockSection({
                   onChangeLockValue('');
                 }
               }}
-              style={{
-                backgroundColor: isSelected ? accentAlpha(colors.accent, 0.15) : colors.surface2,
-                borderColor: isSelected ? colors.accent : colors.border,
-                borderRadius: 8,
-                height: 32,
-              }}
-              textStyle={{
-                color: isSelected ? colors.accent : colors.textMuted,
-                fontWeight: isSelected ? '700' : '600',
-                fontSize: 11.5,
-              }}
               accessibilityRole="button"
               accessibilityLabel={`Lock type ${lt.label}`}
+              accessibilityState={{ selected: isSelected }}
             >
               {lt.label}
-            </PaperChip>
+            </AppChip>
           );
         })}
       </View>
 
-      {/* Dynamic input depending on type */}
+      {/* Pattern Type */}
       {lockType === 'pattern' && (
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4 }}>
-          <Pressable
+        <View style={localStyles.patternRow}>
+          <AppButton
+            variant="secondary"
+            leftIcon={<Lock size={14} color={colors.accent} strokeWidth={2.2} />}
             onPress={() => setIsPatternModalVisible(true)}
-            style={({ pressed }) => [
-              styles.scanBtn,
-              { flex: 1, height: 42, marginTop: 0 },
-              pressed && { opacity: 0.8 },
-            ]}
-            accessibilityRole="button"
             accessibilityLabel="Draw pattern lock"
+            containerStyle={{ flex: 1 }}
           >
-            <Lock color="#FFFFFF" size={15} />
-            <Text style={styles.scanBtnText}>{lockValue ? 'Redraw Pattern' : 'Draw Pattern'}</Text>
-          </Pressable>
+            {lockValue ? 'Redraw Pattern' : 'Draw Pattern'}
+          </AppButton>
 
           {lockValue ? (
-            <View style={{ padding: 4, backgroundColor: colors.surface2, borderRadius: 8, borderWidth: 1, borderColor: colors.border }}>
+            <View style={localStyles.previewBox}>
               <PatternPreview path={lockValue} size={36} />
             </View>
           ) : null}
         </View>
       )}
 
+      {/* Password / PIN Type */}
       {lockType === 'password' && (
         <FormTextInput
-          label="PIN or Password"
-          placeholder="Enter unlock PIN or password"
+          label="Lock Code / Password"
+          placeholder="Enter PIN or password"
           value={lockValue}
           onChangeText={onChangeLockValue}
-          icon={Lock}
-          accessibilityLabel="Password or PIN"
+          autoCapitalize="none"
+          containerStyle={styles.inputTight}
+          accessibilityLabel="Lock password or PIN"
         />
       )}
 
       <PatternDrawingModal
         visible={isPatternModalVisible}
         onClose={() => setIsPatternModalVisible(false)}
-        onSave={onChangeLockValue}
-        initialPattern={lockValue}
+        onSave={(path) => {
+          onChangeLockValue(path);
+          setIsPatternModalVisible(false);
+        }}
       />
-    </View>
+    </AppCard>
   );
 });
-

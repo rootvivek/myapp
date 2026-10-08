@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Pressable,
   ScrollView,
@@ -8,14 +7,19 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, RefreshCw, Users, Store, Wrench, Package } from 'lucide-react-native';
+import { Appbar } from 'react-native-paper';
+import { ArrowLeft, ChevronRight, RefreshCw, Users, Store, Wrench, Package } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
+
+import { AppActivityIndicator } from '../components/ui/AppActivityIndicator';
+import { AppButton } from '../components/ui/AppButton';
+import { AppCard } from '../components/ui/AppCard';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { logger } from '../utils/logger';
-import { spacing, radius, type AppColors } from '../theme';
+import { accentAlpha, radius, sizes, spacing, type AppColors } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AdminDashboard'>;
 
@@ -45,22 +49,13 @@ type QuickActionRowProps = {
 
 function StatCard({ icon, label, value, color, colors }: StatCardProps) {
   return (
-    <View
-      style={{
-        flex: 1,
-        backgroundColor: colors.surface,
-        borderRadius: radius.lg,
-        borderWidth: 1,
-        borderColor: colors.border,
-        padding: spacing.md,
-      }}
-    >
+    <AppCard variant="outlined" containerStyle={{ flex: 1 }}>
       <View
         style={{
           width: 36,
           height: 36,
-          borderRadius: 10,
-          backgroundColor: color + '20',
+          borderRadius: radius.md,
+          backgroundColor: accentAlpha(color, 0.12),
           justifyContent: 'center',
           alignItems: 'center',
           marginBottom: spacing.sm,
@@ -72,7 +67,7 @@ function StatCard({ icon, label, value, color, colors }: StatCardProps) {
         {value}
       </Text>
       <Text style={{ fontSize: 12, fontWeight: '600', color: colors.textMuted }}>{label}</Text>
-    </View>
+    </AppCard>
   );
 }
 
@@ -88,13 +83,13 @@ function QuickActionRow({ label, subtitle, icon, onPress, colors, borderless }: 
         flexDirection: 'row',
         alignItems: 'center',
       }}
-      android_ripple={{ color: 'rgba(0,0,0,0.05)' }}
+      android_ripple={{ color: accentAlpha(colors.text, 0.05) }}
     >
       <View
         style={{
           width: 36,
           height: 36,
-          borderRadius: 10,
+          borderRadius: radius.md,
           backgroundColor: colors.surface2,
           justifyContent: 'center',
           alignItems: 'center',
@@ -107,7 +102,7 @@ function QuickActionRow({ label, subtitle, icon, onPress, colors, borderless }: 
         <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text }}>{label}</Text>
         <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 1 }}>{subtitle}</Text>
       </View>
-      <Text style={{ color: colors.textMuted, fontSize: 16 }}>›</Text>
+      <ChevronRight size={16} color={colors.textMuted} />
     </Pressable>
   );
 }
@@ -138,34 +133,34 @@ function DashboardContent({
 
       <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md }}>
         <StatCard
-          icon={<Store size={20} color="#8B5CF6" />}
+          icon={<Store size={20} color={colors.accent} />}
           label="Shops"
           value={stats?.totalShops ?? 0}
-          color="#8B5CF6"
+          color={colors.accent}
           colors={colors}
         />
         <StatCard
-          icon={<Users size={20} color="#3B82F6" />}
+          icon={<Users size={20} color={colors.text} />}
           label="Users"
           value={stats?.totalUsers ?? 0}
-          color="#3B82F6"
+          color={colors.text}
           colors={colors}
         />
       </View>
 
       <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg }}>
         <StatCard
-          icon={<Wrench size={20} color="#F59E0B" />}
+          icon={<Wrench size={20} color={colors.warning} />}
           label="Repairs"
           value={stats?.totalRepairs ?? 0}
-          color="#F59E0B"
+          color={colors.warning}
           colors={colors}
         />
         <StatCard
-          icon={<Package size={20} color="#10B981" />}
+          icon={<Package size={20} color={colors.success} />}
           label="Inventory"
           value={stats?.totalInventory ?? 0}
-          color="#10B981"
+          color={colors.success}
           colors={colors}
         />
       </View>
@@ -183,52 +178,41 @@ function DashboardContent({
         Quick Actions
       </Text>
 
-      <View
-        style={{
-          backgroundColor: colors.surface,
-          borderRadius: radius.lg,
-          borderWidth: 1,
-          borderColor: colors.border,
-          overflow: 'hidden',
-          marginBottom: spacing.md,
-        }}
+      <AppCard
+        variant="outlined"
+        padding={0}
+        containerStyle={{ marginBottom: spacing.md, overflow: 'hidden' }}
       >
         <QuickActionRow
           label="Manage Shops"
           subtitle="View all registered shops"
-          icon={<Store size={18} color="#8B5CF6" />}
+          icon={<Store size={18} color={colors.accent} />}
           onPress={() => Alert.alert('Coming soon', 'Shop management screen coming soon.')}
           colors={colors}
         />
         <QuickActionRow
           label="Manage Users"
           subtitle="View all users & labour accounts"
-          icon={<Users size={18} color="#3B82F6" />}
+          icon={<Users size={18} color={colors.text} />}
           onPress={() => Alert.alert('Coming soon', 'User management screen coming soon.')}
           colors={colors}
           borderless
         />
-      </View>
+      </AppCard>
 
-      <Pressable
+      <AppButton
+        variant="danger"
+        fullWidth
+        containerStyle={{ marginTop: spacing.md }}
         onPress={() => {
           Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
             { text: 'Cancel', style: 'cancel' },
             { text: 'Sign Out', style: 'destructive', onPress: () => void signOut() },
           ]);
         }}
-        style={{
-          marginTop: spacing.md,
-          paddingVertical: 14,
-          borderRadius: radius.lg,
-          borderWidth: 1,
-          borderColor: '#DC2626',
-          alignItems: 'center',
-          backgroundColor: colors.surface,
-        }}
       >
-        <Text style={{ color: '#DC2626', fontWeight: '700', fontSize: 15 }}>Sign Out</Text>
-      </Pressable>
+        Sign Out
+      </AppButton>
     </>
   );
 }
@@ -268,42 +252,40 @@ export function AdminDashboard({ navigation }: Props) {
   }, []);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top', 'bottom']}>
-      <View
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['bottom']}>
+      <Appbar.Header
+        mode="center-aligned"
         style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          paddingHorizontal: spacing.md,
-          paddingVertical: spacing.sm,
-          borderBottomWidth: 1,
-          borderBottomColor: colors.border,
           backgroundColor: colors.surface,
+          elevation: 0,
+          borderBottomWidth: sizes.hairline,
+          borderBottomColor: colors.border,
         }}
       >
-        <Pressable
+        <Appbar.Action
+          icon={() => <ArrowLeft size={22} color={colors.text} />}
           onPress={() => navigation.goBack()}
-          hitSlop={8}
-          style={{ marginRight: spacing.sm, padding: 4 }}
-        >
-          <ArrowLeft size={22} color={colors.text} />
-        </Pressable>
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 20, fontWeight: '800', color: colors.text }}>
-            Admin Dashboard
-          </Text>
-          <Text style={{ fontSize: 12, color: colors.textMuted }}>
-            {user?.email || 'Super Admin'}
-          </Text>
-        </View>
-        <Pressable
+          accessibilityLabel="Go back"
+        />
+        <Appbar.Content
+          title={
+            <View accessible accessibilityRole="header">
+              <Text style={{ fontSize: 17, fontWeight: '700', color: colors.text }}>
+                Admin Dashboard
+              </Text>
+              <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 1 }}>
+                {user?.email || 'Super Admin'}
+              </Text>
+            </View>
+          }
+        />
+        <Appbar.Action
+          icon={() => <RefreshCw size={22} color={colors.accent} />}
           onPress={() => void loadStats()}
-          hitSlop={8}
-          style={{ padding: 8 }}
           disabled={loading}
-        >
-          <RefreshCw size={20} color={colors.accent} />
-        </Pressable>
-      </View>
+          accessibilityLabel="Refresh dashboard"
+        />
+      </Appbar.Header>
 
       <ScrollView
         contentContainerStyle={{ padding: spacing.md }}
@@ -311,7 +293,7 @@ export function AdminDashboard({ navigation }: Props) {
       >
         {loading && !stats ? (
           <View style={{ alignItems: 'center', marginTop: 40 }}>
-            <ActivityIndicator size="large" color={colors.accent} />
+            <AppActivityIndicator size="large" color={colors.accent} />
             <Text style={{ color: colors.textMuted, marginTop: 12, fontSize: 14 }}>
               Loading dashboard...
             </Text>

@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 
+import { useAuth } from './AuthContext';
 import { inventoryService } from '../services/inventoryService';
 import { rowToInventory } from '../db/inventoryRepository';
 import { supabase } from '../lib/supabase';
@@ -18,8 +19,6 @@ type InventoryActionsContextValue = {
   deleteItem: (id: number) => Promise<void>;
   addInventoryToState: (item: InventoryItem) => void;
   updateInventoryInState: (id: number, updates: Partial<InventoryItem>) => void;
-  upsertInventoryInState: (item: InventoryItem) => void;
-  deleteInventoryFromState: (id: number) => void;
 };
 
 type InventoryContextValue = InventoryStateContextValue & InventoryActionsContextValue;
@@ -31,9 +30,13 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const { session } = useAuth();
+  const userId = session?.user?.id;
+
   const requestIdRef = useRef(0);
   const mountedRef = useRef(true);
   const lastFetchTimeRef = useRef(0);
+  const lastUserIdRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -67,13 +70,31 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    void refresh(true);
-  }, [refresh]);
+    const prevUserId = lastUserIdRef.current;
+    lastUserIdRef.current = userId;
+
+    if (userId && userId !== prevUserId) {
+      // New sign-in — bypass the throttle and load immediately.
+      lastFetchTimeRef.current = 0;
+      void refresh(true);
+    } else if (!userId && prevUserId) {
+      // Signed out — drop the previous user's inventory so it can't be shown
+      // to (or edited by) the next account on this device.
+      setInventory([]);
+      setLoading(false);
+    }
+  }, [userId, refresh]);
 
   // Realtime Subscription
+  //
+  // Re-subscribe on user change: a channel binds the JWT it was created with,
+  // so keeping the old channel across a user switch would leave it authorized
+  // as the previous user.
   useEffect(() => {
+    if (!userId) return;
+
     const channel = supabase
-      .channel('public:inventory')
+      .channel(`public:inventory:${userId}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'inventory' },
@@ -98,7 +119,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, []);
+  }, [userId]);
 
   // Reusable Cache Actions
   const addInventoryToState = useCallback((item: InventoryItem) => {
@@ -107,14 +128,6 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
 
   const updateInventoryInState = useCallback((id: number, updates: Partial<InventoryItem>) => {
     setInventory((current) => updateItem(current, id, updates, 'id'));
-  }, []);
-
-  const upsertInventoryInState = useCallback((item: InventoryItem) => {
-    setInventory((current) => upsertItem(current, item, 'id'));
-  }, []);
-
-  const deleteInventoryFromState = useCallback((id: number) => {
-    setInventory((current) => removeItem(current, id, 'id'));
   }, []);
 
   // Optimistic Delete
@@ -143,17 +156,8 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       deleteItem,
       addInventoryToState,
       updateInventoryInState,
-      upsertInventoryInState,
-      deleteInventoryFromState,
     }),
-    [
-      refresh,
-      deleteItem,
-      addInventoryToState,
-      updateInventoryInState,
-      upsertInventoryInState,
-      deleteInventoryFromState,
-    ]
+    [refresh, deleteItem, addInventoryToState, updateInventoryInState]
   );
 
   return (
@@ -181,17 +185,4 @@ export function useInventory(): InventoryContextValue {
   const state = useInventoryState();
   const actions = useInventoryActions();
   return useMemo(() => ({ ...state, ...actions }), [state, actions]);
-}
-
-/**
- * Finer-grained selector hooks to minimize re-render scope
- */
-export function useInventoryItemById(id: number): InventoryItem | undefined {
-  const { inventory } = useInventoryState();
-  return useMemo(() => inventory.find((i) => i.id === id), [inventory, id]);
-}
-
-export function useInventoryCount(): number {
-  const { inventory } = useInventoryState();
-  return inventory.length;
 }

@@ -1,34 +1,35 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   FlatList,
-  Modal,
   Pressable,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Searchbar } from 'react-native-paper';
-import LinearGradient from 'react-native-linear-gradient';
-import { Plus, Package, Edit2, Trash2, Search, X } from 'lucide-react-native';
+import { Plus, Package, Trash2, Search, X } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
+import { AppActivityIndicator } from '../components/ui/AppActivityIndicator';
+import { AppButton } from '../components/ui/AppButton';
+import { AppIconButton } from '../components/ui/AppIconButton';
+import { AppInput } from '../components/ui/AppInput';
+import { AppModal } from '../components/ui/AppModal';
 import { useInventory } from '../context/InventoryContext';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import type { RootStackParamList } from '../navigation/types';
 import type { AppColors } from '../theme';
-import { accentAlpha, spacing } from '../theme';
+import { radius, sizes, spacing } from '../theme';
 import { formatCurrency } from '../utils/format';
 import type { InventoryItem, InventoryInput } from '../types/inventory';
 import { inventoryService } from '../services/inventoryService';
 
 function createStyles(colors: AppColors) {
   return StyleSheet.create({
-    safe: { flex: 1, backgroundColor: colors.bgGradient[0] || colors.bg },
+    safe: { flex: 1, backgroundColor: colors.bg },
     header: {
       paddingHorizontal: spacing.md,
       paddingTop: spacing.md,
@@ -38,29 +39,19 @@ function createStyles(colors: AppColors) {
       justifyContent: 'space-between',
     },
     title: { color: colors.text, fontSize: 28, fontWeight: '800' },
-    addButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: colors.accent,
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      borderRadius: 8,
-      gap: 4,
-    },
-    addButtonText: { color: '#fff', fontWeight: '700', fontSize: 14 },
     searchbar: {
-      marginHorizontal: 16,
+      marginHorizontal: spacing.md,
       marginBottom: spacing.md,
       backgroundColor: colors.surface2,
-      borderRadius: 12,
-      borderWidth: 1,
+      borderRadius: radius.md,
+      borderWidth: sizes.hairline,
       borderColor: colors.border,
     },
-    list: { paddingHorizontal: 16, paddingBottom: 120 },
+    list: { paddingHorizontal: spacing.md, paddingBottom: 120 },
     card: {
       backgroundColor: colors.surface,
-      borderRadius: 12,
-      borderWidth: 1,
+      borderRadius: radius.md,
+      borderWidth: sizes.hairline,
       borderColor: colors.border,
       padding: 12,
       marginBottom: 8,
@@ -70,7 +61,7 @@ function createStyles(colors: AppColors) {
     cardIcon: {
       width: 44,
       height: 44,
-      borderRadius: 8,
+      borderRadius: radius.sm,
       backgroundColor: colors.surface2,
       alignItems: 'center',
       justifyContent: 'center',
@@ -88,64 +79,9 @@ function createStyles(colors: AppColors) {
       marginTop: spacing.xxl,
       fontSize: 15,
     },
-    
-    // Modal
-    modalWrap: {
-      flex: 1,
-      backgroundColor: 'rgba(0,0,0,0.5)',
-      justifyContent: 'flex-end',
-    },
-    modalContent: {
-      backgroundColor: colors.surface,
-      borderTopLeftRadius: 24,
-      borderTopRightRadius: 24,
-      padding: spacing.xl,
-      borderTopWidth: 1,
-      borderTopColor: colors.border,
-    },
-    modalTitle: { color: colors.text, fontSize: 20, fontWeight: '800', marginBottom: spacing.lg },
-    inputLabel: { color: colors.textMuted, fontSize: 12, fontWeight: '700', marginBottom: 6, textTransform: 'uppercase' },
-    input: {
-      backgroundColor: colors.surface2,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 8,
-      color: colors.text,
-      paddingHorizontal: 12,
-      paddingVertical: 10,
-      fontSize: 16,
-      marginBottom: spacing.md,
-    },
     row: { flexDirection: 'row', gap: spacing.md },
     flex1: { flex: 1 },
-    modalActions: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.md },
-    btnPrimary: {
-      flex: 1,
-      backgroundColor: colors.accent,
-      alignItems: 'center',
-      paddingVertical: 14,
-      borderRadius: 8,
-    },
-    btnPrimaryText: { color: '#fff', fontWeight: '700', fontSize: 16 },
-    btnSecondary: {
-      flex: 1,
-      backgroundColor: colors.surface2,
-      alignItems: 'center',
-      paddingVertical: 14,
-      borderRadius: 8,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    btnSecondaryText: { color: colors.textMuted, fontWeight: '700', fontSize: 16 },
-    btnDelete: {
-      backgroundColor: accentAlpha(colors.danger, 0.1),
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: 14,
-      borderRadius: 8,
-      borderWidth: 1,
-      borderColor: colors.danger,
-    }
+    modalActions: { flexDirection: 'row', gap: spacing.md, alignItems: 'center' },
   });
 }
 
@@ -294,18 +230,17 @@ export function InventoryScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <LinearGradient
-        colors={colors.bgGradient}
-        style={{ position: 'absolute', width: '100%', height: '100%' }}
-      />
       
       <View style={styles.header}>
         <Text style={styles.title}>Inventory</Text>
         {isOwner && (
-          <Pressable onPress={openAddModal} style={styles.addButton}>
-            <Plus size={18} color="#fff" />
-            <Text style={styles.addButtonText}>Add Item</Text>
-          </Pressable>
+          <AppButton
+            variant="primary"
+            leftIcon={<Plus size={18} color="#FFFFFF" />}
+            onPress={openAddModal}
+          >
+            Add Item
+          </AppButton>
         )}
       </View>
 
@@ -322,7 +257,7 @@ export function InventoryScreen({ navigation }: Props) {
       />
 
       {loading && inventory.length === 0 ? (
-        <ActivityIndicator size="large" color={colors.accent} style={{ marginTop: 40 }} />
+        <AppActivityIndicator size="large" color={colors.accent} containerStyle={{ marginTop: 40 }} />
       ) : (
         <FlatList
           data={filtered}
@@ -361,71 +296,76 @@ export function InventoryScreen({ navigation }: Props) {
 
       {/* Add/Edit Modal - only for owners */}
       {isOwner && (
-        <Modal visible={modalVisible} transparent animationType="slide" onRequestClose={() => setModalVisible(false)}>
-          <View style={styles.modalWrap}>
-            <Pressable style={StyleSheet.absoluteFill} onPress={() => setModalVisible(false)} />
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>{editingId ? 'Edit Item' : 'Add Accessory'}</Text>
-              
-              <Text style={styles.inputLabel}>Item Name</Text>
-              <TextInput
-                style={styles.input}
-                value={name}
-                onChangeText={setName}
-                placeholder="e.g., iPhone 13 Screen Protector"
-                placeholderTextColor={colors.textMuted}
-              />
-              
-              <Text style={styles.inputLabel}>SKU / Barcode (Optional)</Text>
-              <TextInput
-                style={styles.input}
-                value={sku}
-                onChangeText={setSku}
-                placeholder="e.g., SP-IP13-001"
-                placeholderTextColor={colors.textMuted}
-              />
+        <AppModal
+          visible={modalVisible}
+          onClose={() => setModalVisible(false)}
+          title={editingId ? 'Edit Item' : 'Add Accessory'}
+          size="medium"
+          footer={
+            <View style={styles.modalActions}>
+              {editingId && (
+                <AppIconButton
+                  variant="danger"
+                  icon={<Trash2 size={20} color="#FFFFFF" />}
+                  onPress={handleDelete}
+                  disabled={saving}
+                  accessibilityLabel="Delete item"
+                />
+              )}
+              <AppButton
+                variant="secondary"
+                containerStyle={{ flex: 1 }}
+                onPress={() => setModalVisible(false)}
+                disabled={saving}
+              >
+                Cancel
+              </AppButton>
+              <AppButton
+                variant="primary"
+                containerStyle={{ flex: 1 }}
+                loading={saving}
+                onPress={() => void handleSave()}
+              >
+                Save
+              </AppButton>
+            </View>
+          }
+        >
+          <AppInput
+            label="Item Name"
+            value={name}
+            onChangeText={setName}
+            placeholder="e.g., iPhone 13 Screen Protector"
+          />
 
-              <View style={styles.row}>
-                <View style={styles.flex1}>
-                  <Text style={styles.inputLabel}>Stock Count</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={stock}
-                    onChangeText={setStock}
-                    placeholder="0"
-                    keyboardType="numeric"
-                    placeholderTextColor={colors.textMuted}
-                  />
-                </View>
-                <View style={styles.flex1}>
-                  <Text style={styles.inputLabel}>Price (₹)</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={price}
-                    onChangeText={setPrice}
-                    placeholder="0.00"
-                    keyboardType="numeric"
-                    placeholderTextColor={colors.textMuted}
-                  />
-                </View>
-              </View>
+          <AppInput
+            label="SKU / Barcode (Optional)"
+            value={sku}
+            onChangeText={setSku}
+            placeholder="e.g., SP-IP13-001"
+          />
 
-              <View style={styles.modalActions}>
-                {editingId && (
-                  <Pressable onPress={handleDelete} style={styles.btnDelete} disabled={saving}>
-                    <Trash2 size={20} color={colors.danger} />
-                  </Pressable>
-                )}
-                <Pressable onPress={() => setModalVisible(false)} style={styles.btnSecondary} disabled={saving}>
-                  <Text style={styles.btnSecondaryText}>Cancel</Text>
-                </Pressable>
-                <Pressable onPress={() => void handleSave()} style={styles.btnPrimary} disabled={saving}>
-                  {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnPrimaryText}>Save</Text>}
-                </Pressable>
-              </View>
+          <View style={styles.row}>
+            <View style={styles.flex1}>
+              <AppInput
+                label="Stock Count"
+                value={stock}
+                onChangeText={setStock}
+                placeholder="0"
+                keyboardType="numeric"
+              />
+            </View>
+            <View style={styles.flex1}>
+              <AppInput
+                label="Price (₹)"
+                value={price}
+                onChangeText={setPrice}
+                placeholder="0.00"
+                keyboardType="numeric"
+              />
             </View>
           </View>
-        </Modal>
+        </AppModal>
       )}
     </SafeAreaView>
   );

@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
-import { Save, UserRound } from 'lucide-react-native';
-import type { AppColors } from '../../theme';
-import { createStyles } from './styles';
+import { Save } from 'lucide-react-native';
+import { spacing } from '../../theme';
+import { AppButton } from '../../components/ui/AppButton';
+import { AppCard } from '../../components/ui/AppCard';
+import { AppInput } from '../../components/ui/AppInput';
 
 type Props = {
   name: string;
@@ -10,7 +11,6 @@ type Props = {
   isOwner: boolean;
   busy: boolean;
   onSave: (name: string, shopName: string) => void;
-  colors: AppColors;
 };
 
 export const ProfileEditCard = React.memo(function ProfileEditCard({
@@ -19,9 +19,7 @@ export const ProfileEditCard = React.memo(function ProfileEditCard({
   isOwner,
   busy,
   onSave,
-  colors,
 }: Props) {
-  const styles = createStyles(colors);
   const [draftName, setDraftName] = useState(name);
   const [draftShopName, setDraftShopName] = useState(shopName);
 
@@ -31,73 +29,38 @@ export const ProfileEditCard = React.memo(function ProfileEditCard({
   }, [name, shopName]);
 
   return (
-    <View style={styles.card}>
-      <View style={styles.cardHeader}>
-        <View style={styles.iconBox}>
-          <UserRound size={18} color={colors.accent} />
-        </View>
-        <View style={styles.cardHeaderInfo}>
-          <Text style={styles.cardTitle}>Profile Details</Text>
-          <Text style={styles.cardSubtitle}>Update your name and shop name</Text>
-        </View>
-      </View>
-
-      <TextInput
+    <AppCard>
+      <AppInput
+        label="Your name"
         value={draftName}
         onChangeText={setDraftName}
         placeholder="Your name"
-        placeholderTextColor={colors.textMuted}
         editable={!busy}
-        style={{
-          color: colors.text,
-          backgroundColor: colors.surface2,
-          borderColor: colors.border,
-          borderWidth: 1,
-          borderRadius: 10,
-          paddingHorizontal: 12,
-          paddingVertical: 11,
-          marginBottom: 10,
-        }}
         accessibilityLabel="Your name"
       />
 
       {isOwner && (
-        <TextInput
+        <AppInput
+          label="Shop name"
           value={draftShopName}
           onChangeText={setDraftShopName}
           placeholder="Shop name"
-          placeholderTextColor={colors.textMuted}
           editable={!busy}
-          style={{
-            color: colors.text,
-            backgroundColor: colors.surface2,
-            borderColor: colors.border,
-            borderWidth: 1,
-            borderRadius: 10,
-            paddingHorizontal: 12,
-            paddingVertical: 11,
-            marginBottom: 10,
-          }}
           accessibilityLabel="Shop name"
         />
       )}
 
-      <Pressable
-        onPress={() => onSave(draftName, draftShopName)}
+      <AppButton
+        fullWidth
+        loading={busy}
         disabled={busy}
-        style={({ pressed }) => [styles.saveBtn, pressed && { opacity: 0.8 }]}
-        accessibilityRole="button"
+        onPress={() => onSave(draftName, draftShopName)}
+        leftIcon={<Save size={18} color="#FFFFFF" strokeWidth={2.4} />}
         accessibilityLabel="Save profile details"
+        containerStyle={{ marginTop: spacing.sm }}
       >
-        {busy ? (
-          <ActivityIndicator color="#FFFFFF" size="small" />
-        ) : (
-          <View style={styles.saveBtnInner}>
-            <Save size={16} color="#FFFFFF" />
-            <Text style={styles.saveBtnText}>Save Details</Text>
-          </View>
-        )}
-      </Pressable>
-    </View>
+        Save Details
+      </AppButton>
+    </AppCard>
   );
 });

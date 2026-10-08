@@ -85,6 +85,43 @@ setInterval(() => {
   }
 }, RATE_LIMIT_WINDOW_MS);
 
+// Expired OTPs / lockout entries are only checked on use, so sweep them
+// periodically as well. Without this an OTP that is never verified (or a
+// lockout that is never retried) would stay in memory forever.
+const OTP_SWEEP_INTERVAL_MS = 5 * 60 * 1000;
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [phone, entry] of otpStore) {
+    if (now > entry.expiresAt) otpStore.delete(phone);
+  }
+  for (const [phone, entry] of otpAttempts) {
+    if (entry.lockedUntil && now > entry.lockedUntil) otpAttempts.delete(phone);
+  }
+}, OTP_SWEEP_INTERVAL_MS);
+
+/**
+ * Log the technical error server-side and return a safe message to the client.
+ * Raw Supabase/Postgres messages must never be forwarded: they leak schema
+ * details and can be used for user enumeration.
+ */
+function sendServerError(res, error, fallbackMessage) {
+  console.error('[otp-server]', error);
+  return res.status(500).json({ error: fallbackMessage || 'Something went wrong. Please try again.' });
+}
+
+/** Keep the handful of errors the user can actually act on. */
+function actionableSignupError(error) {
+  const message = String(error?.message || '').toLowerCase();
+  if (message.includes('already') && (message.includes('registered') || message.includes('exists'))) {
+    return 'An account with this mobile number already exists. Please sign in instead.';
+  }
+  if (message.includes('password')) {
+    return 'That password does not meet the requirements.';
+  }
+  return null;
+}
+
 // ── OTP brute-force protection ────────────────────────────────────
 const MAX_OTP_ATTEMPTS = 5;
 const OTP_LOCKOUT_MS = 15 * 60 * 1000; // 15 minutes
@@ -179,12 +216,14 @@ app.post('/api/send-otp', async (req, res) => {
     const text = await response.text();
 
     if (!response.ok) {
-      return res.status(400).json({ error: text || 'Unable to send OTP.' });
+      // Log the provider response for debugging, but do not forward it verbatim.
+      console.warn('[otp-server] MSG91 send failed:', text);
+      return res.status(400).json({ error: 'Unable to send OTP right now. Please try again.' });
     }
 
     return res.json({ ok: true, message: 'OTP sent successfully.' });
   } catch (error) {
-    return res.status(500).json({ error: error.message || 'Unable to send OTP.' });
+    return sendServerError(res, error, 'Unable to send OTP right now.');
   }
 });
 
@@ -233,7 +272,7 @@ app.post('/api/verify-otp', (req, res) => {
     otpStore.delete(phone);
     return res.json({ ok: true, message: 'OTP verified successfully.' });
   } catch (error) {
-    return res.status(500).json({ error: error.message || 'OTP verification failed.' });
+    return sendServerError(res, error, 'OTP verification failed. Please try again.');
   }
 });
 
@@ -288,7 +327,10 @@ app.post('/api/signup-with-otp', async (req, res) => {
     });
 
     if (userError) {
-      return res.status(400).json({ error: userError.message });
+      console.error('[otp-server] createUser failed:', userError);
+      return res.status(400).json({
+        error: actionableSignupError(userError) || 'Could not create your account. Please try again.',
+      });
     }
 
     const { data: existingShop, error: shopLookupError } = await supabaseAdmin
@@ -300,7 +342,7 @@ app.post('/api/signup-with-otp', async (req, res) => {
       .maybeSingle();
 
     if (shopLookupError) {
-      return res.status(400).json({ error: shopLookupError.message });
+      return sendServerError(res, shopLookupError, 'Could not create your account. Please try again.');
     }
 
     let shopId = existingShop?.id;
@@ -316,7 +358,7 @@ app.post('/api/signup-with-otp', async (req, res) => {
         .single();
 
       if (shopError) {
-        return res.status(400).json({ error: shopError.message });
+        return sendServerError(res, shopError, 'Could not create your account. Please try again.');
       }
       shopId = shopData.id;
     }
@@ -333,7 +375,7 @@ app.post('/api/signup-with-otp', async (req, res) => {
     );
 
     if (profileError) {
-      return res.status(400).json({ error: profileError.message });
+      return sendServerError(res, profileError, 'Could not finish setting up your account. Please try again.');
     }
 
     otpStore.delete(normalizedPhone);
@@ -344,18 +386,26 @@ app.post('/api/signup-with-otp', async (req, res) => {
       shopId,
     });
   } catch (error) {
-    return res.status(500).json({ error: error.message || 'Account creation failed.' });
+    return sendServerError(res, error, 'Account creation failed. Please try again.');
   }
 });
 
 // ── App Update Check Endpoint ─────────────────────────────────────────
+const SUPPORTED_PLATFORMS = new Set(['android', 'ios']);
+
 app.post('/app/update/check', (req, res) => {
   try {
-    const { platform, currentVersionCode, currentVersionName, packageName } = req.body;
+    const { platform, currentVersionCode } = req.body;
 
     // Validate required fields
-    if (!platform || currentVersionCode === undefined) {
+    if (!SUPPORTED_PLATFORMS.has(platform) || currentVersionCode === undefined) {
       return res.status(400).json({ error: 'Missing required fields: platform, currentVersionCode' });
+    }
+
+    // Coerce user input before comparing: the body may arrive as a string.
+    const installedVersionCode = Number.parseInt(String(currentVersionCode), 10);
+    if (!Number.isFinite(installedVersionCode)) {
+      return res.status(400).json({ error: 'currentVersionCode must be a number.' });
     }
 
     // Get latest version from environment or fallback
@@ -365,27 +415,22 @@ app.post('/app/update/check', (req, res) => {
       // .env files store "\n" as two literal characters; convert them to real newlines.
       .replace(/\\n/g, '\n');
 
-    const LATEST_VERSION = {
-      android: {
-        versionName: process.env.APP_LATEST_VERSION_NAME || '1.0.5',
-        versionCode: parseInt(process.env.APP_LATEST_VERSION_CODE || '6', 10),
-        downloadUrl: process.env.APP_DOWNLOAD_URL_ANDROID || 'https://github.com/rootvivek/myapp/releases/download/v1.0.5/app-release.apk',
-        releaseNotes,
-        mandatory: process.env.APP_MANDATORY_UPDATE === 'true',
-        minVersionCode: parseInt(process.env.APP_MIN_VERSION_CODE || '4', 10),
-      },
-      ios: {
-        versionName: process.env.APP_LATEST_VERSION_NAME || '1.0.5',
-        buildNumber: process.env.APP_LATEST_VERSION_CODE || '6',
-        appStoreUrl: process.env.APP_DOWNLOAD_URL_IOS || 'https://apps.apple.com/app/idYOUR_APP_ID',
-        releaseNotes,
-        mandatory: process.env.APP_MANDATORY_UPDATE === 'true',
-      },
+    // A single latest version for both platforms. `versionCode` is the Android
+    // build number / iOS build number, so both platforms compare identically.
+    const latest = {
+      versionName: process.env.APP_LATEST_VERSION_NAME || '1.0.5',
+      versionCode: parseInt(process.env.APP_LATEST_VERSION_CODE || '6', 10),
+      downloadUrl:
+        platform === 'ios'
+          ? process.env.APP_DOWNLOAD_URL_IOS || 'https://apps.apple.com/app/idYOUR_APP_ID'
+          : process.env.APP_DOWNLOAD_URL_ANDROID ||
+            'https://github.com/rootvivek/myapp/releases/download/v1.0.5/app-release.apk',
+      releaseNotes,
+      mandatory: process.env.APP_MANDATORY_UPDATE === 'true',
+      minVersionCode: parseInt(process.env.APP_MIN_VERSION_CODE || '4', 10),
     };
 
-    const latest = LATEST_VERSION[platform] || LATEST_VERSION.android;
-
-    if (latest.versionCode > currentVersionCode) {
+    if (latest.versionCode > installedVersionCode) {
       return res.json({
         hasUpdate: true,
         versionName: latest.versionName,
@@ -397,10 +442,10 @@ app.post('/app/update/check', (req, res) => {
       });
     }
 
-    res.json({ hasUpdate: false });
+    return res.json({ hasUpdate: false });
   } catch (error) {
     console.error('[Update Check] Error:', error);
-    res.status(500).json({ error: 'Update check failed' });
+    return res.status(500).json({ error: 'Update check failed' });
   }
 });
 

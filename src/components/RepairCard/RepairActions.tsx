@@ -1,6 +1,6 @@
 import React from 'react';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
-import { ChevronDown, Phone, Printer } from 'lucide-react-native';
+import { Text, View } from 'react-native';
+import { Phone, Printer, ChevronDown } from 'lucide-react-native';
 
 import type { AppColors } from '../../theme';
 import type { Repair } from '../../types/repair';
@@ -8,6 +8,9 @@ import { WhatsAppIcon } from '../WhatsAppIcon';
 import { useRepairActions } from './hooks';
 import type { PillConfig } from './constants';
 import type { CardStyles } from './styles';
+import { AppActivityIndicator } from '../../components/ui/AppActivityIndicator';
+import { AppChip } from '../../components/ui/AppChip';
+import { AppIconButton } from '../../components/ui/AppIconButton';
 
 type Props = {
   repair: Repair;
@@ -32,75 +35,64 @@ export const RepairActions = React.memo(function RepairActions({
   return (
     <View style={styles.cardFooter}>
       {/* ── Status Pill ── */}
-      <Pressable
+      <AppChip
+        variant="default"
+        showSelectedCheck={false}
+        icon={() => <Text style={styles.statusIcon}>{pill.icon}</Text>}
         onPress={onStatusChipPress}
         disabled={!onStatusChipPress}
-        style={[
-          styles.statusChip,
-          {
-            backgroundColor: pill.bg,
-            borderColor: pill.border,
-          },
-        ]}
-        android_ripple={{ color: 'rgba(255, 255, 255, 0.2)' }}
-        accessibilityRole="button"
         accessibilityLabel={`Status: ${statusLabel}. Tap to change.`}
+        containerStyle={{ backgroundColor: pill.bg, borderColor: pill.border, flexShrink: 1, paddingHorizontal: 2, paddingVertical: 2 }}
+        labelStyle={{ color: pill.text, fontWeight: '700', fontSize: 10 }}
       >
-        <Text style={styles.statusIcon}>{pill.icon}</Text>
-        <Text style={[styles.statusText, { color: pill.text }]} numberOfLines={1}>
-          {statusLabel}
-        </Text>
-        {onStatusChipPress && (
-          <ChevronDown size={13} color={pill.text} strokeWidth={2.4} />
-        )}
-      </Pressable>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+          <Text style={{ color: pill.text, fontWeight: '700' }}>{statusLabel}</Text>
+          <ChevronDown size={14} color={pill.text} strokeWidth={2.5} />
+        </View>
+      </AppChip>
 
       {/* ── Action Buttons ── */}
       <View style={styles.actionIconsGroup}>
         {/* Call Button */}
-        <Pressable
+        <AppIconButton
+          variant="secondary"
+          size={28}
+          icon={<Phone size={12} color={colors.success} strokeWidth={2.2} />}
           onPress={handleCall}
-          style={[styles.iconBtn, styles.callBtn]}
-          android_ripple={{ color: 'rgba(34, 197, 94, 0.2)' }}
-          accessibilityRole="button"
           accessibilityLabel="Call Customer"
-        >
-          <Phone size={14} color={colors.success} strokeWidth={2.2} />
-        </Pressable>
+          containerStyle={styles.callBtn}
+        />
 
         {/* WhatsApp Button */}
-        <Pressable
+        <AppIconButton
+          variant="secondary"
+          size={28}
+          icon={pdfBusy ? (
+            <AppActivityIndicator size="small" color="#25D366" />
+          ) : (
+            <WhatsAppIcon size={12} />
+          )}
           onPress={handleWhatsApp}
           disabled={pdfBusy}
-          style={[styles.iconBtn, styles.whatsappBtn, pdfBusy && styles.disabled]}
-          android_ripple={{ color: 'rgba(37, 211, 102, 0.2)' }}
-          accessibilityRole="button"
           accessibilityLabel="Send WhatsApp invoice"
-        >
-          {pdfBusy ? (
-            <ActivityIndicator size="small" color="#25D366" />
-          ) : (
-            <WhatsAppIcon size={14} />
-          )}
-        </Pressable>
+          containerStyle={styles.whatsappBtn}
+        />
 
         {/* Invoice / Share Button */}
-        <Pressable
+        <AppIconButton
+          variant="secondary"
+          size={28}
+          icon={shareBusy ? (
+            <AppActivityIndicator size="small" color={colors.accent} />
+          ) : (
+            <Printer size={12} color={colors.accent} strokeWidth={2.2} />
+          )}
           onPress={handleShare}
           disabled={shareBusy}
-          style={[styles.iconBtn, styles.invoiceBtn, shareBusy && styles.disabled]}
-          android_ripple={{ color: 'rgba(124, 58, 237, 0.2)' }}
-          accessibilityRole="button"
           accessibilityLabel="Share Invoice PDF"
-        >
-          {shareBusy ? (
-            <ActivityIndicator size="small" color={colors.accent} />
-          ) : (
-            <Printer size={14} color={colors.accent} strokeWidth={2.2} />
-          )}
-        </Pressable>
+          containerStyle={styles.invoiceBtn}
+        />
       </View>
     </View>
   );
 });
-

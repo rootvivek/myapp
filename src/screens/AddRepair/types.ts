@@ -26,6 +26,8 @@ export interface RepairFormState {
   orderCode: string;
   sendWhatsAppInvoice: boolean;
   selectedInventoryItemIds: number[];
+  /** ID of the seller (supplier) this item was purchased from. null = not set. */
+  sellerId: number | null;
 }
 
 export type RepairFormAction =

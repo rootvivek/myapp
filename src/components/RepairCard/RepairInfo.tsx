@@ -1,10 +1,8 @@
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { CheckCircle2, Clock } from 'lucide-react-native';
 
 import { SecureImage } from '../SecureImage';
 import type { AppColors } from '../../theme';
-import { accentAlpha } from '../../theme';
 import type { Repair } from '../../types/repair';
 import { formatDateDisplay } from '../../utils/format';
 import { getImageSource, LABELS } from './constants';
@@ -35,50 +33,6 @@ export const RepairInfo = React.memo(function RepairInfo({
       accessibilityLabel={`View repair for ${repair.customerName}`}
       accessibilityHint="Opens repair details"
     >
-      {/* ── Top Header Row ── */}
-      <View style={styles.cardHeader}>
-        <View style={styles.headerLeft}>
-          <View style={styles.orderCodeBadge}>
-            <Text style={styles.orderCodeText}>{displayCode}</Text>
-          </View>
-          <Text style={styles.customerName} numberOfLines={1}>
-            {repair.customerName}
-          </Text>
-        </View>
-
-        {/* Payment Status Badge (without repeating price) */}
-        <Pressable
-          onPress={onPaymentPress || onPress}
-          style={[
-            styles.paymentBadge,
-            {
-              backgroundColor: repair.isPaid
-                ? accentAlpha(colors.success, 0.12)
-                : accentAlpha(colors.warning, 0.12),
-              borderColor: repair.isPaid
-                ? accentAlpha(colors.success, 0.25)
-                : accentAlpha(colors.warning, 0.25),
-            },
-          ]}
-        >
-          {repair.isPaid ? (
-            <>
-              <CheckCircle2 size={11} color={colors.success} strokeWidth={2.4} />
-              <Text style={[styles.paymentBadgeText, { color: colors.success }]}>
-                {repair.paymentType === 'online' ? 'Paid · Online' : 'Paid · Cash'}
-              </Text>
-            </>
-          ) : (
-            <>
-              <Clock size={11} color={colors.warning} strokeWidth={2.4} />
-              <Text style={[styles.paymentBadgeText, { color: colors.warning }]}>
-                {LABELS.UNPAID}
-              </Text>
-            </>
-          )}
-        </Pressable>
-      </View>
-
       {/* ── Body (Thumbnail + Labeled Details) ── */}
       <View style={styles.body}>
         {/* Left Thumbnail */}
@@ -92,6 +46,18 @@ export const RepairInfo = React.memo(function RepairInfo({
 
         {/* Right Info with Labels */}
         <View style={styles.content}>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>{LABELS.CUSTOMER}</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', flex: 1 }}>
+              <Text style={styles.infoValue} numberOfLines={1}>
+                {repair.customerName}
+              </Text>
+              <Text style={[styles.infoValue, { textAlign: 'right', color: colors.accent }]} numberOfLines={1}>
+                {displayCode}
+              </Text>
+            </View>
+          </View>
+
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>{LABELS.DEVICE}</Text>
             <Text style={styles.infoValue} numberOfLines={1}>
@@ -113,7 +79,7 @@ export const RepairInfo = React.memo(function RepairInfo({
             </Text>
           </View>
 
-          {repair.createdByName ? (
+          {repair.createdByName && repair.createdByRole === 'labour' ? (
             <Text style={styles.addedBy}>
               {LABELS.ADDED_BY} {repair.createdByName}
             </Text>

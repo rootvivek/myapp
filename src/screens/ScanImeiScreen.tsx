@@ -1,6 +1,6 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Camera,
@@ -9,9 +9,11 @@ import {
   useCodeScanner,
 } from 'react-native-vision-camera';
 
+import { AppButton } from '../components/ui/AppButton';
 import { useTheme } from '../context/ThemeContext';
 import type { RootStackParamList } from '../navigation/types';
 import type { AppColors } from '../theme';
+import { radius, spacing } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ScanImei'>;
 
@@ -37,54 +39,36 @@ function createStyles(colors: AppColors): ReturnType<typeof StyleSheet.create> {
       width: 260,
       height: 180,
       borderWidth: 2,
-      borderColor: '#8B5CF6',
-      borderRadius: 16,
+      borderColor: colors.accent,
+      borderRadius: radius.lg,
       backgroundColor: 'transparent',
     },
     hint: {
+      // Always white: the hint sits on top of the camera preview.
       color: '#fff',
       fontSize: 14,
       fontWeight: '600',
-      marginTop: 20,
+      marginTop: spacing.lg,
       textAlign: 'center',
     },
     cancelBtn: {
       position: 'absolute',
       bottom: 60,
       alignSelf: 'center',
-      paddingVertical: 14,
-      paddingHorizontal: 40,
       backgroundColor: 'rgba(255,255,255,0.15)',
-      borderRadius: 14,
-    },
-    cancelText: {
-      color: '#fff',
-      fontWeight: '700',
-      fontSize: 16,
     },
     permissionView: {
       flex: 1,
       justifyContent: 'center',
       alignItems: 'center',
-      padding: 32,
+      padding: spacing.xl,
     },
     permissionText: {
       color: colors.text,
       fontSize: 16,
       textAlign: 'center',
-      marginBottom: 20,
+      marginBottom: spacing.lg,
       lineHeight: 24,
-    },
-    grantBtn: {
-      backgroundColor: colors.accent,
-      paddingVertical: 14,
-      paddingHorizontal: 32,
-      borderRadius: 14,
-    },
-    grantBtnText: {
-      color: '#fff',
-      fontWeight: '700',
-      fontSize: 16,
     },
   });
 }
@@ -130,9 +114,9 @@ export function ScanImeiScreen({ navigation }: Props) {
           <Text style={styles.permissionText}>
             Camera permission is needed to scan IMEI barcodes.
           </Text>
-          <Pressable onPress={requestPermission} style={styles.grantBtn} android_ripple={{ color: colors.border }}>
-            <Text style={styles.grantBtnText}>Grant Permission</Text>
-          </Pressable>
+          <AppButton variant="primary" onPress={requestPermission}>
+            Grant Permission
+          </AppButton>
         </View>
       </SafeAreaView>
     );
@@ -162,9 +146,14 @@ export function ScanImeiScreen({ navigation }: Props) {
         <Text style={styles.hint}>Point camera at the IMEI barcode</Text>
       </View>
 
-      <Pressable onPress={() => navigation.goBack()} style={styles.cancelBtn} android_ripple={{ color: 'rgba(255,255,255,0.1)' }}>
-        <Text style={styles.cancelText}>Cancel</Text>
-      </Pressable>
+      <AppButton
+        variant="tertiary"
+        onPress={() => navigation.goBack()}
+        containerStyle={styles.cancelBtn}
+        labelStyle={{ color: '#FFFFFF', fontWeight: '700' }}
+      >
+        Cancel
+      </AppButton>
     </SafeAreaView>
   );
 }

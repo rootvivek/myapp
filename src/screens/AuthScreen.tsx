@@ -1,6 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -8,19 +7,19 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import LinearGradient from 'react-native-linear-gradient';
-import { Eye, EyeOff, Lock, LogIn, Mail, Phone, ShieldAlert, Store, User, UserPlus, Wrench } from 'lucide-react-native';
+import { LogIn, ShieldAlert, UserPlus, Wrench } from 'lucide-react-native';
 
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { useTab } from './MainTabScreen';
+import { useTab } from '../context/TabContext';
 import type { AppColors } from '../theme';
-import { radius, spacing } from '../theme';
+import { radius, sizes, spacing } from '../theme';
 import { normalizePhone, sendOtp, verifyOtp } from '../services/msg91Service';
+import { AppButton } from '../components/ui/AppButton';
+import { AppInput, type AppInputRef } from '../components/ui/AppInput';
 
 function createStyles(colors: AppColors): ReturnType<typeof StyleSheet.create> {
   return StyleSheet.create({
@@ -43,15 +42,15 @@ function createStyles(colors: AppColors): ReturnType<typeof StyleSheet.create> {
       maxWidth: 420,
       backgroundColor: colors.surface,
       borderRadius: radius.xl,
-      borderWidth: 1,
+      borderWidth: sizes.hairline,
       borderColor: colors.border,
       paddingHorizontal: spacing.lg,
       paddingVertical: spacing.xl,
       shadowColor: '#000',
-      shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: 0.18,
-      shadowRadius: 16,
-      elevation: 6,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.08,
+      shadowRadius: 12,
+      elevation: 2,
     },
     header: {
       alignItems: 'center',
@@ -60,15 +59,15 @@ function createStyles(colors: AppColors): ReturnType<typeof StyleSheet.create> {
     logoContainer: {
       width: 58,
       height: 58,
-      borderRadius: 18,
+      borderRadius: radius.lg,
       justifyContent: 'center',
       alignItems: 'center',
       marginBottom: spacing.md,
       shadowColor: colors.accent,
       shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.35,
-      shadowRadius: 10,
-      elevation: 5,
+      shadowOpacity: 0.12,
+      shadowRadius: 8,
+      elevation: 2,
     },
     appName: {
       color: colors.text,
@@ -88,9 +87,9 @@ function createStyles(colors: AppColors): ReturnType<typeof StyleSheet.create> {
       flexDirection: 'row',
       backgroundColor: colors.surface2,
       borderRadius: radius.lg,
-      padding: 4,
+      padding: spacing.xs,
       marginBottom: spacing.lg,
-      borderWidth: 1,
+      borderWidth: sizes.hairline,
       borderColor: colors.border,
     },
     tabBtn: {
@@ -104,9 +103,9 @@ function createStyles(colors: AppColors): ReturnType<typeof StyleSheet.create> {
       backgroundColor: colors.accent,
       shadowColor: colors.accent,
       shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.25,
+      shadowOpacity: 0.12,
       shadowRadius: 4,
-      elevation: 2,
+      elevation: 1,
     },
     tabText: {
       fontSize: 14,
@@ -120,72 +119,11 @@ function createStyles(colors: AppColors): ReturnType<typeof StyleSheet.create> {
     fieldGroup: {
       marginBottom: spacing.md,
     },
-    label: {
-      color: colors.text,
-      fontSize: 12,
-      fontWeight: '600',
-      marginBottom: 6,
-      textTransform: 'uppercase',
-      letterSpacing: 0.5,
-      opacity: 0.85,
-    },
-    inputContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: colors.surface2,
-      borderRadius: radius.lg,
-      borderWidth: 1,
-      borderColor: colors.border,
-      paddingHorizontal: spacing.md,
-      minHeight: 50,
-    },
-    inputError: {
-      borderColor: '#DC2626',
-    },
-    errorText: {
-      color: '#DC2626',
-      fontSize: 12,
-      marginTop: 5,
-      marginLeft: 4,
-    },
-    inputIcon: {
-      marginRight: spacing.sm,
-    },
-    input: {
-      flex: 1,
-      color: colors.text,
-      fontSize: 15,
-      paddingVertical: Platform.OS === 'ios' ? 12 : 8,
-    },
-    eyeBtn: {
-      padding: spacing.xs,
-      marginLeft: spacing.xs,
-    },
     primaryBtnWrapper: {
-      borderRadius: radius.lg,
-      overflow: 'hidden',
       marginTop: spacing.md,
-      shadowColor: colors.accent,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.35,
-      shadowRadius: 8,
-      elevation: 4,
-    },
-    primaryBtn: {
-      paddingVertical: 14,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: spacing.sm,
     },
     dim: {
       opacity: 0.65,
-    },
-    primaryText: {
-      color: '#FFFFFF',
-      fontSize: 15,
-      fontWeight: '700',
-      letterSpacing: 0.3,
     },
     switchBtn: {
       marginTop: spacing.lg,
@@ -206,7 +144,7 @@ function createStyles(colors: AppColors): ReturnType<typeof StyleSheet.create> {
       maxWidth: 420,
       backgroundColor: colors.surface,
       borderRadius: radius.xl,
-      borderWidth: 1,
+      borderWidth: sizes.hairline,
       borderColor: colors.border,
       padding: spacing.xl,
       alignItems: 'center',
@@ -259,11 +197,11 @@ export function AuthScreen() {
   const [signupStep, setSignupStep] = useState<'phone' | 'otp' | 'details'>('phone');
   const [busy, setBusy] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<'phone' | 'otp' | 'name' | 'shopName' | 'password', string>>>({});
-  const phoneRef = useRef<TextInput>(null);
-  const otpRef = useRef<TextInput>(null);
-  const nameRef = useRef<TextInput>(null);
-  const shopNameRef = useRef<TextInput>(null);
-  const passwordRef = useRef<TextInput>(null);
+  const phoneRef = useRef<AppInputRef>(null);
+  const otpRef = useRef<AppInputRef>(null);
+  const nameRef = useRef<AppInputRef>(null);
+  const shopNameRef = useRef<AppInputRef>(null);
+  const passwordRef = useRef<AppInputRef>(null);
 
   function focusAuthField(field: 'phone' | 'otp' | 'name' | 'shopName' | 'password') {
     const refs = { phone: phoneRef, otp: otpRef, name: nameRef, shopName: shopNameRef, password: passwordRef };
@@ -429,22 +367,11 @@ export function AuthScreen() {
   if (!configured) {
     return (
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-        <LinearGradient
-          colors={colors.bgGradient}
-          style={StyleSheet.absoluteFillObject}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        />
         <View style={styles.scrollContent}>
           <View style={styles.unconfiguredCard}>
-            <LinearGradient
-              colors={[colors.warning, '#F97316']}
-              style={styles.logoContainer}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
+            <View style={[styles.logoContainer, { backgroundColor: colors.warning }]}>
               <ShieldAlert size={28} color="#FFFFFF" />
-            </LinearGradient>
+            </View>
             <Text style={styles.unconfiguredTitle}>Cloud Not Configured</Text>
             <Text style={styles.unconfiguredText}>
               Add EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY to your .env file, run supabase/schema.sql, create the repair-images bucket, and restart the app.
@@ -457,14 +384,6 @@ export function AuthScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      {/* Background Gradient */}
-      <LinearGradient
-        colors={colors.bgGradient}
-        style={StyleSheet.absoluteFillObject}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      />
-
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -478,14 +397,9 @@ export function AuthScreen() {
           <View style={styles.card}>
             {/* Header / Brand */}
             <View style={styles.header}>
-              <LinearGradient
-                colors={['#8B5CF6', '#6366F1']}
-                style={styles.logoContainer}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <Wrench size={28} color="#FFFFFF" strokeWidth={2.2} />
-              </LinearGradient>
+            <View style={[styles.logoContainer, { backgroundColor: colors.accent }]}>
+              <Wrench size={28} color="#FFFFFF" strokeWidth={2.2} />
+            </View>
               <Text style={styles.appName}>MCA Phonewala</Text>
               <Text style={styles.appSubtitle}>Phone Repair & Store Management</Text>
             </View>
@@ -525,245 +439,171 @@ export function AuthScreen() {
             {/* Form Fields */}
             {mode === 'signup' && signupStep === 'details' && (
               <>
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.label}>Full Name</Text>
-                  <View style={[styles.inputContainer, fieldErrors.name && styles.inputError]}>
-                    <User size={18} color={colors.textMuted} style={styles.inputIcon} />
-                    <TextInput
-                      ref={nameRef}
-                      value={name}
-                      onChangeText={(value) => {
-                        setName(value);
-                        clearFieldError('name');
-                      }}
-                      autoCapitalize="words"
-                      placeholder="Enter your full name"
-                      placeholderTextColor={colors.textMuted}
-                      style={styles.input}
-                      editable={!busy}
-                    />
-                  </View>
-                  {fieldErrors.name && <Text style={styles.errorText}>{fieldErrors.name}</Text>}
-                </View>
+                <AppInput
+                  containerStyle={styles.fieldGroup}
+                  ref={nameRef}
+                  label="Full Name"
+                  value={name}
+                  onChangeText={(value) => {
+                    setName(value);
+                    clearFieldError('name');
+                  }}
+                  autoCapitalize="words"
+                  placeholder="Enter your full name"
+                  editable={!busy}
+                  error={fieldErrors.name}
+                />
 
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.label}>Shop Name</Text>
-                  <View style={[styles.inputContainer, fieldErrors.shopName && styles.inputError]}>
-                    <Store size={18} color={colors.textMuted} style={styles.inputIcon} />
-                    <TextInput
-                      ref={shopNameRef}
-                      value={shopName}
-                      onChangeText={(value) => {
-                        setShopName(value);
-                        clearFieldError('shopName');
-                      }}
-                      autoCapitalize="words"
-                      placeholder="Enter your shop name"
-                      placeholderTextColor={colors.textMuted}
-                      style={styles.input}
-                      editable={!busy}
-                    />
-                  </View>
-                  {fieldErrors.shopName && <Text style={styles.errorText}>{fieldErrors.shopName}</Text>}
-                </View>
+                <AppInput
+                  containerStyle={styles.fieldGroup}
+                  ref={shopNameRef}
+                  label="Shop Name"
+                  value={shopName}
+                  onChangeText={(value) => {
+                    setShopName(value);
+                    clearFieldError('shopName');
+                  }}
+                  autoCapitalize="words"
+                  placeholder="Enter your shop name"
+                  editable={!busy}
+                  error={fieldErrors.shopName}
+                />
               </>
             )}
 
             {mode === 'signup' ? (
               signupStep === 'phone' || signupStep === 'otp' ? (
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.label}>Phone Number</Text>
-                  <View style={[styles.inputContainer, fieldErrors.phone && styles.inputError]}>
-                    <Phone size={18} color={colors.textMuted} style={styles.inputIcon} />
-                    <TextInput
-                      ref={phoneRef}
-                      value={phone}
-                      onChangeText={(value) => {
-                        setPhone(value);
-                        clearFieldError('phone');
-                      }}
-                      autoCapitalize="none"
-                      autoComplete="tel"
-                      keyboardType="phone-pad"
-                      placeholder="Enter your phone number"
-                      placeholderTextColor={colors.textMuted}
-                      style={styles.input}
-                      editable={!busy && signupStep === 'phone'}
-                    />
-                  </View>
-                  {fieldErrors.phone && <Text style={styles.errorText}>{fieldErrors.phone}</Text>}
-                </View>
+                <AppInput
+                  containerStyle={styles.fieldGroup}
+                  ref={phoneRef}
+                  label="Phone Number"
+                  value={phone}
+                  onChangeText={(value) => {
+                    setPhone(value);
+                    clearFieldError('phone');
+                  }}
+                  autoCapitalize="none"
+                  autoComplete="tel"
+                  keyboardType="phone-pad"
+                  placeholder="Enter your phone number"
+                  editable={!busy && signupStep === 'phone'}
+                  error={fieldErrors.phone}
+                />
               ) : (
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.label}>Phone Number</Text>
-                  <View style={[styles.inputContainer, fieldErrors.phone && styles.inputError]}>
-                    <Phone size={18} color={colors.textMuted} style={styles.inputIcon} />
-                    <TextInput
-                      ref={phoneRef}
-                      value={phone}
-                      style={styles.input}
-                      editable={false}
-                    />
-                  </View>
-                  {fieldErrors.phone && <Text style={styles.errorText}>{fieldErrors.phone}</Text>}
-                </View>
+                <AppInput
+                  containerStyle={styles.fieldGroup}
+                  ref={phoneRef}
+                  label="Phone Number"
+                  value={phone}
+                  editable={false}
+                  error={fieldErrors.phone}
+                />
               )
             ) : (
-              <View style={styles.fieldGroup}>
-                <Text style={styles.label}>Email or Phone Number</Text>
-                <View style={[styles.inputContainer, fieldErrors.phone && styles.inputError]}>
-                  {phone.includes('@') ? (
-                    <Mail size={18} color={colors.textMuted} style={styles.inputIcon} />
-                  ) : (
-                    <Phone size={18} color={colors.textMuted} style={styles.inputIcon} />
-                  )}
-                  <TextInput
-                    ref={phoneRef}
-                    value={phone}
-                    onChangeText={(value) => {
-                      setPhone(value);
-                      clearFieldError('phone');
-                    }}
-                    autoCapitalize="none"
-                    autoComplete="email"
-                    keyboardType="email-address"
-                    placeholder="Enter email or phone number"
-                    placeholderTextColor={colors.textMuted}
-                    style={styles.input}
-                    editable={!busy}
-                  />
-                </View>
-                {fieldErrors.phone && <Text style={styles.errorText}>{fieldErrors.phone}</Text>}
-              </View>
+              <AppInput
+                containerStyle={styles.fieldGroup}
+                ref={phoneRef}
+                label="Email or Phone Number"
+                value={phone}
+                onChangeText={(value) => {
+                  setPhone(value);
+                  clearFieldError('phone');
+                }}
+                autoCapitalize="none"
+                autoComplete="email"
+                keyboardType="email-address"
+                placeholder="Enter email or phone number"
+                editable={!busy}
+                error={fieldErrors.phone}
+              />
             )}
 
             {mode === 'signup' && signupStep === 'otp' && (
-              <View style={styles.fieldGroup}>
-                <Text style={styles.label}>OTP</Text>
-                <View style={[styles.inputContainer, fieldErrors.otp && styles.inputError]}>
-                  <Lock size={18} color={colors.textMuted} style={styles.inputIcon} />
-                  <TextInput
-                    ref={otpRef}
-                    value={otp}
-                    onChangeText={(value) => {
-                      setOtp(value);
-                      clearFieldError('otp');
-                    }}
-                    keyboardType="number-pad"
-                    placeholder="Enter OTP"
-                    placeholderTextColor={colors.textMuted}
-                    style={styles.input}
-                    editable={!busy}
-                  />
-                </View>
-                {fieldErrors.otp && <Text style={styles.errorText}>{fieldErrors.otp}</Text>}
-              </View>
+              <AppInput
+                containerStyle={styles.fieldGroup}
+                ref={otpRef}
+                label="OTP"
+                value={otp}
+                onChangeText={(value) => {
+                  setOtp(value);
+                  clearFieldError('otp');
+                }}
+                keyboardType="number-pad"
+                placeholder="Enter OTP"
+                editable={!busy}
+                error={fieldErrors.otp}
+              />
             )}
 
             {mode === 'signup' && signupStep === 'phone' && (
               <View style={[styles.primaryBtnWrapper, busy && styles.dim]}>
-                <Pressable
-                  onPress={() => void requestOtp()}
+                <AppButton
+                  fullWidth
+                  loading={busy}
                   disabled={busy}
-                  android_ripple={{ color: 'rgba(255,255,255,0.2)' }}
+                  onPress={() => void requestOtp()}
+                  accessibilityLabel={otpSent ? 'Resend OTP' : 'Send OTP'}
                 >
-                  <LinearGradient
-                    colors={['#10B981', '#059669']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={styles.primaryBtn}
-                  >
-                    <Text style={styles.primaryText}>{otpSent ? 'Resend OTP' : 'Send OTP'}</Text>
-                  </LinearGradient>
-                </Pressable>
+                  {otpSent ? 'Resend OTP' : 'Send OTP'}
+                </AppButton>
               </View>
             )}
 
             {mode === 'signup' && signupStep === 'otp' && (
               <View style={[styles.primaryBtnWrapper, busy && styles.dim]}>
-                <Pressable
-                  onPress={() => void onSubmit()}
+                <AppButton
+                  fullWidth
+                  loading={busy}
                   disabled={busy}
-                  android_ripple={{ color: 'rgba(255,255,255,0.2)' }}
+                  onPress={() => void onSubmit()}
+                  accessibilityLabel="Verify OTP"
                 >
-                  <LinearGradient
-                    colors={['#10B981', '#059669']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={styles.primaryBtn}
-                  >
-                    <Text style={styles.primaryText}>Verify OTP</Text>
-                  </LinearGradient>
-                </Pressable>
+                  Verify OTP
+                </AppButton>
               </View>
             )}
 
             {(mode === 'signin' || signupStep === 'details') && (
-              <View style={styles.fieldGroup}>
-                <Text style={styles.label}>Password</Text>
-                <View style={[styles.inputContainer, fieldErrors.password && styles.inputError]}>
-                  <Lock size={18} color={colors.textMuted} style={styles.inputIcon} />
-                  <TextInput
-                    ref={passwordRef}
-                    value={password}
-                    onChangeText={(value) => {
-                      setPassword(value);
-                      clearFieldError('password');
-                    }}
-                    secureTextEntry={!showPassword}
-                    placeholder={mode === 'signin' ? 'Enter your password' : 'Set a password'}
-                    placeholderTextColor={colors.textMuted}
-                    style={styles.input}
-                    editable={!busy}
-                  />
-                  <Pressable
-                    onPress={() => setShowPassword(prev => !prev)}
-                    style={styles.eyeBtn}
-                    hitSlop={8}
-                  >
-                    {showPassword ? (
-                      <EyeOff size={18} color={colors.textMuted} />
-                    ) : (
-                      <Eye size={18} color={colors.textMuted} />
-                    )}
-                  </Pressable>
-                </View>
-                {fieldErrors.password && <Text style={styles.errorText}>{fieldErrors.password}</Text>}
-              </View>
+              <AppInput
+                containerStyle={styles.fieldGroup}
+                ref={passwordRef}
+                label="Password"
+                value={password}
+                onChangeText={(value) => {
+                  setPassword(value);
+                  clearFieldError('password');
+                }}
+                secureTextEntry={!showPassword}
+                placeholder={mode === 'signin' ? 'Enter your password' : 'Set a password'}
+                editable={!busy}
+                error={fieldErrors.password}
+                rightAction={{
+                  label: showPassword ? 'Hide' : 'Show',
+                  onPress: () => setShowPassword((prev) => !prev),
+                  accessibilityLabel: showPassword ? 'Hide password' : 'Show password',
+                }}
+              />
             )}
 
             {/* Submit Button */}
             {(mode === 'signin' || signupStep === 'details') && (
               <View style={[styles.primaryBtnWrapper, busy && styles.dim]}>
-                <Pressable
-                  onPress={() => void onSubmit()}
+                <AppButton
+                  fullWidth
+                  loading={busy}
                   disabled={busy}
-                  android_ripple={{ color: 'rgba(255,255,255,0.2)' }}
-                >
-                  <LinearGradient
-                    colors={['#8B5CF6', '#6366F1']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={styles.primaryBtn}
-                  >
-                    {busy ? (
-                      <ActivityIndicator color="#FFFFFF" size="small" />
+                  onPress={() => void onSubmit()}
+                  leftIcon={
+                    mode === 'signin' ? (
+                      <LogIn size={18} color="#FFFFFF" strokeWidth={2.4} />
                     ) : (
-                      <>
-                        {mode === 'signin' ? (
-                          <LogIn size={18} color="#FFFFFF" strokeWidth={2.4} />
-                        ) : (
-                          <UserPlus size={18} color="#FFFFFF" strokeWidth={2.4} />
-                        )}
-                        <Text style={styles.primaryText}>
-                          {mode === 'signin'
-                            ? 'Sign In'
-                            : 'Create Account'}
-                        </Text>
-                      </>
-                    )}
-                  </LinearGradient>
-                </Pressable>
+                      <UserPlus size={18} color="#FFFFFF" strokeWidth={2.4} />
+                    )
+                  }
+                  accessibilityLabel={mode === 'signin' ? 'Sign In' : 'Create Account'}
+                >
+                  {mode === 'signin' ? 'Sign In' : 'Create Account'}
+                </AppButton>
               </View>
             )}
 

@@ -1,18 +1,11 @@
 import React, { useCallback, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import { Modal, Portal } from 'react-native-paper';
-
-import { X } from 'lucide-react-native';
+import { Text, View } from 'react-native';
 import type { AppColors } from '../../theme';
 import type { RepairStatus } from '../../types/repair';
 import { LABELS, showError } from './constants';
 import type { CardStyles } from './styles';
+import { AppModal } from '../../components/ui/AppModal';
+import { AppButton } from '../../components/ui/AppButton';
 
 type PaymentStep = 'paid_status' | 'payment_method';
 
@@ -84,157 +77,76 @@ export const PaymentModal = React.memo(function PaymentModal({
   );
 
   return (
-    <Portal>
-      <Modal
-        visible={visible}
-        onDismiss={handleClose}
-        contentContainerStyle={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'transparent' }}
-      >
-        <View style={styles.modalWrap}>
-          <Pressable
-            style={StyleSheet.absoluteFill}
-            onPress={handleClose}
-            accessibilityRole="button"
-            accessibilityLabel={LABELS.CLOSE}
-          />
-          <View style={styles.modalOuter}>
-            <View style={styles.modalSheet}>
-              {/* Close Button */}
-              <Pressable
-                style={styles.modalCloseBtn}
-                onPress={handleClose}
-                disabled={isBusy}
-                accessibilityRole="button"
-                accessibilityLabel={LABELS.CLOSE}
-              >
-                <X size={20} color={colors.textMuted} />
-              </Pressable>
-
-              <Text style={styles.modalTitle}>
-                {step === 'paid_status'
-                  ? LABELS.IS_PAID_QUESTION
-                  : LABELS.SELECT_PAYMENT}
-              </Text>
-              <Text style={styles.modalSub}>
-                {deviceModel} · {customerName}
-              </Text>
-
-              <View style={styles.paymentModalBody}>
-                {step === 'paid_status' ? (
-                  <>
-                    <Pressable
-                      style={[styles.paymentButton, { borderColor: colors.success }]}
-                      onPress={() => setStep('payment_method')}
-                      disabled={isBusy}
-                      accessibilityRole="button"
-                      accessibilityLabel={LABELS.PAID}
-                      accessibilityHint="Proceeds to select payment method"
-                    >
-                      <Text style={styles.badgePillIcon}>💵</Text>
-                      <Text
-                        style={[
-                          styles.paymentButtonText,
-                          { color: colors.success },
-                        ]}
-                      >
-                        {LABELS.PAID}
-                      </Text>
-                    </Pressable>
-                    <Pressable
-                      style={[styles.paymentButton, { borderColor: colors.danger }]}
-                      onPress={() => submitPayment({ isPaid: false }, 'unpaid')}
-                      disabled={isBusy}
-                      accessibilityRole="button"
-                      accessibilityLabel={LABELS.UNPAID}
-                      accessibilityHint="Marks repair as delivered but unpaid"
-                      accessibilityState={{ busy: loadingTarget === 'unpaid' }}
-                    >
-                      {loadingTarget === 'unpaid' ? (
-                        <ActivityIndicator size="small" color={colors.danger} />
-                      ) : (
-                        <>
-                          <Text style={styles.badgePillIcon}>⏳</Text>
-                          <Text
-                            style={[
-                              styles.paymentButtonText,
-                              { color: colors.danger },
-                            ]}
-                          >
-                            {LABELS.UNPAID}
-                          </Text>
-                        </>
-                      )}
-                    </Pressable>
-                  </>
-                ) : (
-                  <>
-                    <Pressable
-                      style={[
-                        styles.paymentButton,
-                        { borderColor: colors.accent },
-                      ]}
-                      onPress={() =>
-                        submitPayment({ isPaid: true, paymentType: 'online' }, 'online')
-                      }
-                      disabled={isBusy}
-                      accessibilityRole="button"
-                      accessibilityLabel={LABELS.ONLINE}
-                      accessibilityHint="Marks as paid via online payment"
-                      accessibilityState={{ busy: loadingTarget === 'online' }}
-                    >
-                      {loadingTarget === 'online' ? (
-                        <ActivityIndicator size="small" color={colors.accent} />
-                      ) : (
-                        <>
-                          <Text style={styles.badgePillIcon}>📱</Text>
-                          <Text
-                            style={[
-                              styles.paymentButtonText,
-                              { color: colors.accent },
-                            ]}
-                          >
-                            {LABELS.ONLINE}
-                          </Text>
-                        </>
-                      )}
-                    </Pressable>
-                    <Pressable
-                      style={[
-                        styles.paymentButton,
-                        { borderColor: colors.success },
-                      ]}
-                      onPress={() =>
-                        submitPayment({ isPaid: true, paymentType: 'cash' }, 'cash')
-                      }
-                      disabled={isBusy}
-                      accessibilityRole="button"
-                      accessibilityLabel={LABELS.CASH}
-                      accessibilityHint="Marks as paid via cash"
-                      accessibilityState={{ busy: loadingTarget === 'cash' }}
-                    >
-                      {loadingTarget === 'cash' ? (
-                        <ActivityIndicator size="small" color={colors.success} />
-                      ) : (
-                        <>
-                          <Text style={styles.badgePillIcon}>💵</Text>
-                          <Text
-                            style={[
-                              styles.paymentButtonText,
-                              { color: colors.success },
-                            ]}
-                          >
-                            {LABELS.CASH}
-                          </Text>
-                        </>
-                      )}
-                    </Pressable>
-                  </>
-                )}
-              </View>
-            </View>
-          </View>
-        </View>
-      </Modal>
-    </Portal>
+    <AppModal
+      visible={visible}
+      onClose={handleClose}
+      title={step === 'paid_status' ? LABELS.IS_PAID_QUESTION : LABELS.SELECT_PAYMENT}
+      subtitle={`${deviceModel} · ${customerName}`}
+      size="medium"
+      showCloseButton={true}
+    >
+      <View style={styles.paymentModalBody}>
+        {step === 'paid_status' ? (
+          <>
+            <AppButton
+              variant="outline"
+              fullWidth
+              leftIcon={<Text style={styles.badgePillIcon}>💵</Text>}
+              onPress={() => setStep('payment_method')}
+              disabled={isBusy}
+              accessibilityLabel={LABELS.PAID}
+              accessibilityHint="Proceeds to select payment method"
+              style={{ marginBottom: 8 }}
+            >
+              {LABELS.PAID}
+            </AppButton>
+            <AppButton
+              variant="outline"
+              fullWidth
+              leftIcon={<Text style={styles.badgePillIcon}>⏳</Text>}
+              onPress={() => submitPayment({ isPaid: false }, 'unpaid')}
+              loading={loadingTarget === 'unpaid'}
+              disabled={isBusy}
+              accessibilityLabel={LABELS.UNPAID}
+              accessibilityHint="Marks repair as delivered but unpaid"
+              accessibilityState={{ busy: loadingTarget === 'unpaid' }}
+              style={{ marginBottom: 8 }}
+            >
+              {LABELS.UNPAID}
+            </AppButton>
+          </>
+        ) : (
+          <>
+            <AppButton
+              variant="outline"
+              fullWidth
+              leftIcon={<Text style={styles.badgePillIcon}>📱</Text>}
+              onPress={() => submitPayment({ isPaid: true, paymentType: 'online' }, 'online')}
+              loading={loadingTarget === 'online'}
+              disabled={isBusy}
+              accessibilityLabel={LABELS.ONLINE}
+              accessibilityHint="Marks as paid via online payment"
+              accessibilityState={{ busy: loadingTarget === 'online' }}
+              style={{ marginBottom: 8, borderColor: colors.accent }}
+            >
+              {LABELS.ONLINE}
+            </AppButton>
+            <AppButton
+              variant="primary"
+              fullWidth
+              leftIcon={<Text style={styles.badgePillIcon}>💵</Text>}
+              onPress={() => submitPayment({ isPaid: true, paymentType: 'cash' }, 'cash')}
+              loading={loadingTarget === 'cash'}
+              disabled={isBusy}
+              accessibilityLabel={LABELS.CASH}
+              accessibilityHint="Marks as paid via cash"
+              accessibilityState={{ busy: loadingTarget === 'cash' }}
+            >
+              {LABELS.CASH}
+            </AppButton>
+          </>
+        )}
+      </View>
+    </AppModal>
   );
 });

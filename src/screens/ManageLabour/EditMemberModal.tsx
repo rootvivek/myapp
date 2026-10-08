@@ -1,14 +1,8 @@
 import React from 'react';
-import {
-  ActivityIndicator,
-  Modal,
-  Pressable,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
-import type { AppColors } from '../../theme';
-import { createStyles } from './styles';
+
+import { AppButton } from '../../components/ui/AppButton';
+import { AppInput } from '../../components/ui/AppInput';
+import { AppModal } from '../../components/ui/AppModal';
 
 type Props = {
   visible: boolean;
@@ -19,7 +13,6 @@ type Props = {
   editBusy: boolean;
   onClose: () => void;
   onSave: () => void;
-  colors: AppColors;
 };
 
 export const EditMemberModal = React.memo(function EditMemberModal({
@@ -31,54 +24,53 @@ export const EditMemberModal = React.memo(function EditMemberModal({
   editBusy,
   onClose,
   onSave,
-  colors,
 }: Props) {
-  const styles = createStyles(colors);
-
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalCard}>
-          <Text style={styles.modalTitle}>Edit Team Member</Text>
+    <AppModal
+      visible={visible}
+      onClose={onClose}
+      title="Edit Team Member"
+      closeOnOverlayPress={false}
+      dismissableBackButton
+      footer={
+        <>
+          <AppButton
+            variant="secondary"
+            onPress={onClose}
+            accessibilityLabel="Cancel"
+            containerStyle={{ flex: 1 }}
+          >
+            Cancel
+          </AppButton>
+          <AppButton
+            variant="primary"
+            loading={editBusy}
+            onPress={onSave}
+            accessibilityLabel="Save changes"
+            containerStyle={{ flex: 1 }}
+          >
+            Save
+          </AppButton>
+        </>
+      }
+    >
+      <AppInput
+        label="Username"
+        value={editName}
+        onChangeText={setEditName}
+        placeholder="e.g. rahul123"
+        autoCapitalize="none"
+        accessibilityLabel="Username"
+      />
 
-          <Text style={styles.label}>Username</Text>
-          <TextInput
-            value={editName}
-            onChangeText={setEditName}
-            placeholder="e.g. rahul123"
-            placeholderTextColor={colors.textMuted}
-            style={styles.input}
-            autoCapitalize="none"
-          />
-
-          <Text style={styles.label}>Phone number</Text>
-          <TextInput
-            value={editPhone}
-            onChangeText={setEditPhone}
-            placeholder="9876543210"
-            placeholderTextColor={colors.textMuted}
-            style={styles.input}
-            keyboardType="phone-pad"
-          />
-
-          <View style={styles.modalActions}>
-            <Pressable onPress={onClose} style={styles.cancelBtn}>
-              <Text style={styles.cancelBtnText}>Cancel</Text>
-            </Pressable>
-            <Pressable
-              onPress={onSave}
-              disabled={editBusy}
-              style={[styles.saveBtn, editBusy && styles.dim]}
-            >
-              {editBusy ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.saveBtnText}>Save</Text>
-              )}
-            </Pressable>
-          </View>
-        </View>
-      </View>
-    </Modal>
+      <AppInput
+        label="Phone number"
+        value={editPhone}
+        onChangeText={setEditPhone}
+        placeholder="9876543210"
+        keyboardType="phone-pad"
+        accessibilityLabel="Phone number"
+      />
+    </AppModal>
   );
 });

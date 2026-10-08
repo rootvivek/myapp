@@ -1,4 +1,4 @@
-export type RepairStatus = 'pending' | 'in_progress' | 'completed' | 'delivered' | 'cancelled';
+export type RepairStatus = 'pending' | 'in_progress' | 'completed' | 'delivered';
 
 export type LockType = '' | 'pattern' | 'pin' | 'password';
 
@@ -12,7 +12,6 @@ export const REPAIR_STATUSES: { value: RepairStatus; label: string }[] = [
   { value: 'in_progress', label: 'In Progress' },
   { value: 'completed', label: 'Completed' },
   { value: 'delivered', label: 'Delivered' },
-  { value: 'cancelled', label: 'Cancelled' },
 ];
 
 /** Photo URLs: `https://…` from cloud storage, or local `file://` while picking before upload. */
@@ -43,8 +42,11 @@ export interface Repair {
   accSimTray: boolean;
   accBackCover: boolean;
   paymentType: 'cash' | 'online';
+  /** FK → sellers.id (optional). Null if not recorded. */
+  sellerId: number | null;
   createdBy: string;
   createdByName: string;
+  createdByRole: 'owner' | 'labour' | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -64,6 +66,6 @@ export function formatAccessoriesSummary(r: Repair): string {
   return ACCESSORY_ITEMS.map(({ key, label }) => `${label}: ${r[key] ? 'Yes' : 'No'}`).join(' · ');
 }
 
-export type RepairInput = Omit<Repair, 'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'createdByName'> & {
+export type RepairInput = Omit<Repair, 'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'createdByName' | 'createdByRole'> & {
   id?: number;
 };

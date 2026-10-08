@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { AppColors } from '../../theme';
-import { accentAlpha, radius, spacing } from '../../theme';
+import { accentAlpha, radius, sizes, spacing } from '../../theme';
 
 export function createStyles(colors: AppColors) {
   return StyleSheet.create({
@@ -25,7 +25,7 @@ export function createStyles(colors: AppColors) {
       backgroundColor: colors.surface,
       borderRadius: radius.lg,
       padding: spacing.sm + 4,
-      borderWidth: 1,
+      borderWidth: sizes.hairline,
       borderColor: colors.border,
       flexDirection: 'row',
       alignItems: 'center',
@@ -37,7 +37,7 @@ export function createStyles(colors: AppColors) {
     avatar: {
       width: 46,
       height: 46,
-      borderRadius: 23,
+      borderRadius: radius.full,
       backgroundColor: accentAlpha(colors.accent, 0.18),
       borderWidth: 1.5,
       borderColor: colors.accent,
@@ -53,11 +53,11 @@ export function createStyles(colors: AppColors) {
       position: 'absolute',
       top: -3,
       right: -3,
-      backgroundColor: '#FEF3C7',
-      borderRadius: 8,
+      backgroundColor: accentAlpha(colors.warning, 0.16),
+      borderRadius: radius.sm,
       padding: 2,
-      borderWidth: 1,
-      borderColor: '#F59E0B',
+      borderWidth: sizes.hairline,
+      borderColor: colors.warning,
     },
     heroInfo: {
       flex: 1,
@@ -85,7 +85,7 @@ export function createStyles(colors: AppColors) {
       paddingVertical: 2,
       borderRadius: radius.full,
       marginTop: 4,
-      borderWidth: 1,
+      borderWidth: sizes.hairline,
       borderColor: colors.border,
     },
     roleBadgeText: {
@@ -95,13 +95,6 @@ export function createStyles(colors: AppColors) {
     },
 
     /* Section Card - Compressed */
-    card: {
-      backgroundColor: colors.surface,
-      borderRadius: radius.lg,
-      padding: spacing.sm + 4,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
     cardHeader: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -155,7 +148,7 @@ export function createStyles(colors: AppColors) {
       backgroundColor: accentAlpha(colors.accent, 0.12),
       justifyContent: 'center',
       alignItems: 'center',
-      borderWidth: 1,
+      borderWidth: sizes.hairline,
       borderColor: accentAlpha(colors.accent, 0.2),
     },
 
@@ -167,14 +160,14 @@ export function createStyles(colors: AppColors) {
       backgroundColor: colors.surface2,
       padding: 10,
       borderRadius: radius.md,
-      borderWidth: 1,
+      borderWidth: sizes.hairline,
       borderColor: colors.border,
       marginBottom: spacing.sm,
     },
     logoCircleWrapper: {
       width: 54,
       height: 54,
-      borderRadius: 27,
+      borderRadius: radius.full,
       backgroundColor: colors.surface,
       borderWidth: 1.5,
       borderColor: colors.border,
@@ -207,45 +200,29 @@ export function createStyles(colors: AppColors) {
       gap: 6,
     },
 
-    /* Save Button */
-    saveBtn: {
-      borderRadius: radius.md,
-      overflow: 'hidden',
-      marginTop: 6,
+    /* Compact inline action buttons (Check Update / Upload / Remove) */
+    inlineBtn: {
+      minHeight: sizes.buttonHeightCompact,
     },
-    saveBtnInner: {
-      height: 42,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 6,
-    },
-    saveBtnText: {
-      color: '#FFFFFF',
-      fontSize: 13.5,
-      fontWeight: '700',
-      letterSpacing: 0.2,
+    inlineBtnLabel: {
+      fontSize: 13,
     },
 
-    logoMiniBtn: {
-      backgroundColor: colors.surface,
-      paddingHorizontal: 10,
-      paddingVertical: 4,
-      borderRadius: radius.sm,
-      borderWidth: 1,
-      borderColor: colors.border,
+    /* Admin dashboard navigation row */
+    adminRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: spacing.md,
+      paddingVertical: 14,
     },
-    logoMiniBtnDanger: {
-      borderColor: 'rgba(239, 68, 68, 0.4)',
-      backgroundColor: 'rgba(239, 68, 68, 0.08)',
-    },
-    logoMiniBtnText: {
-      color: colors.text,
-      fontSize: 11,
-      fontWeight: '700',
-    },
-    logoMiniBtnDangerText: {
-      color: colors.danger,
+    adminIconBox: {
+      width: sizes.iconButton,
+      height: sizes.iconButton,
+      borderRadius: radius.md,
+      backgroundColor: accentAlpha(colors.danger, 0.12),
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: spacing.sm + 4,
     },
   });
 }

@@ -105,31 +105,3 @@ export async function safeInsert(payload: Record<string, unknown>, retryCount = 
   }
   return data as Record<string, unknown>;
 }
-
-export async function safeUpdate(id: number, payload: Record<string, unknown>, retryCount = 0): Promise<void> {
-  if (retryCount > 10) {
-    throw new Error('Too many schema discrepancy retries');
-  }
-  const { data, error } = await supabase
-    .from('repairs')
-    .update(payload as any)
-    .eq('id', id)
-    .select('id')
-    .maybeSingle();
-
-  if (error) {
-    const columnName = getMissingColumn(error.message);
-    if (columnName) {
-      // Log warning so silent data loss is visible in logs
-      console.warn(`[safeUpdate] Dropping missing column "${columnName}" from update payload`);
-      const nextPayload = { ...payload };
-      delete nextPayload[columnName];
-      return safeUpdate(id, nextPayload, retryCount + 1);
-    }
-    throw error;
-  }
-
-  if (!data) {
-    throw new Error('Repair could not be updated. Check your session and repair permissions.');
-  }
-}

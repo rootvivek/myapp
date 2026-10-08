@@ -9,7 +9,6 @@ import {
   requireUserContext,
   requireUserId,
   safeInsert,
-  safeUpdate,
 } from './helpers';
 
 export function rowToRepair(row: Record<string, unknown>): Repair {
@@ -38,8 +37,10 @@ export function rowToRepair(row: Record<string, unknown>): Repair {
     accSimTray: Boolean(row.acc_sim_tray),
     accBackCover: Boolean(row.acc_back_cover),
     paymentType: (row.payment_type as 'cash' | 'online') || 'cash',
+    sellerId: row.seller_id != null ? Number(row.seller_id) : null,
     createdBy: String(row.created_by ?? ''),
     createdByName: '',
+    createdByRole: (row.created_by_role as 'owner' | 'labour') ?? null,
     createdAt: String(row.created_at ?? ''),
     updatedAt: String(row.updated_at ?? ''),
   };
@@ -69,38 +70,62 @@ export function mapInputToRow(input: RepairInput): Record<string, any> {
     acc_sim_tray: input.accSimTray,
     acc_back_cover: input.accBackCover,
     payment_type: input.paymentType,
+    seller_id: input.sellerId ?? null,
   };
 }
 
 export async function deleteRepair(repairId: number): Promise<void> {
   try {
     const ctx = await requireUserContext();
-    await removeAllRepairImages(ctx.userId, repairId);
+
+    // Delete the row first: if storage cleanup fails afterwards the repair is
+    // still gone (the previous order could leave a repair pointing at images
+    // that had already been removed).
     let query = supabase.from('repairs').delete().eq('id', repairId);
     query = applyShopOrUserFilter(query, ctx);
     const { error } = await query;
     if (error) throw error;
+
+    await removeAllRepairImages(ctx.userId, repairId);
   } catch (err) {
     handleRepositoryError(err, 'Failed to delete repair');
   }
 }
 
-export async function getAllRepairs(): Promise<Repair[]> {
-  try {
-    const ctx = await requireUserContext();
-    let query = supabase
+// PostgREST caps a single response at `max-rows` (default 1000), so a plain
+// `.limit(5000)` silently truncates. Page through with `.range()` instead.
+const REPAIRS_PAGE_SIZE = 1000;
+const REPAIRS_MAX = 20000;
+
+async function fetchAllRepairRows(ctx: { userId: string; shopId: string }): Promise<Record<string, unknown>[]> {
+  const rows: Record<string, unknown>[] = [];
+
+  for (let from = 0; from < REPAIRS_MAX; from += REPAIRS_PAGE_SIZE) {
+    let pageQuery = supabase
       .from('repairs')
       .select('*')
       .order('date_received', { ascending: false })
       .order('id', { ascending: false })
-      .limit(5000);
+      .range(from, from + REPAIRS_PAGE_SIZE - 1);
 
-    query = applyShopOrUserFilter(query, ctx);
+    pageQuery = applyShopOrUserFilter(pageQuery, ctx);
 
-    const { data, error } = await query;
+    const { data, error } = await pageQuery;
     if (error) throw error;
 
-    const repairs = (data ?? []).map((r: Record<string, unknown>) => rowToRepair(r));
+    const page = data ?? [];
+    rows.push(...page);
+    if (page.length < REPAIRS_PAGE_SIZE) break;
+  }
+
+  return rows;
+}
+
+export async function getAllRepairs(): Promise<Repair[]> {
+  try {
+    const ctx = await requireUserContext();
+    const rows = await fetchAllRepairRows(ctx);
+    const repairs = rows.map((r) => rowToRepair(r));
 
     if (repairs.length > 0 && ctx.shopId) {
       const { data: profiles } = await supabase
@@ -214,8 +239,21 @@ export async function insertRepair(input: RepairInput): Promise<number> {
 
     const data = await safeInsert(payload);
     const newId = Number(data?.id);
-    const orderCode = orderCodeFromRepairId(newId);
-    await safeUpdate(newId, { order_code: orderCode });
+    if (!Number.isFinite(newId) || newId <= 0) {
+      throw new Error('Repair was created but no id was returned.');
+    }
+
+    // Best-effort: the row already exists, so a failed order_code write must
+    // NOT throw — otherwise the caller retries and creates a duplicate repair.
+    try {
+      await supabase
+        .from('repairs')
+        .update({ order_code: orderCodeFromRepairId(newId) })
+        .eq('id', newId);
+    } catch (err) {
+      console.warn('[insertRepair] Could not set order_code for repair', newId, err);
+    }
+
     return newId;
   } catch (err) {
     handleRepositoryError(err, 'Failed to insert repair');
@@ -259,12 +297,11 @@ export async function updateRepair(input: RepairInput & { id: number }): Promise
       updated_at: now,
     };
 
-    // Apply shop filter to prevent cross-shop updates
-    const { error } = await supabase
-      .from('repairs')
-      .update(payload)
-      .eq('id', input.id)
-      .eq('shop_id', ctx.shopId || null);
+    // Apply the same scope as every other query so shop-less owners can update
+    // their own repairs (`.eq('shop_id', null)` never matches a NULL column).
+    let query = supabase.from('repairs').update(payload).eq('id', input.id);
+    query = applyShopOrUserFilter(query, ctx);
+    const { error } = await query;
     if (error) throw error;
   } catch (err) {
     handleRepositoryError(err, 'Failed to update repair');

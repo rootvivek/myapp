@@ -3,6 +3,25 @@ import { Image, ImageProps } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { logger } from '../utils/logger';
 
+const SIGNED_URL_TTL_MS = 15 * 60 * 1000;
+// Refresh a little before expiry so an image never renders an expired URL.
+const CACHE_SAFETY_MS = 60 * 1000;
+
+type SignedUrlCacheEntry = { url: string; expiresAt: number };
+
+// Module-level cache: without it every mounted thumbnail signs the same object
+// again (a network round trip per image per mount).
+const signedUrlCache = new Map<string, SignedUrlCacheEntry>();
+
+/** Extract the storage object path from a Supabase storage URL. */
+function extractRepairImagePath(imageUrl: string): string {
+  if (imageUrl.includes('/repair-images/')) {
+    const start = imageUrl.indexOf('/repair-images/') + '/repair-images/'.length;
+    return decodeURIComponent(imageUrl.substring(start).split('?')[0]);
+  }
+  return decodeURIComponent(imageUrl);
+}
+
 export function useSecureImage(imageUrl: string | null | undefined) {
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -27,19 +46,19 @@ export function useSecureImage(imageUrl: string | null | undefined) {
       imageUrl.includes('/storage/v1/object/sign/repair-images/');
 
     if (isSupabaseRepairImage) {
+      const cached = signedUrlCache.get(imageUrl);
+      if (cached && cached.expiresAt - Date.now() > CACHE_SAFETY_MS) {
+        setSignedUrl(cached.url);
+        return;
+      }
+
       let isMounted = true;
       setLoading(true);
 
       const getSignedUrl = async () => {
         try {
-          let path = '';
-          if (imageUrl.includes('/repair-images/')) {
-            const pathStart = imageUrl.indexOf('/repair-images/') + '/repair-images/'.length;
-            path = decodeURIComponent(imageUrl.substring(pathStart).split('?')[0]);
-          } else {
-            path = decodeURIComponent(imageUrl);
-          }
-          
+          const path = extractRepairImagePath(imageUrl);
+
           if (!supabase) {
             if (isMounted) setSignedUrl(imageUrl);
             return;
@@ -48,10 +67,14 @@ export function useSecureImage(imageUrl: string | null | undefined) {
           const { data, error } = await supabase.storage
             .from('repair-images')
             .createSignedUrl(path, 15 * 60); // 15 minutes expiry
-          
+
           if (error) throw error;
-          if (isMounted && data?.signedUrl) {
-            setSignedUrl(data.signedUrl);
+          if (data?.signedUrl) {
+            signedUrlCache.set(imageUrl, {
+              url: data.signedUrl,
+              expiresAt: Date.now() + SIGNED_URL_TTL_MS,
+            });
+            if (isMounted) setSignedUrl(data.signedUrl);
           }
         } catch (err) {
           logger.warn('[useSecureImage] error signing url:', err);

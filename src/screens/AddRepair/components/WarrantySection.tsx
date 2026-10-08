@@ -1,12 +1,10 @@
 import React from 'react';
-import { View, Text } from 'react-native';
-import { Chip as PaperChip } from 'react-native-paper';
-import { Shield } from 'lucide-react-native';
-import type { AppColors } from '../../../theme';
-import { accentAlpha } from '../../../theme';
-import { WARRANTY_OPTIONS } from '../constants';
+import { StyleSheet, Text, View } from 'react-native';
 import type { AddRepairStyles } from '../styles';
+import { WARRANTY_OPTIONS } from '../constants';
 import type { WarrantyType } from '../types';
+import { AppCard } from '../../../components/ui/AppCard';
+import { AppChip } from '../../../components/ui/AppChip';
 
 type Props = {
   warranty: string;
@@ -14,7 +12,6 @@ type Props = {
   onChangeWarranty: (w: string) => void;
   onChangeWarrantyType: (wt: WarrantyType) => void;
   styles: AddRepairStyles;
-  colors: AppColors;
 };
 
 export const WarrantySection = React.memo(function WarrantySection({
@@ -22,54 +19,41 @@ export const WarrantySection = React.memo(function WarrantySection({
   onChangeWarranty,
   onChangeWarrantyType,
   styles,
-  colors,
 }: Props) {
-  return (
-    <View style={styles.formCard}>
-      <View style={styles.cardHeader}>
-        <View style={styles.cardHeaderIcon}>
-          <Shield size={16} color={colors.accent} />
-        </View>
-        <View style={styles.cardHeaderInfo}>
-          <Text style={styles.cardTitle}>Warranty Period</Text>
-        </View>
-      </View>
+  const localStyles = StyleSheet.create({
+    chipsRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 6,
+    },
+  });
 
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+  return (
+    <AppCard>
+      <Text style={styles.fieldLabel}>Warranty Period</Text>
+
+      <View style={localStyles.chipsRow}>
         {WARRANTY_OPTIONS.map((opt) => {
           const isSelected = warrantyType === opt.type;
           return (
-            <PaperChip
+            <AppChip
               key={opt.type}
+              variant={isSelected ? 'primary' : 'default'}
               selected={isSelected}
-              mode="outlined"
               showSelectedCheck={false}
               onPress={() => {
                 onChangeWarrantyType(opt.type);
                 onChangeWarranty(opt.value);
-              }}
-              style={{
-                backgroundColor: isSelected ? accentAlpha(colors.accent, 0.15) : colors.surface2,
-                borderColor: isSelected ? colors.accent : colors.border,
-                borderRadius: 8,
-                height: 32,
-              }}
-              textStyle={{
-                color: isSelected ? colors.accent : colors.textMuted,
-                fontWeight: isSelected ? '700' : '600',
-                fontSize: 11.5,
               }}
               accessibilityRole="button"
               accessibilityLabel={`Warranty option ${opt.label}`}
               accessibilityState={{ selected: isSelected }}
             >
               {opt.label}
-            </PaperChip>
+            </AppChip>
           );
         })}
       </View>
-    </View>
+    </AppCard>
   );
 });
-
-

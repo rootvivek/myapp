@@ -1,7 +1,7 @@
 import { useCallback, useReducer } from 'react';
-import type { LockType, RepairImageSlot, RepairStatus } from '../../../types/repair';
+import type { RepairImageSlot } from '../../../types/repair';
 import { initialRepairFormState, repairFormReducer } from '../reducer';
-import type { RepairFormState, WarrantyType } from '../types';
+import type { RepairFormState } from '../types';
 
 export function useRepairForm(initialState?: Partial<RepairFormState>) {
   const [state, dispatch] = useReducer(

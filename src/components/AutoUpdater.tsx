@@ -14,8 +14,8 @@ import { Download } from 'lucide-react-native';
 import { supabase } from '../lib/supabase';
 import { useTheme } from '../context/ThemeContext';
 
-export const CURRENT_VERSION_CODE = 5;
-export const CURRENT_VERSION_NAME = '1.0.4';
+export const CURRENT_VERSION_CODE = 9;
+export const CURRENT_VERSION_NAME = '1.0.8';
 
 export type UpdateInfo = {
   hasUpdate: boolean;

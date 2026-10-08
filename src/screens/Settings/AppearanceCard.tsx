@@ -1,7 +1,9 @@
 import React from 'react';
-import { Switch, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
+import { Switch } from 'react-native-paper';
 import { Moon, Sun } from 'lucide-react-native';
 import type { AppColors } from '../../theme';
+import { AppCard } from '../../components/ui/AppCard';
 import { createStyles } from './styles';
 
 type Props = {
@@ -18,7 +20,7 @@ export const AppearanceCard = React.memo(function AppearanceCard({
   const styles = createStyles(colors);
 
   return (
-    <View style={styles.card}>
+    <AppCard>
       <View style={styles.row}>
         <View style={styles.rowLeft}>
           <View style={styles.iconBox}>
@@ -36,10 +38,9 @@ export const AppearanceCard = React.memo(function AppearanceCard({
         <Switch
           value={mode === 'dark'}
           onValueChange={onThemeChange}
-          trackColor={{ false: colors.border, true: colors.accent }}
-          thumbColor={mode === 'dark' ? colors.accent : '#f4f3f4'}
+          color={colors.accent}
         />
       </View>
-    </View>
+    </AppCard>
   );
 });

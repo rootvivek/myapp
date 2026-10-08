@@ -1,8 +1,8 @@
-import React, { useEffect } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { useEffect } from 'react';
+import { View } from 'react-native';
 import {
-  useAutoUpdate,
   startAutoUpdateCheck,
+  stopAutoUpdateCheck,
   configureAutoUpdate,
   checkForUpdates,
 } from '../services/autoUpdate';
@@ -18,83 +18,38 @@ import {
 } from '@env';
 
 /**
- * AutoUpdateInitializer
- * 
- * Drop this component at the root of your app (inside AuthProvider) to enable
- * automatic update checking on app start and periodically.
- * 
- * Configuration via .env:
- * - UPDATE_API_URL: Your update check API endpoint
- * - UPDATE_CHECK_INTERVAL: Check interval in ms (default 4 hours)
- * - ENABLE_CODE_PUSH: Enable CodePush for JS updates
- * - ENABLE_APK_UPDATE: Enable APK update checks
- * - AUTO_DOWNLOAD_APK: Auto-download APK when update found
- * - SHOW_RELEASE_NOTES: Show release notes in update dialog
+ * Enables the update check for the whole app: once on start and then
+ * periodically. Renders nothing.
+ *
+ * Configuration lives in `.env`:
+ * - UPDATE_API_URL: update check API base URL (required for APK updates)
+ * - UPDATE_CHECK_INTERVAL: check interval in ms (default 4 hours)
+ * - ENABLE_CODE_PUSH: enable CodePush for JS updates
+ * - ENABLE_APK_UPDATE: enable APK update checks
+ * - AUTO_DOWNLOAD_APK: auto-download the APK when an update is found
+ * - SHOW_RELEASE_NOTES: show release notes in the update dialog
  */
 export function AutoUpdateInitializer() {
   useEffect(() => {
-    // Configure from environment variables (.env via react-native-dotenv)
+    const apiUrl = String(UPDATE_API_URL ?? '').trim();
+
     configureAutoUpdate({
-      apiUrl: UPDATE_API_URL || 'https://api.yourdomain.com',
+      apiUrl: apiUrl || 'https://api.yourdomain.com',
       checkInterval: parseInt(UPDATE_CHECK_INTERVAL || '14400000', 10),
       enableCodePush: ENABLE_CODE_PUSH === 'true',
-      enableApkUpdate: ENABLE_APK_UPDATE !== 'false',
+      // Fail closed: no configured update host means no update checks.
+      enableApkUpdate: ENABLE_APK_UPDATE !== 'false' && apiUrl.length > 0,
       autoDownloadApk: AUTO_DOWNLOAD_APK !== 'false',
       showReleaseNotes: SHOW_RELEASE_NOTES !== 'false',
     });
 
-    // Start periodic checks
     startAutoUpdateCheck();
-
-    // Initial check (run once — `checkForUpdates` is a stable module import)
     void checkForUpdates(false);
 
-    // Cleanup on unmount (rarely needed for root component)
     return () => {
-      // stopAutoUpdateCheck() if needed
+      stopAutoUpdateCheck();
     };
   }, []);
 
   return <View />;
-}
-
-/**
- * UpdateBanner - Shows a banner when update is available
- * 
- * Usage: Place anywhere in your app (e.g., HomeDashboardScreen)
- * <UpdateBanner />
- */
-export function UpdateBanner() {
-  const { state, info, checkForUpdates } = useAutoUpdate();
-
-  if (state !== 'ready' || !info) return null;
-
-  return (
-    <View
-      style={{
-        backgroundColor: '#8B5CF6',
-        padding: 16,
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-      }}
-    >
-      <View style={{ flex: 1 }}>
-        <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>
-          Update Available
-        </Text>
-        <Text style={{ color: '#fff', fontSize: 12, marginTop: 2 }}>
-          Version {info.versionName} is ready to install
-        </Text>
-      </View>
-      <View style={{ flexDirection: 'row', gap: 8 }}>
-        <Pressable
-          onPress={() => checkForUpdates(true)}
-          style={{ backgroundColor: '#fff', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}
-        >
-          <Text style={{ color: '#8B5CF6', fontWeight: '700' }}>Update Now</Text>
-        </Pressable>
-      </View>
-    </View>
-  );
 }

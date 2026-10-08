@@ -1,52 +1,40 @@
 import React, { useState } from 'react';
-import { Platform, Pressable, Text, View } from 'react-native';
-import { FormTextInput } from '../../../components/FormTextInput';
+import { Platform, Text } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Calendar } from 'lucide-react-native';
 import type { AppColors } from '../../../theme';
-import type { AddRepairStyles } from '../styles';
+import { appFieldLabelStyle } from '../../../components/ui/AppInput';
+import { AppButton } from '../../../components/ui/AppButton';
+import { AppCard } from '../../../components/ui/AppCard';
 
 type Props = {
   dateReceived: string;
   onChangeDateReceived: (date: string) => void;
-  styles: AddRepairStyles;
   colors: AppColors;
 };
 
 export const DateSection = React.memo(function DateSection({
   dateReceived,
   onChangeDateReceived,
-  styles,
   colors,
 }: Props) {
   const [showDate, setShowDate] = useState(false);
   const dateValue = new Date(dateReceived + 'T12:00:00');
 
   return (
-    <View style={styles.formCard}>
-      <View style={styles.cardHeader}>
-        <View style={styles.cardHeaderIcon}>
-          <Calendar size={16} color={colors.accent} />
-        </View>
-        <View style={styles.cardHeaderInfo}>
-          <Text style={styles.cardTitle}>Received Date</Text>
-        </View>
-      </View>
-
-      <Pressable
+    <AppCard>
+      <Text style={appFieldLabelStyle(colors)}>Received Date</Text>
+      <AppButton
+        variant="secondary"
+        fullWidth
+        leftIcon={<Calendar size={18} color={colors.text} />}
         onPress={() => setShowDate(true)}
-        accessibilityRole="button"
         accessibilityLabel={`Date received: ${dateReceived}`}
         accessibilityHint="Opens date picker"
       >
-        <View pointerEvents="none">
-          <FormTextInput
-            value={dateReceived}
-            editable={false}
-            rightIcon={Calendar}
-          />
-        </View>
-      </Pressable>
+        {dateReceived}
+      </AppButton>
+
       {showDate && (
         <DateTimePicker
           value={dateValue}
@@ -63,17 +51,17 @@ export const DateSection = React.memo(function DateSection({
           }}
         />
       )}
+
       {Platform.OS === 'ios' && showDate && (
-        <Pressable
+        <AppButton
+          variant="tertiary"
           onPress={() => setShowDate(false)}
-          style={{ alignSelf: 'flex-end', padding: 12, marginRight: 22 }}
-          accessibilityRole="button"
+          containerStyle={{ alignSelf: 'flex-end' }}
           accessibilityLabel="Done picking date"
         >
-          <Text style={{ color: colors.accent, fontWeight: '700', fontSize: 14 }}>Done</Text>
-        </Pressable>
+          Done
+        </AppButton>
       )}
-    </View>
+    </AppCard>
   );
 });
-

@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { ChevronRight, Users } from 'lucide-react-native';
 import type { AppColors } from '../../theme';
+import { AppCard } from '../../components/ui/AppCard';
 import { createStyles } from './styles';
 
 type Props = {
@@ -13,7 +14,7 @@ export const TeamCard = React.memo(function TeamCard({ onManageLabour, colors }:
   const styles = createStyles(colors);
 
   return (
-    <View style={styles.card}>
+    <AppCard>
       <Pressable
         onPress={onManageLabour}
         style={({ pressed }) => [styles.row, pressed && { opacity: 0.7 }]}
@@ -29,6 +30,6 @@ export const TeamCard = React.memo(function TeamCard({ onManageLabour, colors }:
         </View>
         <ChevronRight size={18} color={colors.textMuted} />
       </Pressable>
-    </View>
+    </AppCard>
   );
 });

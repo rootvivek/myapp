@@ -1,20 +1,15 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Linking,
-  Pressable,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native';
-import { Crown, ShieldAlert } from 'lucide-react-native';
+import { Alert, Linking, Pressable, ScrollView, Text, View } from 'react-native';
+import { ChevronRight, Crown, ShieldAlert } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
+import { accentAlpha } from '../theme';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { checkAppUpdate, CURRENT_VERSION_NAME } from '../components/AutoUpdater';
+import { AppActivityIndicator } from '../components/ui/AppActivityIndicator';
+import { AppCard } from '../components/ui/AppCard';
 import { logger } from '../utils/logger';
 import { launchLibraryForImage } from '../utils/pickImage';
 import {
@@ -160,7 +155,7 @@ export function SettingsScreen({ navigation }: Props) {
     return (
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={colors.accent} />
+          <AppActivityIndicator size="large" color={colors.accent} />
         </View>
       </SafeAreaView>
     );
@@ -181,7 +176,7 @@ export function SettingsScreen({ navigation }: Props) {
             </View>
             {isOwner && (
               <View style={styles.crownBadge}>
-                <Crown size={11} color="#F59E0B" fill="#F59E0B" />
+                <Crown size={11} color={colors.warning} fill={colors.warning} />
               </View>
             )}
           </View>
@@ -224,7 +219,6 @@ export function SettingsScreen({ navigation }: Props) {
           isOwner={isOwner}
           busy={profileBusy}
           onSave={(name, shopName) => void onSaveProfileDetails(name, shopName)}
-          colors={colors}
         />
 
         {/* Card 3: Manage Labour (Owner only) */}
@@ -237,50 +231,22 @@ export function SettingsScreen({ navigation }: Props) {
 
         {/* Admin Dashboard Card (Admin only) */}
         {isAdmin && (
-          <View
-            style={{
-              backgroundColor: colors.surface,
-              borderRadius: 16,
-              borderWidth: 1,
-              borderColor: colors.border,
-              overflow: 'hidden',
-              marginBottom: 12,
-            }}
-          >
+          <AppCard containerStyle={{ overflow: 'hidden' }}>
             <Pressable
               onPress={() => navigation.navigate('AdminDashboard')}
-              android_ripple={{ color: 'rgba(0,0,0,0.05)' }}
-              style={{
-                paddingHorizontal: 16,
-                paddingVertical: 14,
-                flexDirection: 'row',
-                alignItems: 'center',
-              }}
+              android_ripple={{ color: accentAlpha(colors.text, 0.05) }}
+              style={styles.adminRow}
             >
-              <View
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 12,
-                  backgroundColor: '#DC262620',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  marginRight: 12,
-                }}
-              >
-                <ShieldAlert size={20} color="#DC2626" />
+              <View style={styles.adminIconBox}>
+                <ShieldAlert size={20} color={colors.danger} />
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text }}>
-                  Admin Dashboard
-                </Text>
-                <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 2 }}>
-                  Manage shops, users & system data
-                </Text>
+              <View style={styles.rowInfo}>
+                <Text style={styles.rowTitle}>Admin Dashboard</Text>
+                <Text style={styles.rowSubtitle}>Manage shops, users & system data</Text>
               </View>
-              <Text style={{ color: colors.textMuted, fontSize: 18 }}>›</Text>
+              <ChevronRight size={18} color={colors.textMuted} />
             </Pressable>
-          </View>
+          </AppCard>
         )}
 
         {/* Card 4: Account & App */}

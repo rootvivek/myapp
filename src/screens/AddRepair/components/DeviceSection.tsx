@@ -1,22 +1,19 @@
 import React, { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
-import { ScanLine, Smartphone } from 'lucide-react-native';
-import type { AppColors } from '../../../theme';
 import { FormTextInput } from '../../../components/FormTextInput';
 import { normalizeImeiInput, type RepairFormErrors } from '../../../utils/repairValidation';
 import { DEVICE_BRANDS } from '../constants';
 import type { AddRepairStyles } from '../styles';
+import { AppCard } from '../../../components/ui/AppCard';
 
 type Props = {
   deviceModel: string;
   imei: string;
-  /** Inline validation messages keyed by field. */
   errors?: RepairFormErrors;
   onChangeDeviceModel: (model: string) => void;
   onChangeImei: (imei: string) => void;
   onScanImei: () => void;
   styles: AddRepairStyles;
-  colors: AppColors;
 };
 
 export const DeviceSection = React.memo(function DeviceSection({
@@ -27,7 +24,6 @@ export const DeviceSection = React.memo(function DeviceSection({
   onChangeImei,
   onScanImei,
   styles,
-  colors,
 }: Props) {
   const [showBrandDropdown, setShowBrandDropdown] = useState(false);
 
@@ -40,20 +36,12 @@ export const DeviceSection = React.memo(function DeviceSection({
       : [];
 
   return (
-    <View style={styles.formCard}>
-      <View style={styles.cardHeader}>
-        <View style={styles.cardHeaderIcon}>
-          <Smartphone size={16} color={colors.accent} />
-        </View>
-        <View style={styles.cardHeaderInfo}>
-          <Text style={styles.cardTitle}>Device Details</Text>
-        </View>
-      </View>
-
+    <AppCard>
+      {/* Device Model */}
       <View style={{ position: 'relative', zIndex: 9 }}>
         <FormTextInput
           label="Device Model"
-          placeholder="e.g. Samsung Galaxy S23"
+          placeholder="e.g. iPhone 15, Samsung S24"
           value={deviceModel}
           onChangeText={(t) => {
             onChangeDeviceModel(t);
@@ -61,8 +49,6 @@ export const DeviceSection = React.memo(function DeviceSection({
           }}
           onFocus={() => setShowBrandDropdown(true)}
           error={errors?.deviceModel}
-          icon={Smartphone}
-          containerStyle={styles.inputStack}
           accessibilityLabel="Device Model"
         />
 
@@ -73,7 +59,6 @@ export const DeviceSection = React.memo(function DeviceSection({
                 <Pressable
                   key={brand}
                   style={styles.suggestionItem}
-                  android_ripple={{ color: colors.border }}
                   onPress={() => {
                     onChangeDeviceModel(brand + ' ');
                     setShowBrandDropdown(false);
@@ -89,30 +74,22 @@ export const DeviceSection = React.memo(function DeviceSection({
         )}
       </View>
 
-      {/* IMEI Row */}
-      <View style={styles.imeiRow}>
-        <FormTextInput
-          label="IMEI (15 digits)"
-          placeholder="Enter IMEI number"
-          value={imei}
-          onChangeText={(t) => onChangeImei(normalizeImeiInput(t))}
-          keyboardType="number-pad"
-          maxLength={15}
-          containerStyle={styles.inputFlex}
-          accessibilityLabel="IMEI Number"
-        />
-
-        <Pressable
-          onPress={onScanImei}
-          style={({ pressed }) => [styles.scanBtn, pressed && { opacity: 0.8 }]}
-          accessibilityRole="button"
-          accessibilityLabel="Scan IMEI with camera"
-        >
-          <ScanLine color="#FFFFFF" size={16} />
-          <Text style={styles.scanBtnText}>Scan</Text>
-        </Pressable>
-      </View>
-    </View>
+      {/* IMEI */}
+      <FormTextInput
+        label="IMEI"
+        placeholder="IMEI (15 digits)"
+        value={imei}
+        onChangeText={(t) => onChangeImei(normalizeImeiInput(t))}
+        keyboardType="number-pad"
+        maxLength={15}
+        containerStyle={styles.inputTight}
+        rightAction={{
+          label: 'Scan',
+          onPress: onScanImei,
+          accessibilityLabel: 'Scan IMEI with camera',
+        }}
+        accessibilityLabel="IMEI Number"
+      />
+    </AppCard>
   );
 });
-

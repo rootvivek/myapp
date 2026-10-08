@@ -1,16 +1,18 @@
 import React from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { CheckCircle2 } from 'lucide-react-native';
 import type { AppColors } from '../../theme';
+import { accentAlpha } from '../../theme';
 import type { Repair } from '../../types/repair';
 import { formatCurrency } from '../../utils/format';
+import { AppCard } from '../../components/ui/AppCard';
+import { AppChip } from '../../components/ui/AppChip';
 import { createStyles } from './styles';
 
 type Props = {
   repair: Repair;
   balance: number;
   onMarkAsPaid: () => void;
-  mode: 'light' | 'dark';
   colors: AppColors;
   cardColors?: string[];
 };
@@ -19,14 +21,13 @@ export const PaymentCard = React.memo(function PaymentCard({
   repair,
   balance,
   onMarkAsPaid,
-  mode,
   colors,
 }: Props) {
-  const styles = createStyles(colors, mode);
+  const styles = createStyles(colors);
 
   return (
-    <View style={styles.card}>
-      <View style={styles.cardInner}>
+    <AppCard variant="outlined" containerStyle={styles.sectionCard}>
+      <View style={styles.listCardBody}>
         <View style={styles.paymentRow}>
           <Text style={styles.paymentLabel}>Total Repair Cost</Text>
           <Text style={styles.paymentValue}>{formatCurrency(repair.repairCost)}</Text>
@@ -64,30 +65,26 @@ export const PaymentCard = React.memo(function PaymentCard({
             </Text>
 
             {!repair.isPaid && (
-              <Pressable
+              <AppChip
+                variant="default"
+                showSelectedCheck={false}
+                icon={({ size }) => (
+                  <CheckCircle2 size={size} color={colors.success} strokeWidth={2.4} />
+                )}
                 onPress={onMarkAsPaid}
-                style={({ pressed }) => [{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  paddingHorizontal: 8,
-                  paddingVertical: 4,
-                  borderRadius: 8,
-                  backgroundColor: 'rgba(34, 197, 94, 0.12)',
-                  gap: 4,
-                }, pressed && { opacity: 0.7 }]}
-                accessibilityRole="button"
                 accessibilityLabel="Mark as Paid"
+                containerStyle={{
+                  backgroundColor: accentAlpha(colors.success, 0.12),
+                  borderColor: accentAlpha(colors.success, 0.25),
+                }}
+                labelStyle={{ color: colors.success, fontWeight: '700' }}
               >
-                <CheckCircle2 size={15} color={colors.success} strokeWidth={2.4} />
-                <Text style={{ fontSize: 12, fontWeight: '700', color: colors.success }}>
-                  Mark Paid
-                </Text>
-              </Pressable>
+                Mark Paid
+              </AppChip>
             )}
           </View>
         </View>
       </View>
-    </View>
+    </AppCard>
   );
 });
-

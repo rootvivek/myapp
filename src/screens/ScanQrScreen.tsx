@@ -1,6 +1,6 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useMemo, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Camera,
@@ -10,10 +10,13 @@ import {
 } from 'react-native-vision-camera';
 import { X } from 'lucide-react-native';
 
+import { AppButton } from '../components/ui/AppButton';
+import { AppIconButton } from '../components/ui/AppIconButton';
 import { useTheme } from '../context/ThemeContext';
 import { useRepairsState } from '../context/RepairsContext';
 import type { RootStackParamList } from '../navigation/types';
 import type { AppColors } from '../theme';
+import { radius, spacing } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ScanQr'>;
 
@@ -21,6 +24,8 @@ function createStyles(colors: AppColors): ReturnType<typeof StyleSheet.create> {
   return StyleSheet.create({
     safe: {
       flex: 1,
+      // Camera background stays black in both modes so no light-coloured
+      // frame flashes around the preview.
       backgroundColor: '#000',
     },
     camera: {
@@ -39,55 +44,40 @@ function createStyles(colors: AppColors): ReturnType<typeof StyleSheet.create> {
       width: 280,
       height: 120,
       borderWidth: 2.5,
-      borderColor: '#8B5CF6',
-      borderRadius: 16,
+      borderColor: colors.accent,
+      borderRadius: radius.lg,
       backgroundColor: 'transparent',
     },
     hint: {
+      // Always white: the hint sits on top of the camera preview.
       color: '#fff',
       fontSize: 14,
       fontWeight: '600',
-      marginTop: 24,
+      marginTop: spacing.lg,
       textAlign: 'center',
-      paddingHorizontal: 30,
+      paddingHorizontal: spacing.xl,
       lineHeight: 20,
     },
     closeBtn: {
       position: 'absolute',
       top: 20,
       right: 20,
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      backgroundColor: 'rgba(0,0,0,0.5)',
-      alignItems: 'center',
-      justifyContent: 'center',
       zIndex: 10,
+      backgroundColor: 'rgba(0,0,0,0.5)',
     },
     permissionView: {
       flex: 1,
       justifyContent: 'center',
       alignItems: 'center',
-      padding: 32,
+      padding: spacing.xl,
       backgroundColor: colors.bg,
     },
     permissionText: {
       color: colors.text,
       fontSize: 16,
       textAlign: 'center',
-      marginBottom: 20,
+      marginBottom: spacing.lg,
       lineHeight: 24,
-    },
-    grantBtn: {
-      backgroundColor: colors.accent,
-      paddingVertical: 14,
-      paddingHorizontal: 32,
-      borderRadius: 14,
-    },
-    grantBtnText: {
-      color: '#fff',
-      fontWeight: '700',
-      fontSize: 16,
     },
   });
 }
@@ -144,9 +134,9 @@ export function ScanQrScreen({ navigation }: Props) {
         <Text style={styles.permissionText}>
           Camera permission is needed to scan repair barcodes.
         </Text>
-        <Pressable onPress={requestPermission} style={styles.grantBtn} android_ripple={{ color: colors.border }}>
-          <Text style={styles.grantBtnText}>Grant Permission</Text>
-        </Pressable>
+        <AppButton variant="primary" onPress={requestPermission}>
+          Grant Permission
+        </AppButton>
       </View>
     );
   }
@@ -161,9 +151,14 @@ export function ScanQrScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <Pressable onPress={() => navigation.goBack()} style={styles.closeBtn}>
-        <X size={20} color="#fff" />
-      </Pressable>
+      <AppIconButton
+        variant="ghost"
+        size={44}
+        icon={<X size={20} color="#fff" />}
+        onPress={() => navigation.goBack()}
+        accessibilityLabel="Close scanner"
+        containerStyle={styles.closeBtn}
+      />
 
       <Camera
         style={styles.camera}

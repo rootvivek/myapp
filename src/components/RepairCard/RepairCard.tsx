@@ -10,6 +10,7 @@ import { RepairActions } from './RepairActions';
 import { RepairInfo } from './RepairInfo';
 import { StatusModal } from './StatusModal';
 import { createCardStyles } from './styles';
+import { AppCard } from '../../components/ui/AppCard';
 
 import Animated, { FadeInUp } from 'react-native-reanimated';
 
@@ -91,49 +92,48 @@ export const RepairCard = React.memo(function RepairCard({
   return (
     <Animated.View
       entering={FadeInUp.delay((index ?? 0) * 40).duration(300)}
-      style={styles.card}
     >
-      <RepairInfo
-        repair={repair}
-        onPress={onPress}
-        onPaymentPress={onStatusChange ? () => setPaymentModal(true) : undefined}
-        styles={styles}
-        colors={colors}
-      />
-
-      <RepairActions
-        repair={repair}
-        pill={pill}
-        statusLabel={statusLabel}
-        onStatusChipPress={onStatusChange ? handleStatusChipPress : undefined}
-        styles={styles}
-        colors={colors}
-      />
-
-      {onStatusChange && (
-        <StatusModal
-          visible={statusModal}
-          onClose={handleStatusModalClose}
-          onSelect={handleStatusSelect}
-          currentStatus={repair.status}
-          deviceModel={repair.deviceModel}
+      <AppCard variant="outlined" style={styles.card}>
+        <RepairInfo
+          repair={repair}
+          onPress={onPress}
+          onPaymentPress={onStatusChange ? () => setPaymentModal(true) : undefined}
           styles={styles}
           colors={colors}
         />
-      )}
 
-      {onStatusChange && (
-        <PaymentModal
-          visible={paymentModal}
-          onClose={handlePaymentClose}
-          onStatusChange={onStatusChange}
-          repairId={repair.id}
-          deviceModel={repair.deviceModel}
-          customerName={repair.customerName}
+        <RepairActions
+          repair={repair}
+          pill={pill}
+          statusLabel={statusLabel}
+          onStatusChipPress={onStatusChange ? handleStatusChipPress : undefined}
           styles={styles}
           colors={colors}
         />
-      )}
+
+        {onStatusChange && (
+          <StatusModal
+            visible={statusModal}
+            onClose={handleStatusModalClose}
+            onSelect={handleStatusSelect}
+            currentStatus={repair.status}
+            deviceModel={repair.deviceModel}
+          />
+        )}
+
+        {onStatusChange && (
+          <PaymentModal
+            visible={paymentModal}
+            onClose={handlePaymentClose}
+            onStatusChange={onStatusChange}
+            repairId={repair.id}
+            deviceModel={repair.deviceModel}
+            customerName={repair.customerName}
+            styles={styles}
+            colors={colors}
+          />
+        )}
+      </AppCard>
     </Animated.View>
   );
 });

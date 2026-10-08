@@ -1,11 +1,12 @@
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import LinearGradient from 'react-native-linear-gradient';
-import { ArrowLeft } from 'lucide-react-native';
+import { ChevronLeft } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, BackHandler, Pressable, ScrollView, StatusBar, Text, View, type LayoutChangeEvent } from 'react-native';
+import { Alert, BackHandler, ScrollView, StatusBar, Text, View, type LayoutChangeEvent } from 'react-native';
+import { Appbar } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AppActivityIndicator } from '../../components/ui/AppActivityIndicator';
 import { useTheme } from '../../context/ThemeContext';
 import { customerService } from '../../services/customerService';
 import { repairService } from '../../services/repairService';
@@ -37,6 +38,7 @@ import { PhotosSection } from './components/PhotosSection';
 import { ProblemSection } from './components/ProblemSection';
 import { SaveButton } from './components/SaveButton';
 import { StatusSection } from './components/StatusSection';
+import { SellerSection } from './components/SellerSection';
 import { WarrantySection } from './components/WarrantySection';
 import { useRepairForm } from './hooks/useRepairForm';
 import { useRepairSave } from './hooks/useRepairSave';
@@ -226,6 +228,7 @@ export function AddRepairScreen({ navigation, route }: Props) {
         images: imgState,
         accessories: { accSimTray: r.accSimTray, accBackCover: r.accBackCover },
         orderCode: r.orderCode,
+        sellerId: r.sellerId ?? null,
       });
 
       setLoading(false);
@@ -288,28 +291,30 @@ export function AddRepairScreen({ navigation, route }: Props) {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={colors.accent} />
+          <AppActivityIndicator size="large" color={colors.accent} />
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={styles.safe} edges={['bottom']}>
       <StatusBar barStyle={mode === 'dark' ? 'light-content' : 'dark-content'} />
-      <LinearGradient colors={colors.bgGradient} style={{ position: 'absolute', width: '100%', height: '100%' }} />
+
+      {/* Header */}
+      <Appbar.Header mode="center-aligned" style={{ backgroundColor: colors.surface, elevation: 0 }}>
+        <Appbar.Action
+          icon={() => <ChevronLeft size={22} color={colors.text} strokeWidth={2.4} />}
+          onPress={handleBack}
+          accessibilityLabel="Go back"
+        />
+        <Appbar.Content
+          title={isEdit ? 'Edit Job' : 'New Job'}
+          titleStyle={{ fontSize: 17, fontWeight: '700', color: colors.text }}
+        />
+      </Appbar.Header>
 
       <ScrollView ref={formScrollRef} showsVerticalScrollIndicator={false} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        {/* Header */}
-        <View style={styles.header}>
-          <Pressable onPress={handleBack} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Go back">
-            <ArrowLeft color={colors.text} size={24} />
-          </Pressable>
-          <View style={styles.headerTextWrap}>
-            <Text style={styles.headerTitle}>{isEdit ? 'Edit job' : 'New job'}</Text>
-          </View>
-        </View>
-
         {isEdit && state.orderCode ? (
           <View style={styles.orderBanner}>
             <Text style={styles.orderBannerLabel}>Order ID</Text>
@@ -340,7 +345,6 @@ export function AddRepairScreen({ navigation, route }: Props) {
             onChangeImei={(val) => updateField('imei', val)}
             onScanImei={() => navigation.navigate('ScanImei', { repairId: repairId ?? undefined })}
             styles={styles}
-            colors={colors}
           />
         </View>
 
@@ -349,12 +353,6 @@ export function AddRepairScreen({ navigation, route }: Props) {
             problem={state.problem}
             errors={fieldErrors}
             onChangeProblem={(val) => updateField('problem', val)}
-            currentExpense={state.expense}
-            onChangeExpense={(val) => updateField('expense', val)}
-            selectedInventoryItemIds={state.selectedInventoryItemIds}
-            onAddInventoryItemId={(id) =>
-              updateField('selectedInventoryItemIds', [...(state.selectedInventoryItemIds || []), id])
-            }
             styles={styles}
             colors={colors}
           />
@@ -364,7 +362,6 @@ export function AddRepairScreen({ navigation, route }: Props) {
           accessories={state.accessories}
           onChangeAccessory={setAccessory}
           styles={styles}
-          colors={colors}
         />
 
         <LockSection
@@ -373,6 +370,12 @@ export function AddRepairScreen({ navigation, route }: Props) {
           onChangeLockType={(val) => setField('lockType', val)}
           onChangeLockValue={(val) => setField('lockValue', val)}
           styles={styles}
+          colors={colors}
+        />
+
+        <SellerSection
+          selectedSellerId={state.sellerId}
+          onSelectSeller={(seller) => setField('sellerId', seller?.id ?? null)}
           colors={colors}
         />
 
@@ -391,7 +394,6 @@ export function AddRepairScreen({ navigation, route }: Props) {
           onChangeWarranty={(val) => setField('warranty', val)}
           onChangeWarrantyType={(val) => setField('warrantyType', val)}
           styles={styles}
-          colors={colors}
         />
 
         <StatusSection
@@ -399,7 +401,6 @@ export function AddRepairScreen({ navigation, route }: Props) {
           onChangeStatus={(val) => setField('status', val)}
           isEdit={isEdit}
           styles={styles}
-          colors={colors}
         />
 
         <PaymentSection
@@ -423,12 +424,11 @@ export function AddRepairScreen({ navigation, route }: Props) {
         <DateSection
           dateReceived={state.dateReceived}
           onChangeDateReceived={(val) => setField('dateReceived', val)}
-          styles={styles}
           colors={colors}
         />
       </ScrollView>
 
-      <SaveButton isEdit={isEdit} saving={saving} onSave={handleSave} styles={styles} colors={colors} />
+      <SaveButton isEdit={isEdit} saving={saving} onSave={handleSave} colors={colors} />
 
       <AddRepairPaymentModal
         visible={paymentModalVisible}
@@ -437,8 +437,6 @@ export function AddRepairScreen({ navigation, route }: Props) {
         onSelectDeliveredUnpaid={handleSelectDeliveredUnpaid}
         deviceModel={state.deviceModel}
         customerName={state.customerName}
-        styles={styles}
-        colors={colors}
       />
     </SafeAreaView>
   );

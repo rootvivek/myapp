@@ -1,5 +1,9 @@
-import '@testing-library/jest-native/extend-expect';
-import 'react-native-gesture-handler/jestSetup';
+// NOTE: this file is loaded untranspiled by Jest, so it must use CommonJS
+// (`require`) rather than ESM `import`.
+//
+// Matchers (toBeVisible, etc.) are built into @testing-library/react-native v12.4+,
+// so the deprecated `@testing-library/jest-native/extend-expect` is not needed.
+// `react-native-gesture-handler` is not a dependency of this project either.
 
 // Mock react-native modules
 jest.mock('react-native-reanimated', () => {
@@ -16,8 +20,6 @@ jest.mock('react-native-vision-camera', () => ({
   Camera: 'Camera',
 }));
 
-jest.mock('react-native-linear-gradient', () => 'LinearGradient');
-
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock')
 );
@@ -28,7 +30,7 @@ jest.mock('react-native-share', () => ({
 
 jest.mock('react-native-html-to-pdf', () => ({
   convert: jest.fn().mockResolvedValue({ filePath: '/mock/path.pdf' }),
-}));
+}), { virtual: true });
 
 jest.mock('@supabase/supabase-js', () => ({
   createClient: jest.fn(() => ({

@@ -1,16 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  Pressable,
-  Text,
-  View,
-} from 'react-native';
+import { Alert, FlatList, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Appbar } from 'react-native-paper';
 import { ArrowLeft, UserPlus } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
+import { AppActivityIndicator } from '../components/ui/AppActivityIndicator';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { labourService } from '../services/labourService';
@@ -232,25 +227,34 @@ export function ManageLabourScreen({ navigation }: Props) {
   }, []);
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={styles.safe} edges={['bottom']}>
       {/* Header */}
-      <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <ArrowLeft size={20} color={colors.text} />
-        </Pressable>
-        <Text style={styles.title}>Manage Team</Text>
+      <Appbar.Header
+        mode="center-aligned"
+        style={{ backgroundColor: colors.surface, elevation: 0 }}
+      >
+        <Appbar.Action
+          icon={() => <ArrowLeft size={22} color={colors.text} />}
+          onPress={() => navigation.goBack()}
+          accessibilityLabel="Go back"
+        />
+        <Appbar.Content
+          title="Manage Team"
+          titleStyle={{ fontSize: 17, fontWeight: '700', color: colors.text }}
+        />
         {profile?.role === 'owner' && (
-          <Pressable onPress={() => setShowAddModal(true)} style={styles.addBtn}>
-            <UserPlus size={18} color="#fff" />
-            <Text style={styles.addBtnText}>Add</Text>
-          </Pressable>
+          <Appbar.Action
+            icon={() => <UserPlus size={22} color={colors.accent} />}
+            onPress={() => setShowAddModal(true)}
+            accessibilityLabel="Add member"
+          />
         )}
-      </View>
+      </Appbar.Header>
 
       {/* List */}
       {loading ? (
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={colors.accent} />
+          <AppActivityIndicator size="large" color={colors.accent} />
         </View>
       ) : (
         <FlatList
@@ -285,7 +289,6 @@ export function ManageLabourScreen({ navigation }: Props) {
         addBusy={addBusy}
         onClose={() => setShowAddModal(false)}
         onAdd={() => void handleAdd()}
-        colors={colors}
       />
 
       {/* Reset Password Modal */}
@@ -300,7 +303,6 @@ export function ManageLabourScreen({ navigation }: Props) {
           setResettingUser(null);
         }}
         onReset={() => void handleResetPassword()}
-        colors={colors}
       />
 
       {/* Edit Modal */}
@@ -316,7 +318,6 @@ export function ManageLabourScreen({ navigation }: Props) {
           setEditingUser(null);
         }}
         onSave={() => void handleEditSave()}
-        colors={colors}
       />
     </SafeAreaView>
   );

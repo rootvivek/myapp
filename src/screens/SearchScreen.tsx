@@ -1,17 +1,18 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { Searchbar } from 'react-native-paper';
-import LinearGradient from 'react-native-linear-gradient';
 import { QrCode, Search, X } from 'lucide-react-native';
 
+import { AppChip } from '../components/ui/AppChip';
+import { AppIconButton } from '../components/ui/AppIconButton';
 import { RepairCard } from '../components/RepairCard';
 import { useRepairActions, useRepairsState } from '../context/RepairsContext';
 import { useTheme } from '../context/ThemeContext';
 import { repairService } from '../services/repairService';
 import type { RootStackParamList } from '../navigation/types';
 import type { AppColors } from '../theme';
-import { spacing } from '../theme';
+import { radius, sizes, spacing } from '../theme';
 import type { Repair, RepairStatus } from '../types/repair';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Search'>;
@@ -20,27 +21,28 @@ function createStyles(colors: AppColors): ReturnType<typeof StyleSheet.create> {
   return StyleSheet.create({
     safe: {
       flex: 1,
-      backgroundColor: colors.bgGradient[0] || colors.bg,
+      backgroundColor: colors.bg,
+    },
+    searchRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginHorizontal: spacing.md,
+      marginTop: spacing.xs,
+      marginBottom: spacing.sm,
+      gap: spacing.sm,
     },
     searchbar: {
-      marginHorizontal: 16,
-      marginTop: 4,
-      marginBottom: spacing.sm,
+      flex: 1,
+      height: 46,
+      justifyContent: 'center',
       backgroundColor: colors.surface2,
-      borderRadius: 12,
-      borderWidth: 1,
+      borderRadius: radius.md,
+      borderWidth: sizes.hairline,
       borderColor: colors.border,
     },
     list: {
       paddingHorizontal: 6,
       paddingBottom: spacing.xl,
-    },
-    empty: {
-      color: colors.textMuted,
-      textAlign: 'center',
-      marginTop: spacing.lg,
-      fontSize: 14,
-      fontWeight: '500',
     },
   });
 }
@@ -70,6 +72,16 @@ export function SearchScreen({ navigation }: Props) {
         });
       }
     }, 220);
+  }, []);
+
+  // Cancel the pending debounce on unmount so it can't setState after the
+  // screen is gone.
+  useEffect(() => {
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
   }, []);
 
   const filteredResults = useMemo(() => {
@@ -137,6 +149,13 @@ export function SearchScreen({ navigation }: Props) {
       status: RepairStatus,
       paymentUpdate?: { isPaid: boolean; paymentType?: 'cash' | 'online' }
     ): Promise<void> => {
+      const existing = repairs.find((r) => r.id === repairId);
+      // Snapshot the fields we are about to change so a failed request can be
+      // rolled back (the optimistic update below has no context-level rollback).
+      const snapshot: Partial<Repair> = existing
+        ? { status: existing.status, isPaid: existing.isPaid, paymentType: existing.paymentType }
+        : { status };
+
       const localUpdates: Partial<Repair> = { status };
       if (paymentUpdate) {
         localUpdates.isPaid = paymentUpdate.isPaid;
@@ -150,10 +169,10 @@ export function SearchScreen({ navigation }: Props) {
       try {
         await repairService.updateStatus(repairId, status, paymentUpdate);
       } catch {
-        // Context handles rollback if necessary
+        updateRepairInState(repairId, snapshot);
       }
     },
-    [updateRepairInState]
+    [repairs, updateRepairInState]
   );
 
   const renderItem = useCallback(
@@ -174,75 +193,50 @@ export function SearchScreen({ navigation }: Props) {
 
   const keyExtractor = useCallback((item: Repair) => String(item.id), []);
 
+  // Only show "no results" once the debounced query matches what the user has
+  // typed, otherwise the empty state flashes while typing.
+  const showNoResults = debouncedQuery.trim().length > 0 && debouncedQuery === query;
+
   return (
     <View style={styles.safe}>
-      <LinearGradient
-        colors={colors.bgGradient}
-        style={{
-          position: 'absolute',
-          width: '100%',
-          height: '100%',
-        }}
-      />
-      <View style={{ flexDirection: 'row', alignItems: 'center', marginHorizontal: 16, marginTop: 4, marginBottom: spacing.sm, gap: 10 }}>
+      <View style={styles.searchRow}>
         <Searchbar
           placeholder="Search name, number, or order ID"
           placeholderTextColor={colors.textMuted}
           onChangeText={handleQueryChange}
           value={query}
-          style={[styles.searchbar, { marginHorizontal: 0, marginTop: 0, marginBottom: 0, flex: 1, height: 46, justifyContent: 'center' }]}
+          style={styles.searchbar}
           icon={({ size }) => <Search size={18} color={colors.accent} />}
           clearIcon={({ size }) => <X size={18} color={colors.textMuted} />}
           inputStyle={{ color: colors.text, fontSize: 14, minHeight: 0, paddingVertical: 0, alignSelf: 'center' }}
           theme={{ colors: { elevation: { level3: colors.surface } } }}
           autoFocus
         />
-        <Pressable
+        <AppIconButton
+          variant="secondary"
+          icon={<QrCode size={20} color={colors.accent} />}
           onPress={() => navigation.navigate('ScanQr')}
-          style={{
-            width: 46,
-            height: 46,
-            borderRadius: 12,
-            backgroundColor: colors.surface2,
-            borderWidth: 1,
-            borderColor: colors.border,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-          android_ripple={{ color: colors.border }}
-          accessibilityRole="button"
           accessibilityLabel="Scan barcode"
-        >
-          <QrCode size={20} color={colors.accent} />
-        </Pressable>
+        />
       </View>
 
       {/* ── Recent searches ── */}
       {query.trim() === '' && recentSearches.length > 0 && (
-        <View style={{ paddingHorizontal: 16, marginTop: 12, marginBottom: 8 }}>
-          <Text style={{ fontSize: 11, fontWeight: '700', color: colors.textMuted, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.8 }}>
+        <View style={{ paddingHorizontal: spacing.md, marginTop: spacing.md, marginBottom: spacing.sm }}>
+          <Text style={{ fontSize: 11, fontWeight: '700', color: colors.textMuted, marginBottom: spacing.sm, textTransform: 'uppercase', letterSpacing: 0.8 }}>
             Recent Searches
           </Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-            {recentSearches.map((term, idx) => (
-              <Pressable
-                key={idx}
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+            {recentSearches.map((term) => (
+              <AppChip
+                key={term}
                 onPress={() => {
                   setQuery(term);
                   setDebouncedQuery(term);
                 }}
-                style={{
-                  paddingHorizontal: 14,
-                  paddingVertical: 8,
-                  borderRadius: 10,
-                  backgroundColor: colors.surface,
-                  borderWidth: 1,
-                  borderColor: colors.border,
-                }}
-                android_ripple={{ color: colors.border }}
               >
-                <Text style={{ fontSize: 13, color: colors.text, fontWeight: '600' }}>{term}</Text>
-              </Pressable>
+                {term}
+              </AppChip>
             ))}
           </View>
         </View>
@@ -253,10 +247,10 @@ export function SearchScreen({ navigation }: Props) {
         keyExtractor={keyExtractor}
         contentContainerStyle={styles.list}
         ListEmptyComponent={
-          query.trim() ? (
-            <View style={{ alignItems: 'center', justifyContent: 'center', marginTop: 60, paddingHorizontal: 32 }}>
-              <Search size={48} color={colors.textMuted} strokeWidth={1.5} style={{ marginBottom: 14 }} />
-              <Text style={{ fontSize: 16, fontWeight: '800', color: colors.text, textAlign: 'center', marginBottom: 4 }}>
+          showNoResults ? (
+            <View style={{ alignItems: 'center', justifyContent: 'center', marginTop: 60, paddingHorizontal: spacing.xl }}>
+              <Search size={48} color={colors.textMuted} strokeWidth={1.5} style={{ marginBottom: spacing.md }} />
+              <Text style={{ fontSize: 16, fontWeight: '800', color: colors.text, textAlign: 'center', marginBottom: spacing.xs }}>
                 No Results Found
               </Text>
               <Text style={{ fontSize: 13, color: colors.textMuted, textAlign: 'center', lineHeight: 18 }}>

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, View, ViewStyle } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
+import { radius, sizes, spacing } from '../theme';
 
 type SkeletonProps = {
   width?: number | `${number}%`;
@@ -9,7 +10,12 @@ type SkeletonProps = {
   style?: ViewStyle;
 };
 
-export function Skeleton({ width = '100%', height = 16, borderRadius = 8, style }: SkeletonProps) {
+export function Skeleton({
+  width = '100%',
+  height = 16,
+  borderRadius = radius.sm,
+  style,
+}: SkeletonProps) {
   const { colors } = useTheme();
   const opacity = useRef(new Animated.Value(0.3)).current;
 
@@ -40,7 +46,7 @@ export function Skeleton({ width = '100%', height = 16, borderRadius = 8, style 
           width,
           height,
           borderRadius,
-          backgroundColor: colors.surface2 || '#2c2c2e',
+          backgroundColor: colors.surface2,
           opacity,
         },
         style,
@@ -59,14 +65,24 @@ export function RepairCardSkeleton() {
       ]}
     >
       <View style={styles.headerRow}>
-        <Skeleton width="45%" height={18} borderRadius={6} />
-        <Skeleton width="25%" height={24} borderRadius={12} />
+        <Skeleton width="45%" height={18} borderRadius={radius.sm} />
+        <Skeleton width="25%" height={24} borderRadius={radius.md} />
       </View>
-      <Skeleton width="60%" height={14} borderRadius={4} style={{ marginTop: 8 }} />
-      <Skeleton width="80%" height={14} borderRadius={4} style={{ marginTop: 6 }} />
+      <Skeleton
+        width="60%"
+        height={14}
+        borderRadius={radius.sm}
+        style={{ marginTop: spacing.sm }}
+      />
+      <Skeleton
+        width="80%"
+        height={14}
+        borderRadius={radius.sm}
+        style={{ marginTop: spacing.xs + 2 }}
+      />
       <View style={styles.footerRow}>
-        <Skeleton width="30%" height={16} borderRadius={6} />
-        <Skeleton width="35%" height={32} borderRadius={8} />
+        <Skeleton width="30%" height={16} borderRadius={radius.sm} />
+        <Skeleton width="35%" height={32} borderRadius={radius.sm} />
       </View>
     </View>
   );
@@ -77,10 +93,10 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   card: {
-    borderRadius: 14,
-    borderWidth: 1,
-    padding: 14,
-    marginBottom: 10,
+    borderRadius: radius.lg,
+    borderWidth: sizes.hairline,
+    padding: spacing.md - 2,
+    marginBottom: spacing.sm + 2,
   },
   headerRow: {
     flexDirection: 'row',
@@ -91,6 +107,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 14,
+    marginTop: spacing.md - 2,
   },
 });

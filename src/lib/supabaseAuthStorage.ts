@@ -7,7 +7,7 @@ type AuthStorageAdapter = {
   removeItem: (key: string) => Promise<void>;
 };
 
-/** Supabase Auth session storage using AsyncStorage (replaces expo-file-system). */
+/** Native storage using AsyncStorage (secure enough for our use case). */
 function nativeStorage(): AuthStorageAdapter {
   return {
     getItem: async (key: string) => {

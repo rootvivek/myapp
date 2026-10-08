@@ -1,22 +1,30 @@
 import { useEffect } from 'react';
 import { Linking, StatusBar } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { MD3DarkTheme, MD3LightTheme, PaperProvider } from 'react-native-paper';
+import { PaperProvider } from 'react-native-paper';
+
+// Polyfill URL for Supabase (must be before supabase import)
+import './src/polyfills/url';
 
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
+import { TabProvider } from './src/context/TabContext';
 import { RepairsProvider } from './src/context/RepairsContext';
 import { InventoryProvider } from './src/context/InventoryContext';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { SplashScreen } from './src/components/SplashScreen';
 import { AutoUpdateInitializer } from './src/components/AutoUpdateInitializer';
+import { handleAuthDeepLink } from './src/auth/deepLink';
 import { supabase } from './src/lib/supabase';
+import { createPaperTheme } from './src/theme/paperTheme';
 
 function AuthenticatedApp() {
   const { loading } = useAuth();
   const { mode } = useTheme();
 
-  const paperTheme = mode === 'dark' ? MD3DarkTheme : MD3LightTheme;
+  // Single Paper provider for the whole app: all Paper primitives read the
+  // design-system theme from here.
+  const paperTheme = createPaperTheme(mode);
 
   // The app always opens on the home dashboard — login / sign-up is reachable
   // from the "User" tab in the bottom navigation.
@@ -30,7 +38,9 @@ function AuthenticatedApp() {
         <InventoryProvider>
           <StatusBar barStyle={mode === 'dark' ? 'light-content' : 'dark-content'} />
           <AutoUpdateInitializer />
-          <AppNavigator />
+          <TabProvider>
+            <AppNavigator />
+          </TabProvider>
         </InventoryProvider>
       </RepairsProvider>
     </PaperProvider>
@@ -39,26 +49,14 @@ function AuthenticatedApp() {
 
 export default function App() {
   useEffect(() => {
-    const handleUrl = async (url?: string | null) => {
-      if (!url || !supabase) return;
-
-      try {
-        const { data, error } = await supabase.auth.getSessionFromUrl({ url });
-        if (error) {
-          return;
-        }
-
-        if (data?.session) {
-          await supabase.auth.setSession({
-            access_token: data.session.access_token,
-            refresh_token: data.session.refresh_token,
-          });
-        }
-      } catch { }
+    const handleUrl = (url?: string | null) => {
+      void handleAuthDeepLink(supabase, url).catch((err) => {
+        console.warn('[App] Failed to handle auth deep link:', err);
+      });
     };
 
     const subscription = Linking.addEventListener('url', ({ url }) => {
-      void handleUrl(url);
+      handleUrl(url);
     });
 
     void Linking.getInitialURL().then(handleUrl);

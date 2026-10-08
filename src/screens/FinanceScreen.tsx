@@ -1,30 +1,33 @@
 import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   Linking,
   Pressable,
   StyleSheet,
   Text,
   View,
-  Modal,
-  TextInput,
   Alert,
   Platform,
   ScrollView,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useFocusEffect } from '@react-navigation/native';
-import LinearGradient from 'react-native-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Appbar } from 'react-native-paper';
 import { Phone, CheckCircle, ArrowUpRight, Square, Pencil, CheckSquare, MessageSquare, ArrowLeft } from 'lucide-react-native';
 
+import { AppActivityIndicator } from '../components/ui/AppActivityIndicator';
+import { AppButton } from '../components/ui/AppButton';
+import { AppChip } from '../components/ui/AppChip';
+import { AppInput } from '../components/ui/AppInput';
+import { AppModal } from '../components/ui/AppModal';
 import { useRepairs } from '../context/RepairsContext';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { updateRepair } from '../db/database';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
+import { accentAlpha, radius, sizes, spacing, type AppColors } from '../theme';
 import { formatCurrency, formatDateDisplay, parseMoney } from '../utils/format';
 import { dialPhone } from '../utils/phone';
 import type { Repair } from '../types/repair';
@@ -52,6 +55,7 @@ type Props = {
 
 export function FinanceScreen({ navigation }: Props) {
   const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { isOwner } = useAuth();
   const { repairs, loading, refresh } = useRepairs();
 
@@ -190,8 +194,6 @@ export function FinanceScreen({ navigation }: Props) {
       }
 
       if (!matchesPeriod) return;
-
-      if (r.status === 'cancelled') return;
 
       const cost = Number(r.repairCost || 0);
       const exp = Number(r.expense || 0);
@@ -361,7 +363,7 @@ export function FinanceScreen({ navigation }: Props) {
                 Total: {formatCurrency(cost)} (Adv: {formatCurrency(adv)})
               </Text>
               {subTab === 'dues' ? (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
                   <View style={styles.unpaidBadge}>
                     <Text style={[styles.unpaidText, { color: colors.danger }]}>Unpaid</Text>
                   </View>
@@ -371,17 +373,17 @@ export function FinanceScreen({ navigation }: Props) {
                       style={{
                         flexDirection: 'row',
                         alignItems: 'center',
-                        backgroundColor: 'rgba(34, 197, 94, 0.12)',
-                        paddingHorizontal: 8,
+                        backgroundColor: accentAlpha(colors.success, 0.12),
+                        paddingHorizontal: spacing.sm,
                         paddingVertical: 3,
-                        borderRadius: 6,
-                        gap: 4,
-                        borderWidth: 1,
-                        borderColor: 'rgba(34, 197, 94, 0.25)',
+                        borderRadius: radius.sm,
+                        gap: spacing.xs,
+                        borderWidth: sizes.hairline,
+                        borderColor: accentAlpha(colors.success, 0.25),
                       }}
                     >
-                      <MessageSquare size={10} color="#22C55E" fill="#22C55E" />
-                      <Text style={{ fontSize: 10, fontWeight: '700', color: '#22C55E' }}>
+                      <MessageSquare size={10} color={colors.success} fill={colors.success} />
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: colors.success }}>
                         Remind
                       </Text>
                     </Pressable>
@@ -433,7 +435,7 @@ export function FinanceScreen({ navigation }: Props) {
         <Text style={{ color: colors.text, fontSize: 18, fontWeight: '700' }}>
           Access Denied
         </Text>
-        <Text style={{ color: colors.textMuted, fontSize: 14, marginTop: 8, textAlign: 'center' }}>
+        <Text style={{ color: colors.textMuted, fontSize: 14, marginTop: spacing.sm, textAlign: 'center' }}>
           Only the shop owner can view finance data.
         </Text>
       </SafeAreaView>
@@ -441,20 +443,24 @@ export function FinanceScreen({ navigation }: Props) {
   }
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top']}>
-      <LinearGradient colors={colors.bgGradient} style={StyleSheet.absoluteFillObject} />
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['bottom']}>
 
-      <View style={styles.header}>
+      <Appbar.Header
+        mode="center-aligned"
+        style={{ backgroundColor: colors.surface, elevation: 0 }}
+      >
         {navigation && typeof navigation.canGoBack === 'function' && navigation.canGoBack() && (
-          <Pressable
+          <Appbar.Action
+            icon={() => <ArrowLeft size={22} color={colors.text} />}
             onPress={() => navigation.goBack()}
-            style={{ marginRight: 12, padding: 4 }}
-          >
-            <ArrowLeft size={22} color={colors.text} />
-          </Pressable>
+            accessibilityLabel="Go back"
+          />
         )}
-        <Text style={[styles.title, { color: colors.text }]}>Earnings & Dues</Text>
-      </View>
+        <Appbar.Content
+          title="Earnings & Dues"
+          titleStyle={{ fontSize: 17, fontWeight: '700', color: colors.text }}
+        />
+      </Appbar.Header>
 
       {/* Time Period Filter Row */}
       <View style={styles.periodContainer}>
@@ -473,22 +479,26 @@ export function FinanceScreen({ navigation }: Props) {
           ] as const).map((p) => {
             const active = period === p.key;
             return (
-              <Pressable
+              <AppChip
                 key={p.key}
+                variant={active ? 'primary' : 'default'}
+                selected={active}
+                showSelectedCheck={false}
                 onPress={() => setPeriod(p.key)}
-                style={[
-                  styles.periodBtn,
-                  { borderColor: colors.border },
-                  active && { backgroundColor: colors.accent, borderColor: colors.accent }
-                ]}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+                containerStyle={{
+                  backgroundColor: active ? colors.accent : colors.surface2,
+                  borderColor: active ? colors.accent : colors.border,
+                  borderWidth: sizes.hairline,
+                }}
+                labelStyle={{
+                  color: active ? '#FFFFFF' : colors.textMuted,
+                  fontWeight: active ? '700' : '600',
+                }}
               >
-                <Text style={[
-                  styles.periodText,
-                  { color: active ? '#FFFFFF' : colors.textMuted }
-                ]}>
-                  {p.label}
-                </Text>
-              </Pressable>
+                {p.label}
+              </AppChip>
             );
           })}
         </ScrollView>
@@ -540,7 +550,7 @@ export function FinanceScreen({ navigation }: Props) {
       )}
 
       {/* KPI Stats Cards */}
-      <View style={[styles.fullStatCard, { backgroundColor: colors.surface, borderColor: colors.border, marginBottom: 8 }]}>
+      <View style={[styles.fullStatCard, { backgroundColor: colors.surface, borderColor: colors.border, marginBottom: spacing.sm }]}>
         <View style={styles.fullStatHeader}>
           <Text style={[styles.statLabel, { color: colors.textMuted }]}>Total Received</Text>
           <CheckCircle size={16} color={colors.success} />
@@ -548,7 +558,7 @@ export function FinanceScreen({ navigation }: Props) {
         <Text style={[styles.fullStatValue, { color: colors.success }]}>
           {formatCurrency(stats.totalPaid)}
         </Text>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 6 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.sm, borderTopWidth: sizes.hairline, borderTopColor: colors.border, paddingTop: 6 }}>
           <Text style={{ fontSize: 11, color: colors.textMuted, fontWeight: '600' }}>
             💵 Cash: <Text style={{ color: colors.text, fontWeight: '700' }}>{formatCurrency(stats.cashPaid)}</Text>
           </Text>
@@ -588,34 +598,50 @@ export function FinanceScreen({ navigation }: Props) {
 
       {/* Sub tabs selection */}
       <View style={styles.tabContainer}>
-        <Pressable
+        <AppChip
+          variant={subTab === 'dues' ? 'primary' : 'default'}
+          selected={subTab === 'dues'}
+          showSelectedCheck={false}
           onPress={() => setSubTab('dues')}
-          style={[
-            styles.tabBtn,
-            { backgroundColor: subTab === 'dues' ? colors.surface2 : 'transparent', borderColor: subTab === 'dues' ? colors.border : 'transparent' },
-          ]}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: subTab === 'dues' }}
+          containerStyle={{
+            backgroundColor: subTab === 'dues' ? colors.accent : colors.surface2,
+            borderColor: subTab === 'dues' ? colors.accent : colors.border,
+            borderWidth: sizes.hairline,
+          }}
+          labelStyle={{
+            color: subTab === 'dues' ? '#FFFFFF' : colors.textMuted,
+            fontWeight: subTab === 'dues' ? '700' : '600',
+          }}
         >
-          <Text style={[styles.tabText, { color: subTab === 'dues' ? colors.text : colors.textMuted, fontWeight: subTab === 'dues' ? '700' : '500' }]}>
-            Unpaid Jobs ({duesList.length})
-          </Text>
-        </Pressable>
-        <Pressable
+          Unpaid Jobs ({duesList.length})
+        </AppChip>
+        <AppChip
+          variant={subTab === 'paid' ? 'primary' : 'default'}
+          selected={subTab === 'paid'}
+          showSelectedCheck={false}
           onPress={() => setSubTab('paid')}
-          style={[
-            styles.tabBtn,
-            { backgroundColor: subTab === 'paid' ? colors.surface2 : 'transparent', borderColor: subTab === 'paid' ? colors.border : 'transparent' },
-          ]}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: subTab === 'paid' }}
+          containerStyle={{
+            backgroundColor: subTab === 'paid' ? colors.accent : colors.surface2,
+            borderColor: subTab === 'paid' ? colors.accent : colors.border,
+            borderWidth: sizes.hairline,
+          }}
+          labelStyle={{
+            color: subTab === 'paid' ? '#FFFFFF' : colors.textMuted,
+            fontWeight: subTab === 'paid' ? '700' : '600',
+          }}
         >
-          <Text style={[styles.tabText, { color: subTab === 'paid' ? colors.text : colors.textMuted, fontWeight: subTab === 'paid' ? '700' : '500' }]}>
-            Fully Paid ({paidList.length})
-          </Text>
-        </Pressable>
+          Fully Paid ({paidList.length})
+        </AppChip>
       </View>
 
       {/* List content */}
       {loading && repairs.length === 0 ? (
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={colors.accent} />
+          <AppActivityIndicator size="large" color={colors.accent} />
         </View>
       ) : (
         <FlatList
@@ -638,360 +664,251 @@ export function FinanceScreen({ navigation }: Props) {
 
       {/* Edit Payment Modal */}
       {editingRepair && (
-        <Modal
+        <AppModal
           visible={!!editingRepair}
-          transparent
-          animationType="fade"
-          onRequestClose={closePaymentModal}
-        >
-          <View style={styles.modalOverlay}>
-            <Pressable style={StyleSheet.absoluteFill} onPress={closePaymentModal} />
-            <View style={[styles.modalContent, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>Edit Payment</Text>
-              <Text style={[styles.modalSub, { color: colors.textMuted }]} numberOfLines={1}>
-                {editingRepair.customerName} · {editingRepair.deviceModel}
-              </Text>
-
-              <View style={styles.modalInputGroup}>
-                <Text style={[styles.inputLabel, { color: colors.textMuted }]}>Total Repair Cost (₹)</Text>
-                <TextInput
-                  value={editCost}
-                  onChangeText={setEditCost}
-                  keyboardType="decimal-pad"
-                  style={[styles.modalTextInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.surface2 }]}
-                  placeholder="0"
-                  placeholderTextColor={colors.textMuted}
-                />
-              </View>
-
-              <View style={styles.modalInputGroup}>
-                <Text style={[styles.inputLabel, { color: colors.textMuted }]}>Advance Amount (₹)</Text>
-                <TextInput
-                  value={editAdvance}
-                  onChangeText={setEditAdvance}
-                  keyboardType="decimal-pad"
-                  style={[styles.modalTextInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.surface2 }]}
-                  placeholder="0"
-                  placeholderTextColor={colors.textMuted}
-                />
-              </View>
-
-              <Pressable
-                onPress={() => {
-                  const nextPaid = !editPaid;
-                  setEditPaid(nextPaid);
-                  if (nextPaid) {
-                    setEditAdvance(editCost);
-                  }
-                }}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 }}
+          onClose={closePaymentModal}
+          title="Edit Payment"
+          subtitle={`${editingRepair.customerName} · ${editingRepair.deviceModel}`}
+          size="medium"
+          footer={
+            <View style={styles.modalActions}>
+              <AppButton
+                variant="secondary"
+                containerStyle={{ flex: 1 }}
+                onPress={() => void onSavePayment('cash')}
+                disabled={savingEdit}
               >
-                {editPaid ? (
-                  <CheckSquare size={20} color={colors.success} />
-                ) : (
-                  <Square size={20} color={colors.textMuted} />
-                )}
-                <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600' }}>
-                  Mark as fully paid
-                </Text>
-              </Pressable>
-
-              <View style={styles.modalActions}>
-                <Pressable
-                  onPress={() => void onSavePayment('cash')}
-                  disabled={savingEdit}
-                  style={[styles.modalBtn, { backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border }]}
-                >
-                  <Text style={[styles.modalBtnText, { color: colors.text, fontWeight: '700' }]}>💵 Cash</Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => void onSavePayment('online')}
-                  disabled={savingEdit}
-                  style={[styles.modalBtn, { backgroundColor: colors.accent }]}
-                >
-                  {savingEdit ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <Text style={[styles.modalBtnText, { color: '#fff', fontWeight: '700' }]}>📱 Online</Text>
-                  )}
-                </Pressable>
-              </View>
+                💵 Cash
+              </AppButton>
+              <AppButton
+                variant="primary"
+                containerStyle={{ flex: 1 }}
+                loading={savingEdit}
+                onPress={() => void onSavePayment('online')}
+              >
+                📱 Online
+              </AppButton>
             </View>
-          </View>
-        </Modal>
+          }
+        >
+          <AppInput
+            label="Total Repair Cost (₹)"
+            value={editCost}
+            onChangeText={setEditCost}
+            keyboardType="decimal-pad"
+            placeholder="0"
+          />
+
+          <AppInput
+            label="Advance Amount (₹)"
+            value={editAdvance}
+            onChangeText={setEditAdvance}
+            keyboardType="decimal-pad"
+            placeholder="0"
+          />
+
+          <Pressable
+            onPress={() => {
+              const nextPaid = !editPaid;
+              setEditPaid(nextPaid);
+              if (nextPaid) {
+                setEditAdvance(editCost);
+              }
+            }}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm, marginBottom: spacing.md }}
+          >
+            {editPaid ? (
+              <CheckSquare size={20} color={colors.success} />
+            ) : (
+              <Square size={20} color={colors.textMuted} />
+            )}
+            <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600' }}>
+              Mark as fully paid
+            </Text>
+          </Pressable>
+        </AppModal>
       )}
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-  },
-  header: {
-    paddingHorizontal: 18,
-    paddingTop: 14,
-    paddingBottom: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '800',
-    letterSpacing: 0.3,
-  },
-  periodContainer: {
-    marginHorizontal: 18,
-    marginBottom: 14,
-    height: 38,
-  },
-  periodScroll: {
-    flex: 1,
-  },
-  periodScrollContent: {
-    flexDirection: 'row',
-    gap: 8,
-    paddingRight: 18,
-    alignItems: 'center',
-  },
-  periodBtn: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    borderWidth: 1.2,
-    backgroundColor: 'transparent',
-    height: 32,
-  },
-  periodText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  customDateContainer: {
-    flexDirection: 'row',
-    gap: 10,
-    marginHorizontal: 18,
-    marginBottom: 12,
-  },
-  customDateBtn: {
-    flex: 1,
-    padding: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: 'center',
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    gap: 10,
-    marginHorizontal: 18,
-    marginBottom: 8,
-  },
-  statCard: {
-    flex: 1,
-    padding: 14,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  fullStatCard: {
-    marginHorizontal: 18,
-    marginBottom: 14,
-    padding: 14,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  fullStatHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  statLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  statValue: {
-    fontSize: 18,
-    fontWeight: '800',
-    marginTop: 4,
-  },
-  fullStatValue: {
-    fontSize: 22,
-    fontWeight: '800',
-    marginTop: 4,
-  },
-  statSubText: {
-    fontSize: 10,
-    marginTop: 2,
-    fontWeight: '500',
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    marginHorizontal: 18,
-    marginBottom: 12,
-    gap: 8,
-  },
-  tabBtn: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: 'center',
-  },
-  tabText: {
-    fontSize: 13,
-  },
-  list: {
-    paddingHorizontal: 18,
-    paddingBottom: 100,
-  },
-  row: {
-    borderRadius: 16,
-    borderWidth: 1,
-    marginBottom: 10,
-    flexDirection: 'row',
-    overflow: 'hidden',
-  },
-  rowMain: {
-    flex: 1,
-    padding: 14,
-  },
-  rowHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  custName: {
-    fontSize: 15,
-    fontWeight: '700',
-    flex: 1,
-    marginRight: 8,
-  },
-  date: {
-    fontSize: 11,
-    fontWeight: '500',
-  },
-  device: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginTop: 2,
-  },
-  amountRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  costBreakdown: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  unpaidBadge: {
-    backgroundColor: 'rgba(239, 68, 68, 0.12)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  unpaidText: {
-    fontSize: 10,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-  },
-  paidBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(34, 197, 94, 0.12)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  paidText: {
-    fontSize: 10,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-  },
-  rowActions: {
-    flexDirection: 'column',
-    width: 44,
-  },
-  actionIconBtn: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  empty: {
-    textAlign: 'center',
-    marginTop: 30,
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalContent: {
-    width: '100%',
-    maxWidth: 380,
-    borderRadius: 20,
-    borderWidth: 1,
-    padding: 20,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-  },
-  modalSub: {
-    fontSize: 12,
-    fontWeight: '500',
-    marginTop: 2,
-    marginBottom: 16,
-  },
-  modalInputGroup: {
-    marginBottom: 14,
-  },
-  inputLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 6,
-  },
-  modalTextInput: {
-    height: 44,
-    borderRadius: 10,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  modalActions: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 4,
-  },
-  modalBtn: {
-    flex: 1,
-    height: 44,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cancelBtn: {
-    backgroundColor: 'white',
-    borderWidth: 1,
-  },
-  modalBtnText: {
-    fontSize: 14,
-    fontWeight: '700',
-  },
-});
+function createStyles(colors: AppColors): ReturnType<typeof StyleSheet.create> {
+  return StyleSheet.create({
+    safe: {
+      flex: 1,
+    },
+    periodContainer: {
+      marginHorizontal: 18,
+      marginBottom: 14,
+      height: 38,
+    },
+    periodScroll: {
+      flex: 1,
+    },
+    periodScrollContent: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+      paddingRight: 18,
+      alignItems: 'center',
+    },
+    customDateContainer: {
+      flexDirection: 'row',
+      gap: 10,
+      marginHorizontal: 18,
+      marginBottom: 12,
+    },
+    customDateBtn: {
+      flex: 1,
+      padding: 10,
+      borderRadius: radius.md,
+      borderWidth: sizes.hairline,
+      alignItems: 'center',
+    },
+    statsContainer: {
+      flexDirection: 'row',
+      gap: 10,
+      marginHorizontal: 18,
+      marginBottom: spacing.sm,
+    },
+    statCard: {
+      flex: 1,
+      padding: 14,
+      borderRadius: radius.lg,
+      borderWidth: sizes.hairline,
+    },
+    fullStatCard: {
+      marginHorizontal: 18,
+      marginBottom: 14,
+      padding: 14,
+      borderRadius: radius.lg,
+      borderWidth: sizes.hairline,
+    },
+    fullStatHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    statLabel: {
+      fontSize: 11,
+      fontWeight: '700',
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+    },
+    statValue: {
+      fontSize: 18,
+      fontWeight: '800',
+      marginTop: spacing.xs,
+    },
+    fullStatValue: {
+      fontSize: 22,
+      fontWeight: '800',
+      marginTop: spacing.xs,
+    },
+    statSubText: {
+      fontSize: 10,
+      marginTop: 2,
+      fontWeight: '500',
+    },
+    tabContainer: {
+      flexDirection: 'row',
+      marginHorizontal: 18,
+      marginBottom: 12,
+      gap: spacing.sm,
+    },
+    list: {
+      paddingHorizontal: 18,
+      paddingBottom: 100,
+    },
+    row: {
+      borderRadius: radius.lg,
+      borderWidth: sizes.hairline,
+      marginBottom: 10,
+      flexDirection: 'row',
+      overflow: 'hidden',
+    },
+    rowMain: {
+      flex: 1,
+      padding: 14,
+    },
+    rowHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    custName: {
+      fontSize: 15,
+      fontWeight: '700',
+      flex: 1,
+      marginRight: spacing.sm,
+    },
+    date: {
+      fontSize: 11,
+      fontWeight: '500',
+    },
+    device: {
+      fontSize: 12,
+      fontWeight: '600',
+      marginTop: 2,
+    },
+    amountRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginTop: 10,
+    },
+    costBreakdown: {
+      fontSize: 11,
+      fontWeight: '600',
+    },
+    unpaidBadge: {
+      backgroundColor: accentAlpha(colors.danger, 0.12),
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 3,
+      borderRadius: radius.sm,
+    },
+    unpaidText: {
+      fontSize: 10,
+      fontWeight: '800',
+      textTransform: 'uppercase',
+    },
+    paidBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+      backgroundColor: accentAlpha(colors.success, 0.12),
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 3,
+      borderRadius: radius.sm,
+    },
+    paidText: {
+      fontSize: 10,
+      fontWeight: '800',
+      textTransform: 'uppercase',
+    },
+    rowActions: {
+      flexDirection: 'column',
+      width: 44,
+    },
+    actionIconBtn: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    centered: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingVertical: 40,
+    },
+    empty: {
+      textAlign: 'center',
+      marginTop: 30,
+      fontSize: 14,
+      fontWeight: '500',
+    },
+    modalActions: {
+      flexDirection: 'row',
+      gap: 10,
+    },
+  });
+}

@@ -12,19 +12,15 @@ import {
     useWindowDimensions,
     View,
 } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
     ArrowRight,
     BatteryCharging,
     Bell,
-    CheckCircle2,
-    Clock,
     Database,
     Headphones,
     Home,
-    Package,
     Plus,
     QrCode,
     Search,
@@ -33,21 +29,22 @@ import {
     Smartphone,
     Sparkles,
     Tag,
-    TrendingUp,
     User,
     Users,
     Wrench,
 } from 'lucide-react-native';
 
 import { showComingSoon } from '../components/ComingSoon';
+import { AppButton } from '../components/ui/AppButton';
+import { AppCard } from '../components/ui/AppCard';
+import { AppIconButton } from '../components/ui/AppIconButton';
 import { useAuth } from '../context/AuthContext';
 import { useRepairsState } from '../context/RepairsContext';
 import { useTheme } from '../context/ThemeContext';
 import type { RootStackParamList } from '../navigation/types';
-import { accentAlpha, radius, spacing } from '../theme';
+import { accentAlpha, radius, sizes, spacing } from '../theme';
 import type { AppColors } from '../theme';
-import { formatCurrency } from '../utils/format';
-import { useTab } from './MainTabScreen';
+import { useTab } from '../context/TabContext';
 
 type Props = {
     navigation: NativeStackNavigationProp<RootStackParamList, 'Home'>;
@@ -62,13 +59,14 @@ type Props = {
 type ServiceItem = {
     key: string;
     label: string;
-    color: string;
+    /** Category identity tint. Brand services omit it → app accent colour. */
+    color?: string;
     Icon: React.ComponentType<any>;
     live?: boolean; // only Repair is live right now
 };
 
 const SERVICES: ServiceItem[] = [
-    { key: 'repair', label: 'Repairs', color: '#6366F1', Icon: Wrench, live: true },
+    { key: 'repair', label: 'Repairs', Icon: Wrench, live: true },
     { key: 'buy_sell', label: 'Buy / Sell', color: '#F97316', Icon: Smartphone },
     { key: 'accessories', label: 'Accessories', color: '#EC4899', Icon: ShoppingBag },
     { key: 'warranty', label: 'Warranty', color: '#10B981', Icon: ShieldCheck },
@@ -76,11 +74,20 @@ const SERVICES: ServiceItem[] = [
     { key: 'support', label: 'Helpdesk', color: '#06B6D4', Icon: Headphones },
 ];
 
-const POPULAR_SERVICES = [
-    { key: 'screen', label: 'Screen Replacement', desc: 'Original & OLED screens', Icon: Smartphone, color: '#3B82F6' },
+type PopularService = {
+    key: string;
+    label: string;
+    desc: string;
+    Icon: React.ComponentType<any>;
+    /** Category identity tint. Brand services omit it → app accent colour. */
+    color?: string;
+};
+
+const POPULAR_SERVICES: PopularService[] = [
+    { key: 'screen', label: 'Screen Replacement', desc: 'Original & OLED screens', Icon: Smartphone },
     { key: 'battery', label: 'Battery Replacement', desc: 'High capacity cells', Icon: BatteryCharging, color: '#10B981' },
     { key: 'water', label: 'Water Damage Clean', desc: 'Ultrasonic board service', Icon: Sparkles, color: '#F59E0B' },
-    { key: 'data', label: 'Data & Chip Recovery', desc: 'Dead phone storage extraction', Icon: Database, color: '#8B5CF6' },
+    { key: 'data', label: 'Data & Chip Recovery', desc: 'Dead phone storage extraction', Icon: Database },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -92,8 +99,8 @@ type Banner = {
     title: string;
     subtitle?: string;
     cta: string;
-    gradient: [string, string];
-    ctaColor: string;
+    /** Flat identity fill of the tile (no gradients), resolved from design tokens. */
+    color: 'accent' | 'success' | 'warning' | 'danger';
     badge?: string;
     repairs?: boolean; // CTA opens the repair flow
 };
@@ -104,8 +111,7 @@ const BANNERS: Banner[] = [
         title: 'Precision Mobile\nRepair & Care',
         subtitle: 'Diagnostics, job cards & digital billing',
         cta: 'Open Repair Desk',
-        gradient: ['#4F46E5', '#312E81'],
-        ctaColor: '#4338CA',
+        color: 'accent',
         badge: 'Core Service',
         repairs: true,
     },
@@ -114,8 +120,7 @@ const BANNERS: Banner[] = [
         title: 'Instant Job\nEntry System',
         subtitle: 'Log IMEIs, passcodes & advance payment',
         cta: 'New Job Entry',
-        gradient: ['#7C3AED', '#4C1D95'],
-        ctaColor: '#6D28D9',
+        color: 'success',
         badge: 'Fast Flow',
         repairs: true,
     },
@@ -124,8 +129,7 @@ const BANNERS: Banner[] = [
         title: 'Spare Parts &\nStock Catalog',
         subtitle: 'Live stock count with auto deduction',
         cta: 'View Inventory',
-        gradient: ['#059669', '#064E3B'],
-        ctaColor: '#047857',
+        color: 'warning',
         badge: 'Stock Care',
     },
     {
@@ -133,8 +137,7 @@ const BANNERS: Banner[] = [
         title: 'Refurbished &\nDevice Exchange',
         subtitle: 'Best value for used smartphone models',
         cta: 'Explore Trade-in',
-        gradient: ['#EA580C', '#7C2D12'],
-        ctaColor: '#C2410C',
+        color: 'danger',
         badge: 'Upcoming',
     },
 ];
@@ -143,8 +146,7 @@ const BANNERS: Banner[] = [
 /*  Styles                                                             */
 /* ------------------------------------------------------------------ */
 
-function createStyles(colors: AppColors, mode: 'light' | 'dark') {
-    const isDark = mode === 'dark';
+function createStyles(colors: AppColors) {
     return StyleSheet.create({
         safe: { flex: 1, backgroundColor: colors.bg },
         scroll: { paddingBottom: 96 },
@@ -171,8 +173,8 @@ function createStyles(colors: AppColors, mode: 'light' | 'dark') {
             height: 44,
             borderRadius: radius.md,
             overflow: 'hidden',
-            backgroundColor: isDark ? '#1E293B' : '#0F172A',
-            borderWidth: 1,
+            backgroundColor: colors.surface2,
+            borderWidth: sizes.hairline,
             borderColor: colors.border,
             alignItems: 'center',
             justifyContent: 'center',
@@ -202,22 +204,7 @@ function createStyles(colors: AppColors, mode: 'light' | 'dark') {
         headerActions: {
             flexDirection: 'row',
             alignItems: 'center',
-            gap: 8,
-        },
-        iconBtn: {
-            width: 40,
-            height: 40,
-            borderRadius: radius.md,
-            borderWidth: 1,
-            borderColor: colors.border,
-            backgroundColor: colors.surface,
-            alignItems: 'center',
-            justifyContent: 'center',
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 1 },
-            shadowOpacity: 0.05,
-            shadowRadius: 2,
-            elevation: 1,
+            gap: spacing.sm,
         },
 
         /* Search & Scanner bar */
@@ -236,7 +223,7 @@ function createStyles(colors: AppColors, mode: 'light' | 'dark') {
             gap: 10,
             paddingHorizontal: spacing.md,
             borderRadius: radius.lg,
-            borderWidth: 1,
+            borderWidth: sizes.hairline,
             borderColor: colors.border,
             backgroundColor: colors.surface,
             shadowColor: '#000',
@@ -249,74 +236,6 @@ function createStyles(colors: AppColors, mode: 'light' | 'dark') {
             flex: 1,
             fontSize: 13.5,
             fontWeight: '500',
-            color: colors.textMuted,
-        },
-        scanBtn: {
-            width: 44,
-            height: 44,
-            borderRadius: radius.lg,
-            borderWidth: 1,
-            borderColor: colors.border,
-            backgroundColor: colors.surface,
-            alignItems: 'center',
-            justifyContent: 'center',
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 1 },
-            shadowOpacity: 0.04,
-            shadowRadius: 3,
-            elevation: 1,
-        },
-
-        /* Stat Insights */
-        statsGrid: {
-            flexDirection: 'row',
-            flexWrap: 'wrap',
-            gap: 10,
-            marginTop: spacing.xs,
-            marginBottom: spacing.sm,
-        },
-        statCard: {
-            width: '48.5%',
-            borderRadius: radius.lg,
-            borderWidth: 1,
-            borderColor: colors.border,
-            backgroundColor: colors.surface,
-            padding: 12,
-            gap: 6,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.04,
-            shadowRadius: 4,
-            elevation: 1,
-        },
-        statHeader: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-        },
-        statIconWrap: {
-            width: 32,
-            height: 32,
-            borderRadius: radius.md,
-            alignItems: 'center',
-            justifyContent: 'center',
-        },
-        statBadge: {
-            fontSize: 10,
-            fontWeight: '700',
-            color: colors.textMuted,
-            textTransform: 'uppercase',
-            letterSpacing: 0.5,
-        },
-        statValue: {
-            fontSize: 20,
-            fontWeight: '900',
-            color: colors.text,
-            letterSpacing: -0.5,
-        },
-        statLabel: {
-            fontSize: 12,
-            fontWeight: '600',
             color: colors.textMuted,
         },
 
@@ -332,11 +251,11 @@ function createStyles(colors: AppColors, mode: 'light' | 'dark') {
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: 8,
+            gap: spacing.sm,
             paddingVertical: 12,
-            paddingHorizontal: 8,
+            paddingHorizontal: spacing.sm,
             borderRadius: radius.lg,
-            borderWidth: 1,
+            borderWidth: sizes.hairline,
             borderColor: colors.border,
             backgroundColor: colors.surface,
             shadowColor: '#000',
@@ -358,22 +277,17 @@ function createStyles(colors: AppColors, mode: 'light' | 'dark') {
         banner: {
             borderRadius: radius.xl,
             overflow: 'hidden',
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.15,
-            shadowRadius: 8,
-            elevation: 4,
         },
-        bannerInner: { padding: spacing.md + 2, gap: 8 },
+        bannerInner: { padding: spacing.md + 2, gap: spacing.sm },
         bannerBadge: {
             alignSelf: 'flex-start',
-            backgroundColor: 'rgba(255, 255, 255, 0.22)',
+            backgroundColor: colors.surface,
             paddingHorizontal: 9,
             paddingVertical: 3,
             borderRadius: radius.full,
         },
         bannerBadgeText: {
-            color: '#FFFFFF',
+            color: colors.text,
             fontSize: 10.5,
             fontWeight: '800',
             textTransform: 'uppercase',
@@ -388,7 +302,7 @@ function createStyles(colors: AppColors, mode: 'light' | 'dark') {
         bannerSubtitle: {
             fontSize: 12,
             fontWeight: '500',
-            color: 'rgba(255, 255, 255, 0.85)',
+            color: '#FFFFFF',
             lineHeight: 16,
         },
         bannerBtn: {
@@ -397,15 +311,10 @@ function createStyles(colors: AppColors, mode: 'light' | 'dark') {
             alignItems: 'center',
             gap: 6,
             backgroundColor: '#FFFFFF',
-            paddingHorizontal: 16,
+            paddingHorizontal: spacing.md,
             paddingVertical: 9,
             borderRadius: radius.full,
-            marginTop: 4,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 4,
-            elevation: 2,
+            marginTop: spacing.xs,
         },
         bannerBtnText: {
             fontSize: 13,
@@ -447,7 +356,7 @@ function createStyles(colors: AppColors, mode: 'light' | 'dark') {
         tile: {
             width: '31.3%',
             backgroundColor: colors.surface,
-            borderWidth: 1,
+            borderWidth: sizes.hairline,
             borderColor: colors.border,
             borderRadius: radius.lg,
             paddingVertical: 14,
@@ -492,13 +401,13 @@ function createStyles(colors: AppColors, mode: 'light' | 'dark') {
             paddingHorizontal: 7,
             paddingVertical: 2,
             borderRadius: radius.full,
-            backgroundColor: 'rgba(16, 185, 129, 0.14)',
+            backgroundColor: accentAlpha(colors.success, 0.14),
         },
         livePillText: {
             fontSize: 9,
             fontWeight: '800',
             letterSpacing: 0.4,
-            color: '#10B981',
+            color: colors.success,
             textTransform: 'uppercase',
         },
 
@@ -507,7 +416,7 @@ function createStyles(colors: AppColors, mode: 'light' | 'dark') {
         popularCard: {
             width: 154,
             backgroundColor: colors.surface,
-            borderWidth: 1,
+            borderWidth: sizes.hairline,
             borderColor: colors.border,
             borderRadius: radius.lg,
             padding: spacing.sm + 2,
@@ -542,18 +451,13 @@ function createStyles(colors: AppColors, mode: 'light' | 'dark') {
         /* Trust strip */
         trustBox: {
             marginTop: spacing.xl,
-            padding: spacing.md,
-            borderRadius: radius.lg,
-            borderWidth: 1,
-            borderColor: colors.border,
-            backgroundColor: colors.surface,
             alignItems: 'center',
-            gap: 4,
+            gap: spacing.xs,
         },
         trustRow: {
             flexDirection: 'row',
             alignItems: 'center',
-            gap: 8,
+            gap: spacing.sm,
         },
         trustLine: {
             flex: 1,
@@ -581,28 +485,13 @@ function createStyles(colors: AppColors, mode: 'light' | 'dark') {
             alignItems: 'center',
             justifyContent: 'center',
         },
-        backToHomePressable: {
+        backToHomePill: {
             borderRadius: radius.full,
-            overflow: 'hidden',
             shadowColor: colors.accent,
             shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.35,
-            shadowRadius: 10,
-            elevation: 8,
-        },
-        backToHomeGradient: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 7,
-            paddingHorizontal: 18,
-            paddingVertical: 11,
-            borderRadius: radius.full,
-        },
-        backToHomeText: {
-            color: '#FFFFFF',
-            fontSize: 13.5,
-            fontWeight: '800',
-            letterSpacing: 0.2,
+            shadowOpacity: 0.12,
+            shadowRadius: 8,
+            elevation: 2,
         },
     });
 }
@@ -610,15 +499,13 @@ function createStyles(colors: AppColors, mode: 'light' | 'dark') {
 /** Scroll distance (px) after which the floating "Back to home" pill appears. */
 const BACK_TO_HOME_THRESHOLD = 320;
 
-const gradientStyle = StyleSheet.absoluteFill;
-
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
 
 export function HomeDashboardScreen({ navigation }: Props) {
-    const { colors, mode } = useTheme();
-    const styles = useMemo(() => createStyles(colors, mode), [colors, mode]);
+    const { colors } = useTheme();
+    const styles = useMemo(() => createStyles(colors), [colors]);
     const { width: windowWidth } = useWindowDimensions();
     const bannerWidth = windowWidth - spacing.md * 2;
     const { setActiveTab } = useTab();
@@ -759,13 +646,16 @@ export function HomeDashboardScreen({ navigation }: Props) {
 
     const shopTitle = profile?.shopName || 'MCA Phone Wala';
 
+    /** Flat tile fills for the promo banners, resolved from the active theme. */
+    const bannerTints: Record<Banner['color'], string> = {
+        accent: colors.accent,
+        success: colors.success,
+        warning: colors.warning,
+        danger: colors.danger,
+    };
+
     return (
         <SafeAreaView style={styles.safe} edges={['top']}>
-            <LinearGradient
-                colors={colors.bgGradient}
-                style={gradientStyle}
-                pointerEvents="none"
-            />
 
             {/* ── Brand header ── */}
             <View style={styles.header}>
@@ -784,24 +674,22 @@ export function HomeDashboardScreen({ navigation }: Props) {
                 </View>
 
                 <View style={styles.headerActions}>
-                    <Pressable
+                    <AppIconButton
+                        variant="secondary"
+                        size={40}
+                        icon={<Bell size={18} color={colors.text} strokeWidth={2.2} />}
                         onPress={() => showComingSoon('Notifications')}
-                        style={styles.iconBtn}
-                        android_ripple={{ color: accentAlpha(colors.accent, 0.15) }}
                         accessibilityRole="button"
                         accessibilityLabel="Notifications"
-                    >
-                        <Bell size={18} color={colors.text} strokeWidth={2.2} />
-                    </Pressable>
-                    <Pressable
+                    />
+                    <AppIconButton
+                        variant="secondary"
+                        size={40}
+                        icon={<User size={18} color={colors.accent} strokeWidth={2.2} />}
                         onPress={() => setActiveTab('settings')}
-                        style={styles.iconBtn}
-                        android_ripple={{ color: accentAlpha(colors.accent, 0.15) }}
                         accessibilityRole="button"
                         accessibilityLabel={session ? 'Profile settings' : 'Sign in'}
-                    >
-                        <User size={18} color={colors.accent} strokeWidth={2.2} />
-                    </Pressable>
+                    />
                 </View>
             </View>
 
@@ -828,15 +716,14 @@ export function HomeDashboardScreen({ navigation }: Props) {
                             </Text>
                         </Pressable>
 
-                        <Pressable
+                        <AppIconButton
+                            variant="secondary"
+                            size={44}
+                            icon={<QrCode size={20} color={colors.accent} strokeWidth={2.2} />}
                             onPress={handleScanQr}
-                            style={styles.scanBtn}
-                            android_ripple={{ color: accentAlpha(colors.accent, 0.15) }}
                             accessibilityRole="button"
                             accessibilityLabel="Scan QR code"
-                        >
-                            <QrCode size={20} color={colors.accent} strokeWidth={2.2} />
-                        </Pressable>
+                        />
                     </View>
 
                     <ScrollView
@@ -849,12 +736,14 @@ export function HomeDashboardScreen({ navigation }: Props) {
                         accessibilityLabel="Promotional banners"
                     >
                         {BANNERS.map((banner) => (
-                            <LinearGradient
+                            <AppCard
                                 key={banner.key}
-                                colors={banner.gradient}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 1 }}
-                                style={[styles.banner, { width: bannerWidth, marginRight: 12 }]}
+                                variant="elevated"
+                                padding={0}
+                                containerStyle={[
+                                    styles.banner,
+                                    { width: bannerWidth, marginRight: 12, backgroundColor: bannerTints[banner.color] },
+                                ]}
                             >
                                 <View style={styles.bannerInner}>
                                     {banner.badge ? (
@@ -873,17 +762,17 @@ export function HomeDashboardScreen({ navigation }: Props) {
                                                 : showComingSoon(banner.title.replace('\n', ' '))
                                         }
                                         style={styles.bannerBtn}
-                                        android_ripple={{ color: 'rgba(0, 0, 0, 0.08)' }}
+                                        android_ripple={{ color: accentAlpha(colors.accent, 0.1) }}
                                         accessibilityRole="button"
                                         accessibilityLabel={banner.cta}
                                     >
-                                        <Text style={[styles.bannerBtnText, { color: banner.ctaColor }]}>
+                                        <Text style={[styles.bannerBtnText, { color: bannerTints[banner.color] }]}>
                                             {banner.cta}
                                         </Text>
-                                        <ArrowRight size={16} color={banner.ctaColor} strokeWidth={2.6} />
+                                        <ArrowRight size={16} color={bannerTints[banner.color]} strokeWidth={2.6} />
                                     </Pressable>
                                 </View>
-                            </LinearGradient>
+                            </AppCard>
                         ))}
                     </ScrollView>
 
@@ -905,7 +794,7 @@ export function HomeDashboardScreen({ navigation }: Props) {
                             android_ripple={{ color: accentAlpha(colors.accent, 0.1) }}
                             accessibilityRole="button"
                         >
-                            <Wrench size={16} color="#6366F1" strokeWidth={2.4} />
+                            <Wrench size={16} color={colors.accent} strokeWidth={2.4} />
                             <Text style={styles.quickActionText} numberOfLines={1}>Job Desk</Text>
                         </Pressable>
 
@@ -915,7 +804,7 @@ export function HomeDashboardScreen({ navigation }: Props) {
                             android_ripple={{ color: accentAlpha(colors.accent, 0.1) }}
                             accessibilityRole="button"
                         >
-                            <Users size={16} color="#059669" strokeWidth={2.4} />
+                            <Users size={16} color={colors.accent} strokeWidth={2.4} />
                             <Text style={styles.quickActionText} numberOfLines={1}>Customers</Text>
                         </Pressable>
                     </View>
@@ -937,6 +826,7 @@ export function HomeDashboardScreen({ navigation }: Props) {
                     <View style={styles.grid}>
                         {SERVICES.map((service) => {
                             const { Icon } = service;
+                            const tint = service.color ?? colors.accent;
                             return (
                                 <Pressable
                                     key={service.key}
@@ -949,10 +839,10 @@ export function HomeDashboardScreen({ navigation }: Props) {
                                     <View
                                         style={[
                                             styles.tileIcon,
-                                            { backgroundColor: accentAlpha(service.color, 0.14) },
+                                            { backgroundColor: accentAlpha(tint, 0.14) },
                                         ]}
                                     >
-                                        <Icon size={22} color={service.color} strokeWidth={2.2} />
+                                        <Icon size={22} color={tint} strokeWidth={2.2} />
                                     </View>
                                     <Text style={styles.tileLabel}>{service.label}</Text>
                                     <View style={service.live ? styles.livePill : styles.soonPill}>
@@ -984,33 +874,36 @@ export function HomeDashboardScreen({ navigation }: Props) {
                         showsHorizontalScrollIndicator={false}
                         contentContainerStyle={styles.popularScroll}
                     >
-                        {POPULAR_SERVICES.map(({ key, label, desc, Icon, color }) => (
-                            <Pressable
-                                key={key}
-                                onPress={() => showComingSoon(label)}
-                                style={styles.popularCard}
-                                android_ripple={{ color: accentAlpha(colors.accent, 0.1) }}
-                                accessibilityRole="button"
-                                accessibilityLabel={label}
-                            >
-                                <View
-                                    style={[
-                                        styles.popularIcon,
-                                        { backgroundColor: accentAlpha(color, 0.14) },
-                                    ]}
+                        {POPULAR_SERVICES.map(({ key, label, desc, Icon, color }) => {
+                            const tint = color ?? colors.accent;
+                            return (
+                                <Pressable
+                                    key={key}
+                                    onPress={() => showComingSoon(label)}
+                                    style={styles.popularCard}
+                                    android_ripple={{ color: accentAlpha(colors.accent, 0.1) }}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={label}
                                 >
-                                    <Icon size={22} color={color} strokeWidth={2.3} />
-                                </View>
-                                <Text style={styles.popularLabel}>{label}</Text>
-                                <Text style={styles.popularDesc} numberOfLines={2}>
-                                    {desc}
-                                </Text>
-                            </Pressable>
-                        ))}
+                                    <View
+                                        style={[
+                                            styles.popularIcon,
+                                            { backgroundColor: accentAlpha(tint, 0.14) },
+                                        ]}
+                                    >
+                                        <Icon size={22} color={tint} strokeWidth={2.3} />
+                                    </View>
+                                    <Text style={styles.popularLabel}>{label}</Text>
+                                    <Text style={styles.popularDesc} numberOfLines={2}>
+                                        {desc}
+                                    </Text>
+                                </Pressable>
+                            );
+                        })}
                     </ScrollView>
 
                     {/* ── Trust strip ── */}
-                    <View style={styles.trustBox}>
+                    <AppCard containerStyle={styles.trustBox}>
                         <View style={styles.trustRow}>
                             <View style={styles.trustLine} />
                             <Text style={styles.trustText}>Trusted by Hundreds</Text>
@@ -1019,7 +912,7 @@ export function HomeDashboardScreen({ navigation }: Props) {
                         <Text style={styles.trustCaption}>
                             of Happy Customers • Your Device, Our Priority
                         </Text>
-                    </View>
+                    </AppCard>
                 </View>
             </ScrollView>
 
@@ -1032,28 +925,16 @@ export function HomeDashboardScreen({ navigation }: Props) {
                     backToHomeAnimStyle,
                 ]}
             >
-                <Pressable
+                <AppButton
+                    variant="primary"
+                    leftIcon={<Home size={16} color="#FFFFFF" strokeWidth={2.5} />}
                     onPress={handleBackToHome}
-                    style={styles.backToHomePressable}
-                    android_ripple={{
-                        color: 'rgba(255, 255, 255, 0.3)',
-                        borderless: true,
-                        radius: radius.full,
-                    }}
-                    accessibilityRole="button"
                     accessibilityLabel="Back to home"
                     accessibilityHint="Scrolls the home page back to the top"
+                    containerStyle={styles.backToHomePill}
                 >
-                    <LinearGradient
-                        colors={['#8B5CF6', '#6366F1']}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={styles.backToHomeGradient}
-                    >
-                        <Home size={16} color="#FFFFFF" strokeWidth={2.5} />
-                        <Text style={styles.backToHomeText}>Back to home</Text>
-                    </LinearGradient>
-                </Pressable>
+                    Back to home
+                </AppButton>
             </Animated.View>
         </SafeAreaView>
     );

@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
-import { Chip } from 'react-native-paper';
+import { AppChip } from './ui/AppChip';
 import { useTheme } from '../context/ThemeContext';
+import { sizes } from '../theme';
 import type { RepairStatus } from '../types/repair';
 
 export const StatusBadge = React.memo(function StatusBadge({
@@ -12,7 +13,9 @@ export const StatusBadge = React.memo(function StatusBadge({
 }) {
   const { colors } = useTheme();
 
-  const sc = useMemo(() => {
+  // Status colours come straight from the theme's `status*` tokens so the
+  // badge follows the active mode (light / dark) automatically.
+  const customColors = useMemo(() => {
     switch (status) {
       case 'pending':
         return { bg: colors.statusPendingBg, text: colors.statusPendingText, border: colors.statusPendingBorder };
@@ -22,31 +25,28 @@ export const StatusBadge = React.memo(function StatusBadge({
         return { bg: colors.statusCompletedBg, text: colors.statusCompletedText, border: colors.statusCompletedBorder };
       case 'delivered':
         return { bg: colors.statusDeliveredBg, text: colors.statusDeliveredText, border: colors.statusDeliveredBorder };
-      case 'cancelled':
-        return { bg: colors.statusCancelledBg, text: colors.statusCancelledText, border: colors.statusCancelledBorder };
       default:
         return { bg: colors.statusPendingBg, text: colors.statusPendingText, border: colors.statusPendingBorder };
     }
   }, [status, colors]);
 
   return (
-    <Chip
-      compact
-      mode="outlined"
-      style={{
-        backgroundColor: sc.bg,
-        borderColor: sc.border,
-        borderRadius: 4,
+    <AppChip
+      variant="default"
+      containerStyle={{
+        backgroundColor: customColors.bg,
+        borderColor: customColors.border,
+        borderWidth: sizes.hairline,
       }}
-      textStyle={{
-        color: sc.text,
-        fontSize: 13,
+      labelStyle={{
+        color: customColors.text,
+        fontSize: 11,
         fontWeight: '700',
-        marginVertical: 2,
-        marginHorizontal: 4,
+        marginVertical: 1,
+        marginHorizontal: 3,
       }}
     >
       {label}
-    </Chip>
+    </AppChip>
   );
 });

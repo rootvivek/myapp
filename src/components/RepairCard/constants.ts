@@ -8,7 +8,7 @@ import type { Repair, RepairStatus } from '../../types/repair';
 // ------------------------------------------------------------------
 
 export const LABELS = {
-  CUSTOMER: 'Customer',
+  CUSTOMER: 'Name',
   DEVICE: 'Device',
   PROBLEM: 'Problem',
   DATE: 'Date',
@@ -46,7 +46,6 @@ const STATUS_COLOR_KEYS: Record<RepairStatus, StatusColorKeys> = {
   in_progress: { bg: 'statusInProgressBg', text: 'statusInProgressText', border: 'statusInProgressBorder' },
   completed: { bg: 'statusCompletedBg', text: 'statusCompletedText', border: 'statusCompletedBorder' },
   delivered: { bg: 'statusDeliveredBg', text: 'statusDeliveredText', border: 'statusDeliveredBorder' },
-  cancelled: { bg: 'statusCancelledBg', text: 'statusCancelledText', border: 'statusCancelledBorder' },
 };
 
 export const STATUS_ICONS: Record<RepairStatus, string> = {
@@ -54,7 +53,6 @@ export const STATUS_ICONS: Record<RepairStatus, string> = {
   in_progress: '🔄',
   completed: '✅',
   delivered: '📦',
-  cancelled: '❌',
 };
 
 export type PillConfig = {

@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import { useTheme } from '../context/ThemeContext';
@@ -20,22 +20,7 @@ import type { RootStackParamList } from './types';
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export function AppNavigator() {
-  const { colors, mode } = useTheme();
-
-  const theme = useMemo(() => {
-    const base = mode === 'dark' ? DarkTheme : DefaultTheme;
-    return {
-      ...base,
-      colors: {
-        ...base.colors,
-        primary: colors.accent,
-        background: colors.bg,
-        card: colors.surface,
-        text: colors.text,
-        border: colors.border,
-      },
-    };
-  }, [colors, mode]);
+  const { colors } = useTheme();
 
   const screenOptions = useMemo(
     () => ({
@@ -48,27 +33,27 @@ export function AppNavigator() {
   );
 
   return (
-    <NavigationContainer theme={theme}>
+    <NavigationContainer>
       <Stack.Navigator screenOptions={screenOptions}>
-        <Stack.Screen name="Home" component={MainTabScreen} options={{ headerShown: false }} />
-        <Stack.Screen
-          name="AddRepair"
-          component={AddRepairScreen}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen name="RepairDetail" component={RepairDetailScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="Search" component={SearchScreen} options={{ title: 'Search' }} />
-        <Stack.Screen
-          name="CustomerDirectory"
-          component={CustomerDirectoryScreen}
-          options={{ title: 'Customers', headerShown: false }}
-        />
-        <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Shop & invoice' }} />
-        <Stack.Screen name="ManageLabour" component={ManageLabourScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="ScanImei" component={ScanImeiScreen} options={{ title: 'Scan IMEI' }} />
-        <Stack.Screen name="ScanQr" component={ScanQrScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="Finance" component={FinanceScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="AdminDashboard" component={AdminDashboard} options={{ headerShown: false }} />
+          <Stack.Screen name="Home" component={MainTabScreen} options={{ headerShown: false }} />
+          <Stack.Screen
+            name="AddRepair"
+            component={AddRepairScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen name="RepairDetail" component={RepairDetailScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="Search" component={SearchScreen} options={{ title: 'Search' }} />
+          <Stack.Screen
+            name="CustomerDirectory"
+            component={CustomerDirectoryScreen}
+            options={{ title: 'Customers', headerShown: false }}
+          />
+          <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Shop & invoice' }} />
+          <Stack.Screen name="ManageLabour" component={ManageLabourScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="ScanImei" component={ScanImeiScreen} options={{ title: 'Scan IMEI' }} />
+          <Stack.Screen name="ScanQr" component={ScanQrScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="Finance" component={FinanceScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="AdminDashboard" component={AdminDashboard} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

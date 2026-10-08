@@ -9,8 +9,8 @@ import React, {
   type ReactNode,
 } from 'react';
 
-import { isSupabaseConfigured, supabase } from '../lib/supabase';
 import { logger } from '../utils/logger';
+import { isSupabaseConfigured as _isSupabaseConfigured, supabase as _supabase } from '../lib/supabase';
 import { saveShopBranding } from '../utils/shopSettings';
 import { signInUser, signUpUser } from './AuthService';
 import { authReducer, initialAuthState } from './AuthReducer';
@@ -23,6 +23,9 @@ import {
   updateProfileLogo as svcUpdateProfileLogo,
 } from './ProfileService';
 import type { AuthContextValue, UserProfile } from './types';
+
+const isSupabaseConfigured = _isSupabaseConfigured ?? (() => false);
+const supabase = _supabase ?? null;
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
@@ -91,7 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } = await withTimeout(
           supabase.auth.getSession() as unknown as Promise<any>,
           TIMEOUTS.QUERY_MS,
-          'getSession timed out'
+          'getSession timed out',
         );
 
         if (cancelled || !mountedRef.current) return;
@@ -114,12 +117,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event: any, s: any) => {
+    } = supabase.auth.onAuthStateChange((_event: any, s: any) => {
       if (initializingRef.current || validatingLoginRef.current || !mountedRef.current) return;
 
       dispatch({ type: 'SET_SESSION', payload: s });
       if (s?.user?.id) {
-        await loadProfile(s.user.id);
+        // Defer profile loading out of the auth callback: awaiting Supabase
+        // calls inside `onAuthStateChange` can deadlock the auth client.
+        const userId = s.user.id;
+        setTimeout(() => {
+          if (mountedRef.current) void loadProfile(userId);
+        }, 0);
       } else {
         dispatch({ type: 'RESET' });
       }
@@ -174,7 +182,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         validatingLoginRef.current = false;
       }
     },
-    [loadProfile]
+    [loadProfile],
   );
 
   const signOut = useCallback(async () => {
@@ -226,7 +234,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           name,
           profileRef.current?.shopId || '',
           shopName,
-          isOwner
+          isOwner,
         );
         await refreshProfile();
       }

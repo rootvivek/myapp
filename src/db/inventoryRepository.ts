@@ -99,36 +99,68 @@ export async function deleteInventoryItem(id: number): Promise<void> {
   }
 }
 
+/** True when the RPC is missing from the database (migration not applied yet). */
+function isMissingFunctionError(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  const code = error.code ?? '';
+  const message = (error.message ?? '').toLowerCase();
+  return (
+    code === '42883' ||
+    code === 'PGRST202' ||
+    message.includes('does not exist') ||
+    message.includes('could not find the function')
+  );
+}
+
+/**
+ * Decrement stock in a single atomic, shop-scoped statement. Falls back to a
+ * scoped read-modify-write only when the RPC migration is not installed yet.
+ */
 export async function deductInventoryStock(inventoryItemId: number, quantity = 1): Promise<void> {
   try {
-    const ctx = await requireUserContext();
-    // Read current stock with shop filter
-    let query = supabase
-      .from('inventory')
-      .select('stock_count')
-      .eq('id', inventoryItemId);
-    query = applyShopOrUserFilter(query, ctx);
+    const { error } = await supabase.rpc('deduct_inventory_stock', {
+      p_item_id: inventoryItemId,
+      p_quantity: quantity,
+    });
 
-    const { data, error } = await query.single();
+    if (!error) return;
 
-    if (error || !data) {
+    if (!isMissingFunctionError(error)) {
+      // Non-fatal: a stock update failure shouldn't block the repair save.
+      console.warn('[deductInventoryStock] Failed to update stock:', error.message);
       return;
     }
 
-    const currentStock = Number(data.stock_count) || 0;
-    const newStock = Math.max(0, currentStock - quantity);
+    await deductInventoryStockFallback(inventoryItemId, quantity);
+  } catch (err) {
+    console.warn('[deductInventoryStock] Failed:', err);
+  }
+}
 
-    const { error: updateErr } = await supabase
-      .from('inventory')
-      .update({ stock_count: newStock, updated_at: getNowIso() })
-      .eq('id', inventoryItemId);
+async function deductInventoryStockFallback(inventoryItemId: number, quantity: number): Promise<void> {
+  const ctx = await requireUserContext();
 
-    if (updateErr) {
-      // Non-fatal: stock update failure shouldn't block the repair save
-      console.warn('[deductInventoryStock] Failed to update stock:', updateErr.message);
-    }
-  } catch {
-    // Non-fatal — ignore silently
+  let readQuery = supabase
+    .from('inventory')
+    .select('stock_count')
+    .eq('id', inventoryItemId);
+  readQuery = applyShopOrUserFilter(readQuery, ctx);
+
+  const { data, error } = await readQuery.maybeSingle();
+  if (error || !data) return;
+
+  const currentStock = Number(data.stock_count) || 0;
+  const newStock = Math.max(0, currentStock - quantity);
+
+  let writeQuery = supabase
+    .from('inventory')
+    .update({ stock_count: newStock, updated_at: getNowIso() })
+    .eq('id', inventoryItemId);
+  writeQuery = applyShopOrUserFilter(writeQuery, ctx);
+
+  const { error: updateErr } = await writeQuery;
+  if (updateErr) {
+    console.warn('[deductInventoryStock] Failed to update stock:', updateErr.message);
   }
 }
 

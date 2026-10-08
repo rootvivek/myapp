@@ -1,13 +1,6 @@
-import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useCallback, useMemo, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  StyleSheet,
-  View,
-} from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
+import { useCallback, useMemo, useState } from 'react';
+import { FlatList, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Wrench } from 'lucide-react-native';
@@ -24,7 +17,7 @@ import {
   useRepairsState,
 } from '../context/RepairsContext';
 import { useTheme } from '../context/ThemeContext';
-import { useTab } from './MainTabScreen';
+import { useTab } from '../context/TabContext';
 import { repairService } from '../services/repairService';
 import type { RootStackParamList } from '../navigation/types';
 import type { AppColors } from '../theme';
@@ -33,15 +26,12 @@ import type { Repair, RepairStatus } from '../types/repair';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
-const gradientStyle = StyleSheet.absoluteFillObject;
-
 function createStyles(colors: AppColors) {
   const s = StyleSheet.create({
-    safe: { flex: 1, backgroundColor: colors.bgGradient[0] || colors.bg },
+    safe: { flex: 1, backgroundColor: colors.bg },
     main: { flex: 1, position: 'relative' },
 
-    list: { paddingHorizontal: 6, paddingTop: spacing.sm, paddingBottom: 120 },
-    centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    list: { paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: 120 },
   });
   return s;
 }
@@ -130,10 +120,6 @@ export function HomeScreen({ navigation }: Props) {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.main}>
-        <LinearGradient
-          colors={colors.bgGradient}
-          style={gradientStyle}
-        />
         <HomeHeader
           navigation={navigation}
           statusFilter={statusFilter}

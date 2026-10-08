@@ -12,13 +12,14 @@ import {
   Shield,
   Smartphone,
   TriangleAlert,
-  User,
 } from 'lucide-react-native';
 import { InfoRow } from '../../components/InfoRow';
 import { PatternPreview } from '../../components/PatternDrawingModal';
 import { StatusBadge } from '../../components/StatusBadge';
 import { getWarrantyInfo } from '../../components/CustomerHistoryModal';
-import type { AppColors } from '../../theme';
+import { AppCard } from '../../components/ui/AppCard';
+import { AppChip } from '../../components/ui/AppChip';
+import { accentAlpha, radius, sizes, spacing, type AppColors } from '../../theme';
 import type { Repair } from '../../types/repair';
 import { formatDateDisplay } from '../../utils/format';
 import { createStyles } from './styles';
@@ -30,7 +31,6 @@ type Props = {
   setRevealLock: (reveal: boolean) => void;
   onCall: () => void;
   onViewHistory?: () => void;
-  mode: 'light' | 'dark';
   colors: AppColors;
   cardColors: string[];
 };
@@ -42,19 +42,22 @@ export const RepairInfoCard = React.memo(function RepairInfoCard({
   setRevealLock,
   onCall,
   onViewHistory,
-  mode,
   colors,
 }: Props) {
-  const styles = createStyles(colors, mode);
+  const styles = createStyles(colors);
 
   return (
-    <View style={styles.card}>
-      <View style={styles.cardInner}>
+    <AppCard variant="outlined" containerStyle={styles.sectionCard}>
+      <View style={styles.sectionCardBody}>
         {/* ── Order ID & Status Header ── */}
         <View style={styles.heroHeader}>
-          <View style={styles.orderBadge}>
-            <Text style={styles.orderBadgeText}>{repair.orderCode || `#${repair.id}`}</Text>
-          </View>
+          <AppChip
+            variant="default"
+            containerStyle={{ backgroundColor: colors.surface2, borderColor: colors.border }}
+            labelStyle={{ color: colors.accent, fontWeight: '800', letterSpacing: 0.3 }}
+          >
+            {repair.orderCode || `#${repair.id}`}
+          </AppChip>
           <StatusBadge status={repair.status} label={statusLabel} />
         </View>
 
@@ -63,7 +66,7 @@ export const RepairInfoCard = React.memo(function RepairInfoCard({
           <Text style={styles.customerName}>{repair.customerName}</Text>
           <Text style={styles.customerPhone}>
             {repair.phone}
-            {repair.createdByName ? ` · Added by ${repair.createdByName}` : ''}
+            {repair.createdByName && repair.createdByRole === 'labour' ? ` · Added by ${repair.createdByName}` : ''}
           </Text>
         </View>
 
@@ -71,7 +74,7 @@ export const RepairInfoCard = React.memo(function RepairInfoCard({
           <Pressable
             onPress={onCall}
             style={[styles.quickBtn, styles.quickBtnCall]}
-            android_ripple={{ color: 'rgba(34, 197, 94, 0.2)' }}
+            android_ripple={{ color: accentAlpha(colors.success, 0.2) }}
           >
             <Phone size={14} color={colors.success} strokeWidth={2.4} />
             <Text style={[styles.quickBtnText, { color: colors.success }]}>Call</Text>
@@ -81,7 +84,7 @@ export const RepairInfoCard = React.memo(function RepairInfoCard({
             <Pressable
               onPress={onViewHistory}
               style={[styles.quickBtn, styles.quickBtnHistory]}
-              android_ripple={{ color: 'rgba(124, 58, 237, 0.2)' }}
+              android_ripple={{ color: accentAlpha(colors.accent, 0.2) }}
             >
               <History size={14} color={colors.accent} strokeWidth={2.4} />
               <Text style={[styles.quickBtnText, { color: colors.accent }]}>History</Text>
@@ -92,34 +95,34 @@ export const RepairInfoCard = React.memo(function RepairInfoCard({
         {/* ── Details Rows ── */}
         <InfoRow
           icon={Smartphone}
-          iconBg="rgba(96,165,250,0.18)"
+          iconBg={accentAlpha(colors.accent, 0.14)}
           label="Device"
           value={repair.deviceModel || '\u2014'}
           styles={styles}
-          iconColor={mode === 'dark' ? '#60A5FA' : '#2563EB'}
+          iconColor={colors.accent}
         />
 
         <InfoRow
           icon={TriangleAlert}
-          iconBg="rgba(251,146,60,0.18)"
+          iconBg={accentAlpha(colors.warning, 0.14)}
           label="Issue / Problem"
           value={repair.problem || '\u2014'}
           styles={styles}
-          iconColor={mode === 'dark' ? '#FDBA74' : '#EA580C'}
+          iconColor={colors.warning}
         />
 
         <InfoRow
           icon={Calendar}
-          iconBg="rgba(232,121,249,0.18)"
+          iconBg={accentAlpha(colors.textMuted, 0.14)}
           label="Received Date"
           value={formatDateDisplay(repair.dateReceived)}
           styles={styles}
-          iconColor={mode === 'dark' ? '#F472B6' : '#DB2777'}
+          iconColor={colors.textMuted}
         />
 
         <InfoRow
           icon={QrCode}
-          iconBg="rgba(167,139,250,0.18)"
+          iconBg={accentAlpha(colors.accent, 0.14)}
           label="IMEI Number"
           value={repair.imei || '\u2014'}
           chip={repair.imei ? 'Copy' : undefined}
@@ -130,7 +133,7 @@ export const RepairInfoCard = React.memo(function RepairInfoCard({
             }
           }}
           styles={styles}
-          iconColor={mode === 'dark' ? '#C084FC' : '#7C3AED'}
+          iconColor={colors.accent}
         />
 
         {repair.warranty ? (() => {
@@ -138,11 +141,15 @@ export const RepairInfoCard = React.memo(function RepairInfoCard({
           return (
             <InfoRow
               icon={Shield}
-              iconBg={wInfo.active ? 'rgba(34,197,94,0.18)' : 'rgba(156,163,175,0.18)'}
+              iconBg={
+                wInfo.active
+                  ? accentAlpha(colors.success, 0.14)
+                  : accentAlpha(colors.textMuted, 0.14)
+              }
               label="Warranty"
               value={`${repair.warranty}${wInfo.isWarranted ? ` (${wInfo.label})` : ''}`}
               styles={styles}
-              iconColor={wInfo.active ? (mode === 'dark' ? '#34D399' : '#16A34A') : colors.textMuted}
+              iconColor={wInfo.active ? colors.success : colors.textMuted}
             />
           );
         })() : null}
@@ -152,7 +159,7 @@ export const RepairInfoCard = React.memo(function RepairInfoCard({
           <>
             <InfoRow
               icon={Lock}
-              iconBg="rgba(251,191,36,0.18)"
+              iconBg={accentAlpha(colors.warning, 0.14)}
               label="Device Lock"
               value={
                 repair.lockType === 'pattern'
@@ -165,7 +172,7 @@ export const RepairInfoCard = React.memo(function RepairInfoCard({
               chipIcon={revealLock ? EyeOff : Eye}
               onChipPress={() => setRevealLock(!revealLock)}
               styles={styles}
-              iconColor={mode === 'dark' ? '#FBBF24' : '#D97706'}
+              iconColor={colors.warning}
             />
             {repair.lockType === 'pattern' && repair.lockValue ? (
               revealLock ? (
@@ -194,7 +201,7 @@ export const RepairInfoCard = React.memo(function RepairInfoCard({
           alignItems: 'center',
           justifyContent: 'center',
           paddingTop: 12,
-          borderTopWidth: 1,
+          borderTopWidth: sizes.hairline,
           borderTopColor: colors.border,
           marginTop: 4,
         }}>
@@ -208,12 +215,12 @@ export const RepairInfoCard = React.memo(function RepairInfoCard({
           }}>Order Barcode</Text>
           <Image
             source={{ uri: `https://quickchart.io/barcode?type=code128&text=${encodeURIComponent(repair.orderCode || String(repair.id))}` }}
-            style={{ width: 240, height: 70, backgroundColor: '#fff', padding: 4, borderRadius: 8 }}
+            style={{ width: 240, height: 70, backgroundColor: '#fff', padding: spacing.xs, borderRadius: radius.sm }}
             resizeMode="contain"
           />
         </View>
       </View>
-    </View>
+    </AppCard>
   );
 });
 

@@ -1,10 +1,8 @@
 import { StyleSheet } from 'react-native';
 import type { AppColors } from '../../theme';
-import { accentAlpha, radius, spacing } from '../../theme';
+import { accentAlpha, radius, sizes, spacing } from '../../theme';
 
-export function createStyles(colors: AppColors, mode: 'light' | 'dark') {
-  const isLight = mode === 'light';
-
+export function createStyles(colors: AppColors) {
   return StyleSheet.create({
     safe: {
       flex: 1,
@@ -15,50 +13,19 @@ export function createStyles(colors: AppColors, mode: 'light' | 'dark') {
       paddingTop: spacing.xs,
     },
 
-    /* Header */
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: spacing.md,
-      paddingVertical: spacing.sm,
-      gap: spacing.sm,
-    },
-    headerBtn: {
-      width: 40,
-      height: 40,
-      borderRadius: radius.md,
-      backgroundColor: colors.surface2,
-      borderWidth: 1,
-      borderColor: colors.border,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    headerTitle: {
-      flex: 1,
-      color: colors.text,
-      fontSize: 18,
-      fontWeight: '800',
-      letterSpacing: -0.3,
-    },
-
-    /* Card Container Shared */
-    card: {
+    /* Section cards — fill, radius and border come from AppCard */
+    sectionCard: {
       marginHorizontal: spacing.md,
       marginBottom: spacing.md,
-      borderRadius: radius.lg,
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.border,
-      overflow: 'hidden',
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 3 },
-      shadowOpacity: isLight ? 0.04 : 0.2,
-      shadowRadius: 8,
-      elevation: 2,
     },
-    cardInner: {
-      padding: spacing.md,
+    sectionCardBody: {
       gap: spacing.md,
+    },
+    listCardBody: {
+      gap: spacing.sm + 2,
+    },
+    photoCardBody: {
+      gap: spacing.sm,
     },
 
     /* Hero / Header Card */
@@ -67,31 +34,8 @@ export function createStyles(colors: AppColors, mode: 'light' | 'dark') {
       justifyContent: 'space-between',
       alignItems: 'center',
       paddingBottom: spacing.sm + 2,
-      borderBottomWidth: 1,
+      borderBottomWidth: sizes.hairline,
       borderBottomColor: colors.border,
-    },
-    orderBadge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: colors.surface2,
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderRadius: radius.sm,
-      borderWidth: 1,
-      borderColor: colors.border,
-      gap: 4,
-    },
-    orderBadgeText: {
-      color: colors.accent,
-      fontSize: 13,
-      fontWeight: '800',
-      letterSpacing: 0.3,
-    },
-    customerRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      marginTop: spacing.xs,
     },
     customerName: {
       fontSize: 18,
@@ -118,7 +62,7 @@ export function createStyles(colors: AppColors, mode: 'light' | 'dark') {
       paddingHorizontal: 12,
       paddingVertical: 7,
       borderRadius: radius.md,
-      borderWidth: 1,
+      borderWidth: sizes.hairline,
       gap: 6,
       flex: 1,
       justifyContent: 'center',
@@ -126,10 +70,6 @@ export function createStyles(colors: AppColors, mode: 'light' | 'dark') {
     quickBtnCall: {
       backgroundColor: accentAlpha(colors.success, 0.12),
       borderColor: accentAlpha(colors.success, 0.25),
-    },
-    quickBtnWhatsapp: {
-      backgroundColor: 'rgba(37,211,102,0.12)',
-      borderColor: 'rgba(37,211,102,0.25)',
     },
     quickBtnHistory: {
       backgroundColor: accentAlpha(colors.accent, 0.12),
@@ -141,19 +81,6 @@ export function createStyles(colors: AppColors, mode: 'light' | 'dark') {
     },
 
     /* Info card */
-    infoCard: {
-      marginHorizontal: spacing.md,
-      marginBottom: spacing.md,
-      borderRadius: radius.lg,
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.border,
-      overflow: 'hidden',
-    },
-    infoCardInner: {
-      padding: spacing.md,
-      gap: spacing.md,
-    },
     infoRow: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -165,8 +92,8 @@ export function createStyles(colors: AppColors, mode: 'light' | 'dark') {
       borderRadius: radius.md,
       alignItems: 'center',
       justifyContent: 'center',
-      borderWidth: 1,
-      borderColor: 'rgba(255,255,255,0.06)',
+      borderWidth: sizes.hairline,
+      borderColor: colors.border,
     },
     infoContent: {
       flex: 1,
@@ -195,7 +122,7 @@ export function createStyles(colors: AppColors, mode: 'light' | 'dark') {
       paddingVertical: 5,
       borderRadius: radius.full,
       backgroundColor: colors.surface2,
-      borderWidth: 1,
+      borderWidth: sizes.hairline,
       borderColor: colors.border,
       flexDirection: 'row',
       alignItems: 'center',
@@ -220,7 +147,7 @@ export function createStyles(colors: AppColors, mode: 'light' | 'dark') {
       padding: 6,
       backgroundColor: colors.surface2,
       borderRadius: radius.md,
-      borderWidth: 1,
+      borderWidth: sizes.hairline,
       borderColor: colors.border,
     },
     patternTextContainer: {
@@ -255,19 +182,6 @@ export function createStyles(colors: AppColors, mode: 'light' | 'dark') {
     },
 
     /* Accessories */
-    accessoryCard: {
-      marginHorizontal: spacing.md,
-      marginBottom: spacing.md,
-      borderRadius: radius.lg,
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.border,
-      overflow: 'hidden',
-    },
-    accessoryCardInner: {
-      padding: spacing.md,
-      gap: spacing.sm + 2,
-    },
     accessoryRow: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -292,19 +206,6 @@ export function createStyles(colors: AppColors, mode: 'light' | 'dark') {
     },
 
     /* Photos */
-    photoCard: {
-      marginHorizontal: spacing.md,
-      marginBottom: spacing.md,
-      borderRadius: radius.lg,
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.border,
-      overflow: 'hidden',
-    },
-    photoCardInner: {
-      padding: spacing.md,
-      gap: spacing.sm,
-    },
     photoGrid: {
       flexDirection: 'row',
       flexWrap: 'wrap',
@@ -316,7 +217,7 @@ export function createStyles(colors: AppColors, mode: 'light' | 'dark') {
       borderRadius: radius.md,
       overflow: 'hidden',
       backgroundColor: colors.surface2,
-      borderWidth: 1,
+      borderWidth: sizes.hairline,
       borderColor: colors.border,
     },
     photoImg: {
@@ -348,19 +249,6 @@ export function createStyles(colors: AppColors, mode: 'light' | 'dark') {
     },
 
     /* Payment card */
-    paymentCard: {
-      marginHorizontal: spacing.md,
-      marginBottom: spacing.md,
-      borderRadius: radius.lg,
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.border,
-      overflow: 'hidden',
-    },
-    paymentCardInner: {
-      padding: spacing.md,
-      gap: spacing.sm + 2,
-    },
     paymentRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
@@ -393,44 +281,6 @@ export function createStyles(colors: AppColors, mode: 'light' | 'dark') {
       marginHorizontal: spacing.md,
       marginTop: spacing.xs,
       gap: spacing.sm,
-    },
-    actionBtn: {
-      borderRadius: radius.lg,
-      overflow: 'hidden',
-      shadowColor: colors.accent,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3,
-      shadowRadius: 8,
-      elevation: 4,
-    },
-    actionBtnInner: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: spacing.sm,
-      paddingVertical: 14,
-    },
-    actionBtnText: {
-      color: '#FFFFFF',
-      fontSize: 15,
-      fontWeight: '700',
-      letterSpacing: 0.2,
-    },
-    actionBtnSecondary: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: spacing.sm,
-      borderRadius: radius.lg,
-      borderWidth: 1,
-      borderColor: colors.border,
-      paddingVertical: 13,
-      backgroundColor: colors.surface,
-    },
-    actionBtnSecondaryText: {
-      color: colors.text,
-      fontSize: 14,
-      fontWeight: '700',
     },
 
     /* Loading / error */

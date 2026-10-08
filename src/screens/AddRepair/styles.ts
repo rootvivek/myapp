@@ -1,32 +1,18 @@
 import { StyleSheet } from 'react-native';
 import type { AppColors } from '../../theme';
-import { accentAlpha, radius, spacing } from '../../theme';
+import { radius, sizes, spacing } from '../../theme';
 
 export function createAddRepairStyles(colors: AppColors) {
-  const COLORS = {
-    bg: colors.bg,
-    card: colors.surface,
-    border: colors.border,
-    input: colors.surface2,
-    primary: colors.accent,
-    secondary: colors.accent,
-    text: colors.text,
-    subText: colors.textMuted,
-  };
-
   return StyleSheet.create({
     safe: {
       flex: 1,
-      backgroundColor: COLORS.bg,
-    },
-    scroll: {
-      flex: 1,
+      backgroundColor: colors.bg,
     },
     content: {
       paddingHorizontal: spacing.md,
-      paddingTop: spacing.xs,
-      paddingBottom: 120,
-      gap: spacing.sm + 4,
+      paddingTop: 6,
+      paddingBottom: 110,
+      gap: 12,
     },
     centered: {
       flex: 1,
@@ -34,139 +20,39 @@ export function createAddRepairStyles(colors: AppColors) {
       alignItems: 'center',
     },
 
-    /* Header */
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingVertical: spacing.xs,
-      marginBottom: 2,
-    },
-    backBtn: {
-      width: 40,
-      height: 40,
-      borderRadius: radius.md,
-      backgroundColor: COLORS.card,
-      borderWidth: 1,
-      borderColor: COLORS.border,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    headerTextWrap: {
-      marginLeft: spacing.sm + 4,
-      flex: 1,
-    },
-    headerTitle: {
-      color: COLORS.text,
-      fontSize: 20,
-      fontWeight: '800',
-      letterSpacing: -0.3,
-    },
-    headerSubtitle: {
-      color: COLORS.subText,
-      fontSize: 12,
-      fontWeight: '500',
-      marginTop: 1,
-    },
-
     /* Order Banner (Edit mode) */
     orderBanner: {
-      backgroundColor: COLORS.card,
-      borderRadius: radius.lg,
-      borderWidth: 1,
-      borderColor: COLORS.border,
-      padding: spacing.md,
+      backgroundColor: colors.surface,
+      borderRadius: radius.md,
+      borderWidth: sizes.hairline,
+      borderColor: colors.border,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
+      marginBottom: 2,
     },
     orderBannerLabel: {
-      color: COLORS.subText,
+      color: colors.textMuted,
       fontSize: 11,
-      fontWeight: '700',
+      fontWeight: '600',
       textTransform: 'uppercase',
-      letterSpacing: 0.5,
-    },
-    orderBannerValue: {
-      color: COLORS.primary,
-      fontSize: 16,
-      fontWeight: '800',
       letterSpacing: 0.3,
     },
-
-    /* Unified Form Card Container */
-    formCard: {
-      backgroundColor: COLORS.card,
-      borderRadius: radius.lg,
-      padding: spacing.md,
-      borderWidth: 1,
-      borderColor: COLORS.border,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.08,
-      shadowRadius: 6,
-      elevation: 2,
-    },
-    cardHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
-      marginBottom: spacing.sm + 4,
-    },
-    cardHeaderIcon: {
-      width: 30,
-      height: 30,
-      borderRadius: radius.sm + 2,
-      backgroundColor: accentAlpha(COLORS.primary, 0.12),
-      justifyContent: 'center',
-      alignItems: 'center',
-      borderWidth: 1,
-      borderColor: accentAlpha(COLORS.primary, 0.25),
-    },
-    cardHeaderInfo: {
-      flex: 1,
-    },
-    cardTitle: {
-      color: COLORS.text,
-      fontSize: 14.5,
-      fontWeight: '800',
-      letterSpacing: -0.2,
-    },
-
-    /* Customer 1-Row & Search */
-    searchCustomerRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      marginBottom: 8,
-    },
-    newCustomerBtn: {
-      width: 48,
-      height: 48,
-      borderRadius: radius.md,
-      backgroundColor: COLORS.primary,
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginTop: -2,
-    },
-    customer1Row: {
-      flexDirection: 'row',
-      gap: 8,
-    },
-
-    /* Field Labels & Inputs */
-    fieldLabel: {
-      color: COLORS.subText,
-      fontSize: 11,
+    orderBannerValue: {
+      color: colors.accent,
+      fontSize: 15,
       fontWeight: '700',
-      textTransform: 'uppercase',
-      letterSpacing: 0.5,
-      marginBottom: 5,
-      marginTop: 4,
+      letterSpacing: 0.2,
     },
-    /* Layout wrappers for FormTextInput (the input itself is themed by the
-       shared component, so these only control spacing/flex). */
-    inputStack: {
-      marginBottom: spacing.sm,
+
+    /* Section headings above non-input controls (chips, switches, previews) */
+    fieldLabel: {
+      color: colors.text,
+      fontSize: 12.5,
+      fontWeight: '600',
+      marginBottom: sizes.labelGap,
     },
     inputTight: {
       marginBottom: 4,
@@ -175,232 +61,85 @@ export function createAddRepairStyles(colors: AppColors) {
       flex: 1,
       minWidth: 0,
     },
-    searchInputText: {
-      fontSize: 13.5,
-    },
-    imeiRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      marginBottom: 4,
-    },
-    scanBtn: {
-      borderRadius: radius.md,
-      backgroundColor: COLORS.primary,
-      height: 48,
-      paddingHorizontal: 12,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 6,
-      marginTop: -2,
-    },
-    scanBtnText: {
-      color: '#FFFFFF',
-      fontSize: 13,
-      fontWeight: '700',
-    },
 
-    /* Dropdown suggestions */
+    /* Inline suggestion lists (customer search & device brand search) */
     suggestionsContainer: {
-      backgroundColor: COLORS.input,
-      borderWidth: 1,
-      borderColor: COLORS.border,
+      backgroundColor: colors.surface,
+      borderWidth: sizes.hairline,
+      borderColor: colors.border,
       borderRadius: radius.md,
-      marginTop: -6,
-      marginBottom: 8,
+      marginTop: spacing.xs,
+      marginBottom: spacing.sm,
       overflow: 'hidden',
     },
     suggestionItem: {
-      padding: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
       borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: COLORS.border,
+      borderBottomColor: colors.border,
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
     },
     suggestionName: {
-      color: COLORS.text,
+      color: colors.text,
       fontWeight: '600',
       fontSize: 13.5,
     },
     suggestionPhone: {
-      color: COLORS.subText,
+      color: colors.textMuted,
       fontSize: 11.5,
     },
     brandSuggestContainer: {
-      backgroundColor: COLORS.input,
-      borderWidth: 1,
-      borderColor: COLORS.border,
+      backgroundColor: colors.surface,
+      borderWidth: sizes.hairline,
+      borderColor: colors.border,
       borderRadius: radius.md,
-      marginTop: -6,
-      marginBottom: 8,
+      marginTop: spacing.xs,
+      marginBottom: spacing.sm,
       overflow: 'hidden',
       maxHeight: 180,
     },
 
-    /* Problem Chips */
-    problemSuggestions: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 6,
-      marginTop: 8,
-      marginBottom: 4,
-    },
-
-    /* Security Lock */
-    lockTypeRow: {
-      flexDirection: 'row',
-      gap: 6,
-      flexWrap: 'wrap',
-      marginTop: 4,
-      marginBottom: 8,
-    },
-
-    /* Accessories & Warranty */
-    accessoryRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      backgroundColor: COLORS.input,
-      padding: 10,
-      borderRadius: radius.md,
-      borderWidth: 1,
-      borderColor: COLORS.border,
-      marginBottom: 8,
-    },
-    accessoryTitle: {
-      color: COLORS.text,
-      fontSize: 13.5,
-      fontWeight: '600',
-    },
-    accessoryToggle: {
-      flexDirection: 'row',
-      backgroundColor: COLORS.card,
-      borderRadius: radius.sm,
-      borderWidth: 1,
-      borderColor: COLORS.border,
-      padding: 2,
-    },
-    toggleBtn: {
-      paddingVertical: 4,
-      paddingHorizontal: 12,
-      borderRadius: radius.sm - 2,
-    },
-    toggleBtnActive: {
-      backgroundColor: COLORS.primary,
-    },
-    toggleText: {
-      color: COLORS.subText,
-      fontSize: 12,
-      fontWeight: '700',
-    },
-    toggleTextActive: {
-      color: '#FFFFFF',
-    },
-
-    /* Billing section */
+    /* Billing & Payment */
     billingRow: {
       flexDirection: 'row',
-      gap: 10,
+      gap: spacing.sm,
     },
     balancePreviewRow: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      backgroundColor: COLORS.input,
-      padding: 10,
+      backgroundColor: colors.surface2,
       borderRadius: radius.md,
-      borderWidth: 1,
-      borderColor: COLORS.border,
-      marginVertical: 6,
+      borderWidth: sizes.hairline,
+      borderColor: colors.border,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      marginTop: 2,
     },
     balanceLabel: {
-      color: COLORS.subText,
-      fontSize: 12,
-      fontWeight: '700',
-      textTransform: 'uppercase',
+      color: colors.textMuted,
+      fontSize: 12.5,
+      fontWeight: '500',
     },
     balanceValue: {
-      fontSize: 15,
-      fontWeight: '800',
+      fontSize: 14,
+      fontWeight: '700',
     },
-
-    /* Switch row */
     switchRow: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
       paddingVertical: 6,
+      marginTop: 4,
     },
     switchLabel: {
-      color: COLORS.text,
-      fontSize: 13.5,
-      fontWeight: '600',
-      flex: 1,
-    },
-
-    /* Modal styles */
-    modalWrap: {
-      flex: 1,
-      backgroundColor: 'rgba(0,0,0,0.65)',
-      justifyContent: 'center',
-      padding: spacing.lg,
-    },
-    modalOuter: {
-      zIndex: 1,
-      width: '100%',
-    },
-    modalSheet: {
-      backgroundColor: colors.surface,
-      borderRadius: 20,
-      borderWidth: 1,
-      borderColor: colors.border,
-      overflow: 'hidden',
-    },
-    modalTitle: {
       color: colors.text,
-      fontSize: 18,
-      fontWeight: '800',
-      paddingHorizontal: spacing.lg,
-      paddingTop: spacing.lg,
-    },
-    modalSub: {
-      color: colors.textMuted,
       fontSize: 13,
-      paddingHorizontal: spacing.lg,
-      paddingBottom: spacing.sm,
-    },
-    modalCloseBtn: {
-      position: 'absolute',
-      top: spacing.md,
-      right: spacing.md,
-      zIndex: 10,
-      padding: 4,
-    },
-    paymentModalBody: {
-      padding: spacing.lg,
-      gap: spacing.md,
-    },
-    paymentButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingVertical: 13,
-      borderRadius: radius.md,
-      borderWidth: 1,
-      borderColor: colors.border,
-      backgroundColor: colors.surface2,
-      gap: 8,
-    },
-    paymentButtonText: {
-      fontSize: 15,
-      fontWeight: '700',
-      color: colors.text,
+      fontWeight: '500',
     },
   });
 }
 
 export type AddRepairStyles = ReturnType<typeof createAddRepairStyles>;
-
-

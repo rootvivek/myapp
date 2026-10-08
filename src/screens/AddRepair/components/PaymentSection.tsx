@@ -1,11 +1,12 @@
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { Switch as PaperSwitch } from 'react-native-paper';
-import { CreditCard, MessageSquare } from 'lucide-react-native';
+import { MessageSquare } from 'lucide-react-native';
 import type { AppColors } from '../../../theme';
 import { FormTextInput } from '../../../components/FormTextInput';
 import { formatCurrency } from '../../../utils/format';
 import type { AddRepairStyles } from '../styles';
+import { AppCard } from '../../../components/ui/AppCard';
 
 type Props = {
   repairCost: string;
@@ -30,14 +31,11 @@ export const PaymentSection = React.memo(function PaymentSection({
   expense,
   advanceAmount,
   isPaid,
-  paymentType,
   sendWhatsAppInvoice,
   isEdit,
   onChangeRepairCost,
   onChangeExpense,
   onChangeAdvanceAmount,
-  onChangeIsPaid,
-  onChangePaymentType,
   onChangeSendWhatsAppInvoice,
   styles,
   colors,
@@ -47,17 +45,10 @@ export const PaymentSection = React.memo(function PaymentSection({
   const dueAmount = Math.max(0, costNum - advNum);
 
   return (
-    <View style={styles.formCard}>
-      <View style={styles.cardHeader}>
-        <View style={styles.cardHeaderIcon}>
-          <CreditCard size={16} color={colors.accent} />
-        </View>
-        <View style={styles.cardHeaderInfo}>
-          <Text style={styles.cardTitle}>Billing & Payment</Text>
-        </View>
-      </View>
+    <AppCard>
+      <Text style={styles.fieldLabel}>Billing & Payment</Text>
 
-      {/* Row 1: Cost, Expense & Advance side-by-side */}
+      {/* Row 1: Cost & Expense */}
       <View style={styles.billingRow}>
         <FormTextInput
           label="Total Cost (₹)"
@@ -65,7 +56,7 @@ export const PaymentSection = React.memo(function PaymentSection({
           value={repairCost}
           onChangeText={onChangeRepairCost}
           keyboardType="decimal-pad"
-          containerStyle={[styles.inputFlex, styles.inputStack]}
+          containerStyle={styles.inputFlex}
           accessibilityLabel="Repair cost"
         />
 
@@ -75,22 +66,20 @@ export const PaymentSection = React.memo(function PaymentSection({
           value={expense}
           onChangeText={onChangeExpense}
           keyboardType="decimal-pad"
-          containerStyle={[styles.inputFlex, styles.inputStack]}
+          containerStyle={styles.inputFlex}
           accessibilityLabel="Expense amount"
         />
       </View>
 
-      <View style={styles.billingRow}>
-        <FormTextInput
-          label="Advance Paid (₹)"
-          placeholder="0"
-          value={advanceAmount}
-          onChangeText={onChangeAdvanceAmount}
-          keyboardType="decimal-pad"
-          containerStyle={[styles.inputFlex, styles.inputStack]}
-          accessibilityLabel="Advance amount"
-        />
-      </View>
+      {/* Row 2: Advance Paid */}
+      <FormTextInput
+        label="Advance Paid (₹)"
+        placeholder="0"
+        value={advanceAmount}
+        onChangeText={onChangeAdvanceAmount}
+        keyboardType="decimal-pad"
+        accessibilityLabel="Advance amount"
+      />
 
       {/* Live Balance / Due Pill */}
       <View style={styles.balancePreviewRow}>
@@ -107,20 +96,17 @@ export const PaymentSection = React.memo(function PaymentSection({
         </Text>
       </View>
 
-
-
       {/* WhatsApp Invoice Toggle */}
       {!isEdit && (
         <Pressable
           onPress={() => onChangeSendWhatsAppInvoice(!sendWhatsAppInvoice)}
           style={styles.switchRow}
-          android_ripple={{ color: colors.border }}
           accessibilityRole="switch"
           accessibilityLabel="Send WhatsApp invoice PDF after save"
           accessibilityState={{ checked: sendWhatsAppInvoice }}
         >
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-            <MessageSquare size={16} color={colors.accent} />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
+            <MessageSquare size={15} color={colors.accent} strokeWidth={2} />
             <Text style={styles.switchLabel}>Send invoice via WhatsApp after save</Text>
           </View>
           <PaperSwitch
@@ -130,7 +116,6 @@ export const PaymentSection = React.memo(function PaymentSection({
           />
         </Pressable>
       )}
-    </View>
+    </AppCard>
   );
 });
-

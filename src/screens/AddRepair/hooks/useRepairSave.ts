@@ -91,54 +91,79 @@ export function useRepairSave() {
           imageThumbnail: '',
           imageId1: '',
           imageId2: '',
+          sellerId: state.sellerId ?? null,
           ...state.accessories,
         };
 
         let savedRepairId = repairId ?? 0;
+        let imageUploadFailed = false;
+
+        type ResolvedImages = Awaited<ReturnType<typeof resolveImagesForSaveCloud>>;
+
+        const resolveImagesSafely = async (
+          id: number,
+          fallback: ResolvedImages,
+          initial: Record<RepairImageSlot, string>
+        ): Promise<ResolvedImages> => {
+          try {
+            return await resolveImagesForSaveCloud(id, state.images, initial);
+          } catch (err) {
+            // Do not silently drop the failure: the record must still save, but
+            // the user has to know the photos were not uploaded.
+            imageUploadFailed = true;
+            console.warn('[useRepairSave] Image upload failed:', err);
+            return fallback;
+          }
+        };
 
         if (isEdit && repairId != null) {
-          let resolvedImages = {
-            imagePhoneFront: initialImagesRef.current.front || '',
-            imagePhoneBack: initialImagesRef.current.back || '',
-            imageThumbnail: initialImagesRef.current.front || '',
-            imageId1: initialImagesRef.current.id1 || '',
-            imageId2: initialImagesRef.current.id2 || '',
-          };
-          try {
-            resolvedImages = await resolveImagesForSaveCloud(
-              repairId,
-              state.images,
-              initialImagesRef.current
-            );
-          } catch {}
+          const resolvedImages = await resolveImagesSafely(
+            repairId,
+            {
+              imagePhoneFront: initialImagesRef.current.front || '',
+              imagePhoneBack: initialImagesRef.current.back || '',
+              imageThumbnail: initialImagesRef.current.front || '',
+              imageId1: initialImagesRef.current.id1 || '',
+              imageId2: initialImagesRef.current.id2 || '',
+            },
+            initialImagesRef.current
+          );
           await repairService.update({ ...base, id: repairId, ...resolvedImages });
           savedRepairId = repairId;
         } else {
-          let resolvedImages = {
-            imagePhoneFront: '',
-            imagePhoneBack: '',
-            imageThumbnail: '',
-            imageId1: '',
-            imageId2: '',
-          };
           const newId = await repairService.create(base);
-          try {
-            resolvedImages = await resolveImagesForSaveCloud(newId, state.images, emptyImageState());
-          } catch {}
+          const resolvedImages = await resolveImagesSafely(
+            newId,
+            {
+              imagePhoneFront: '',
+              imagePhoneBack: '',
+              imageThumbnail: '',
+              imageId1: '',
+              imageId2: '',
+            },
+            emptyImageState()
+          );
           await repairService.update({ ...base, id: newId, ...resolvedImages });
           savedRepairId = newId;
         }
 
-        if (state.selectedInventoryItemIds && state.selectedInventoryItemIds.length > 0) {
-          for (const invId of state.selectedInventoryItemIds) {
-            void deductInventoryStock(invId, 1);
-          }
+        // Dedupe: the same part attached twice must not deduct stock twice.
+        const inventoryIds = Array.from(new Set(state.selectedInventoryItemIds ?? []));
+        for (const invId of inventoryIds) {
+          await deductInventoryStock(invId, 1);
         }
 
         // Fetch single created/updated record and update local cache atomically
         const savedRepair = await repairService.getById(savedRepairId);
         if (savedRepair) {
           upsertRepairInState(savedRepair);
+        }
+
+        if (imageUploadFailed) {
+          Alert.alert(
+            'Job saved',
+            'The job was saved, but one or more photos could not be uploaded. Open the job and re-attach the photos when you have signal.'
+          );
         }
 
         if (shouldAutoSendWhatsApp && savedRepair) {

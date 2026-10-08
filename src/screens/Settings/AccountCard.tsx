@@ -1,8 +1,11 @@
 import React from 'react';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { LogOut, RefreshCw, ShieldCheck } from 'lucide-react-native';
 import type { AppColors } from '../../theme';
+import { spacing } from '../../theme';
 import { CURRENT_VERSION_NAME } from '../../components/AutoUpdater';
+import { AppButton } from '../../components/ui/AppButton';
+import { AppCard } from '../../components/ui/AppCard';
 import { createStyles } from './styles';
 
 type Props = {
@@ -23,7 +26,7 @@ export const AccountCard = React.memo(function AccountCard({
   const styles = createStyles(colors);
 
   return (
-    <View style={styles.card}>
+    <AppCard>
       <View style={styles.cardHeader}>
         <View style={styles.iconBox}>
           <ShieldCheck size={18} color={colors.accent} />
@@ -35,41 +38,35 @@ export const AccountCard = React.memo(function AccountCard({
       </View>
 
       {/* Version check */}
-      <View style={[styles.row, { paddingVertical: 8 }]}>
+      <View style={[styles.row, { paddingVertical: spacing.sm }]}>
         <View style={styles.rowInfo}>
           <Text style={styles.rowTitle}>App Version</Text>
           <Text style={styles.rowSubtitle}>v{CURRENT_VERSION_NAME}</Text>
         </View>
-        <Pressable
-          onPress={onCheckUpdate}
+        <AppButton
+          variant="secondary"
+          loading={checkingUpdate}
           disabled={checkingUpdate}
-          style={({ pressed }) => [styles.logoMiniBtn, pressed && { opacity: 0.7 }]}
+          onPress={onCheckUpdate}
+          leftIcon={<RefreshCw size={14} color={colors.text} strokeWidth={2} />}
+          style={styles.inlineBtn}
+          contentStyle={styles.inlineBtn}
+          labelStyle={styles.inlineBtnLabel}
         >
-          {checkingUpdate ? (
-            <ActivityIndicator size="small" color={colors.text} />
-          ) : (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <RefreshCw size={12} color={colors.text} />
-              <Text style={styles.logoMiniBtnText}>Check Update</Text>
-            </View>
-          )}
-        </Pressable>
+          Check Update
+        </AppButton>
       </View>
 
       {/* Sign Out Button */}
-      <Pressable
+      <AppButton
+        variant="danger"
+        fullWidth
         onPress={onSignOut}
-        style={({ pressed }) => [
-          styles.saveBtn,
-          { backgroundColor: 'rgba(239, 68, 68, 0.12)', borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.3)', marginTop: 12 },
-          pressed && { opacity: 0.8 },
-        ]}
+        leftIcon={<LogOut size={18} color="#FFFFFF" strokeWidth={2.4} />}
+        containerStyle={{ marginTop: spacing.sm + 4 }}
       >
-        <View style={styles.saveBtnInner}>
-          <LogOut size={16} color={colors.danger} strokeWidth={2.4} />
-          <Text style={[styles.saveBtnText, { color: colors.danger }]}>Sign Out</Text>
-        </View>
-      </Pressable>
-    </View>
+        Sign Out
+      </AppButton>
+    </AppCard>
   );
 });

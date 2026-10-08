@@ -3,4 +3,6 @@ export type DirectoryCustomer = {
   phone: string;
   customerName: string;
   deviceModel: string;
+  /** Number of jobs for this customer. Computed by the directory screen. */
+  jobCount?: number;
 };

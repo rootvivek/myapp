@@ -1,14 +1,8 @@
 import React from 'react';
-import {
-  ActivityIndicator,
-  Modal,
-  Pressable,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
-import type { AppColors } from '../../theme';
-import { createStyles } from './styles';
+
+import { AppButton } from '../../components/ui/AppButton';
+import { AppInput } from '../../components/ui/AppInput';
+import { AppModal } from '../../components/ui/AppModal';
 
 type Props = {
   visible: boolean;
@@ -21,7 +15,6 @@ type Props = {
   addBusy: boolean;
   onClose: () => void;
   onAdd: () => void;
-  colors: AppColors;
 };
 
 export const AddMemberModal = React.memo(function AddMemberModal({
@@ -35,64 +28,62 @@ export const AddMemberModal = React.memo(function AddMemberModal({
   addBusy,
   onClose,
   onAdd,
-  colors,
 }: Props) {
-  const styles = createStyles(colors);
-
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalCard}>
-          <Text style={styles.modalTitle}>Add Team Member</Text>
+    <AppModal
+      visible={visible}
+      onClose={onClose}
+      title="Add Team Member"
+      closeOnOverlayPress={false}
+      dismissableBackButton
+      footer={
+        <>
+          <AppButton
+            variant="secondary"
+            onPress={onClose}
+            accessibilityLabel="Cancel"
+            containerStyle={{ flex: 1 }}
+          >
+            Cancel
+          </AppButton>
+          <AppButton
+            variant="primary"
+            loading={addBusy}
+            onPress={onAdd}
+            accessibilityLabel="Create team member"
+            containerStyle={{ flex: 1 }}
+          >
+            Create
+          </AppButton>
+        </>
+      }
+    >
+      <AppInput
+        label="Username"
+        value={addName}
+        onChangeText={setAddName}
+        placeholder="e.g. rahul123"
+        autoCapitalize="none"
+        accessibilityLabel="Username"
+      />
 
-          <Text style={styles.label}>Username</Text>
-          <TextInput
-            value={addName}
-            onChangeText={setAddName}
-            placeholder="e.g. rahul123"
-            placeholderTextColor={colors.textMuted}
-            style={styles.input}
-            autoCapitalize="none"
-          />
+      <AppInput
+        label="Phone number"
+        value={addPhone}
+        onChangeText={setAddPhone}
+        placeholder="9876543210"
+        keyboardType="phone-pad"
+        accessibilityLabel="Phone number"
+      />
 
-          <Text style={styles.label}>Phone number</Text>
-          <TextInput
-            value={addPhone}
-            onChangeText={setAddPhone}
-            placeholder="9876543210"
-            placeholderTextColor={colors.textMuted}
-            style={styles.input}
-            keyboardType="phone-pad"
-          />
-
-          <Text style={styles.label}>Password</Text>
-          <TextInput
-            value={addPassword}
-            onChangeText={setAddPassword}
-            placeholder="Min 6 characters"
-            placeholderTextColor={colors.textMuted}
-            style={styles.input}
-            secureTextEntry
-          />
-
-          <View style={styles.modalActions}>
-            <Pressable onPress={onClose} style={styles.cancelBtn}>
-              <Text style={styles.cancelBtnText}>Cancel</Text>
-            </Pressable>
-            <Pressable
-              onPress={onAdd}
-              disabled={addBusy}
-              style={[styles.saveBtn, addBusy && styles.dim]}
-            >
-              {addBusy ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.saveBtnText}>Create</Text>
-              )}
-            </Pressable>
-          </View>
-        </View>
-      </View>
-    </Modal>
+      <AppInput
+        label="Password"
+        value={addPassword}
+        onChangeText={setAddPassword}
+        placeholder="Min 6 characters"
+        secureTextEntry
+        accessibilityLabel="Password"
+      />
+    </AppModal>
   );
 });

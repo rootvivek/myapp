@@ -2,7 +2,6 @@ import React, { useCallback, useMemo } from 'react';
 import {
   FlatList,
   Linking,
-  Modal,
   Pressable,
   StyleSheet,
   Text,
@@ -19,13 +18,16 @@ import {
 } from 'lucide-react-native';
 
 import { useTheme } from '../context/ThemeContext';
-import { accentAlpha } from '../theme';
+import { accentAlpha, radius, sizes, spacing } from '../theme';
 import type { DirectoryCustomer } from '../types/customer';
 import type { Repair } from '../types/repair';
 import { REPAIR_STATUSES } from '../types/repair';
 import { formatCurrency } from '../utils/format';
 import { dialPhone } from '../utils/phone';
 import { WhatsAppIcon } from './WhatsAppIcon';
+import { AppModal } from './ui/AppModal';
+import { AppButton } from './ui/AppButton';
+import { AppIconButton } from './ui/AppIconButton';
 
 type Props = {
   visible: boolean;
@@ -98,7 +100,7 @@ export function CustomerHistoryModal({
   onSelectRepair,
   onNewRepair,
 }: Props) {
-  const { colors, mode } = useTheme();
+  const { colors } = useTheme();
 
   // Filter repairs belonging to this customer by matching phone number or customer name
   const customerRepairs = useMemo(() => {
@@ -163,256 +165,232 @@ export function CustomerHistoryModal({
   const initial = (customer.customerName.trim() || '?').slice(0, 1).toUpperCase();
 
   return (
-    <Modal
+    <AppModal
       visible={visible}
-      transparent
-      animationType="slide"
-      statusBarTranslucent
-      onRequestClose={onClose}
+      onClose={onClose}
+      size="full"
+      showCloseButton={false}
     >
-      <View style={styles.backdrop}>
-        <View
-          style={[
-            styles.container,
-            {
-              backgroundColor: colors.surface,
-              borderColor: colors.border,
-            },
-          ]}
-        >
-          {/* Header */}
-          <View style={[styles.header, { borderBottomColor: colors.border }]}>
-            <View style={styles.headerLeft}>
-              <View style={[styles.avatar, { backgroundColor: accentAlpha(colors.accent, 0.12), borderColor: colors.border }]}>
-                <Text style={[styles.avatarText, { color: colors.accent }]}>{initial}</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>
-                  {customer.customerName || 'Customer Details'}
-                </Text>
-                <Text style={[styles.phone, { color: colors.textMuted }]}>{customer.phone}</Text>
-              </View>
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <View style={styles.headerLeft}>
+            <View style={[styles.avatar, { backgroundColor: accentAlpha(colors.accent, 0.12), borderColor: colors.border }]}>
+              <Text style={[styles.avatarText, { color: colors.accent }]}>{initial}</Text>
             </View>
-            <Pressable
-              onPress={onClose}
-              style={[styles.closeBtn, { backgroundColor: colors.surface2, borderColor: colors.border }]}
-              android_ripple={{ color: colors.border }}
-              accessibilityRole="button"
-              accessibilityLabel="Close profile"
-            >
-              <X size={18} color={colors.textMuted} />
-            </Pressable>
-          </View>
-
-          {/* Quick Stats Grid */}
-          <View style={styles.statsContainer}>
-            <View style={[styles.statBox, { backgroundColor: colors.surface2, borderColor: colors.border }]}>
-              <Text style={[styles.statValue, { color: colors.text }]}>{stats.totalJobs}</Text>
-              <Text style={[styles.statLabel, { color: colors.textMuted }]}>Total Jobs</Text>
-            </View>
-
-            <View style={[styles.statBox, { backgroundColor: colors.surface2, borderColor: colors.border }]}>
-              <Text style={[styles.statValue, { color: colors.success }]}>
-                {formatCurrency(stats.totalSpent)}
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>
+                {customer.customerName || 'Customer Details'}
               </Text>
-              <Text style={[styles.statLabel, { color: colors.textMuted }]}>Total Spent</Text>
-            </View>
-
-            <View style={[styles.statBox, { backgroundColor: colors.surface2, borderColor: colors.border }]}>
-              <Text
-                style={[
-                  styles.statValue,
-                  { color: stats.activeWarrantiesCount > 0 ? colors.accent : colors.textMuted },
-                ]}
-              >
-                {stats.activeWarrantiesCount}
-              </Text>
-              <Text style={[styles.statLabel, { color: colors.textMuted }]}>Warranties</Text>
+              <Text style={[styles.phone, { color: colors.textMuted }]}>{customer.phone}</Text>
             </View>
           </View>
-
-          {/* Quick Action Buttons */}
-          <View style={styles.actionsRow}>
-            <Pressable
-              onPress={handleCall}
-              style={[styles.actionBtn, { backgroundColor: colors.surface2, borderColor: colors.border }]}
-              android_ripple={{ color: colors.border }}
-            >
-              <Phone size={15} color={colors.accent} />
-              <Text style={[styles.actionBtnText, { color: colors.text }]}>Call</Text>
-            </Pressable>
-
-            <Pressable
-              onPress={handleWhatsApp}
-              style={[styles.actionBtn, { backgroundColor: 'rgba(37,211,102,0.12)', borderColor: 'rgba(37,211,102,0.3)' }]}
-              android_ripple={{ color: colors.border }}
-            >
-              <WhatsAppIcon size={15} />
-              <Text style={[styles.actionBtnText, { color: '#25D366' }]}>WhatsApp</Text>
-            </Pressable>
-
-            <Pressable
-              onPress={() => {
-                onClose();
-                onNewRepair(customer);
-              }}
-              style={[styles.newJobBtn, { backgroundColor: colors.accent }]}
-              android_ripple={{ color: 'rgba(255,255,255,0.2)' }}
-            >
-              <PlusCircle size={15} color="#FFFFFF" />
-              <Text style={styles.newJobBtnText}>New Job</Text>
-            </Pressable>
-          </View>
-
-          {/* Past Repairs Timeline Section */}
-          <View style={styles.timelineTitleRow}>
-            <Wrench size={14} color={colors.accent} />
-            <Text style={[styles.timelineTitle, { color: colors.text }]}>
-              REPAIR HISTORY ({customerRepairs.length})
-            </Text>
-          </View>
-
-          <FlatList
-            data={customerRepairs}
-            keyExtractor={(item) => String(item.id)}
-            contentContainerStyle={styles.listContent}
-            showsVerticalScrollIndicator={false}
-            ListEmptyComponent={
-              <Text style={[styles.emptyText, { color: colors.textMuted }]}>
-                No repair records found for this customer.
-              </Text>
-            }
-            renderItem={({ item }) => {
-              const statusItem = REPAIR_STATUSES.find((s) => s.value === item.status);
-              const statusLabel = statusItem?.label || item.status;
-              const wInfo = getWarrantyInfo(item.dateReceived, item.warranty);
-              const isPaid = item.isPaid;
-              const due = Math.max(0, item.repairCost - item.advanceAmount);
-
-              return (
-                <Pressable
-                  onPress={() => {
-                    onClose();
-                    onSelectRepair(item.id);
-                  }}
-                  style={[styles.jobCard, { backgroundColor: colors.surface2, borderColor: colors.border }]}
-                  android_ripple={{ color: colors.border }}
-                >
-                  <View style={styles.jobCardHeader}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Text style={[styles.orderCode, { color: colors.accent }]}>
-                        {item.orderCode || `ord#${item.id}`}
-                      </Text>
-                      <Text style={[styles.jobDate, { color: colors.textMuted }]}>
-                        • {item.dateReceived}
-                      </Text>
-                    </View>
-
-                    <View
-                      style={[
-                        styles.statusPill,
-                        {
-                          backgroundColor:
-                            item.status === 'completed' || item.status === 'delivered'
-                              ? accentAlpha(colors.success, 0.15)
-                              : accentAlpha(colors.accent, 0.15),
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.statusText,
-                          {
-                            color:
-                              item.status === 'completed' || item.status === 'delivered'
-                                ? colors.success
-                                : colors.accent,
-                          },
-                        ]}
-                      >
-                        {statusLabel}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <Text style={[styles.deviceModel, { color: colors.text }]} numberOfLines={1}>
-                    {item.deviceModel}
-                  </Text>
-                  <Text style={[styles.problemText, { color: colors.textMuted }]} numberOfLines={2}>
-                    {item.problem || 'No problem notes'}
-                  </Text>
-
-                  <View style={styles.jobCardFooter}>
-                    {/* Payment Info */}
-                    <Text style={[styles.costText, { color: isPaid ? colors.success : due > 0 ? '#EF4444' : colors.text }]}>
-                      {isPaid
-                        ? `Paid ${formatCurrency(item.repairCost)}`
-                        : due > 0
-                        ? `Due ${formatCurrency(due)}`
-                        : formatCurrency(item.repairCost)}
-                    </Text>
-
-                    {/* Warranty Indicator */}
-                    <View
-                      style={[
-                        styles.warrantyBadge,
-                        {
-                          backgroundColor: wInfo.active
-                            ? accentAlpha(colors.success, 0.12)
-                            : mode === 'dark'
-                            ? 'rgba(255,255,255,0.05)'
-                            : 'rgba(0,0,0,0.05)',
-                        },
-                      ]}
-                    >
-                      {wInfo.active ? (
-                        <ShieldCheck size={12} color={colors.success} />
-                      ) : (
-                        <ShieldAlert size={12} color={colors.textMuted} />
-                      )}
-                      <Text
-                        style={[
-                          styles.warrantyText,
-                          { color: wInfo.active ? colors.success : colors.textMuted },
-                        ]}
-                      >
-                        {wInfo.label}
-                      </Text>
-                    </View>
-
-                    <ChevronRight size={16} color={colors.textMuted} style={{ marginLeft: 'auto' }} />
-                  </View>
-                </Pressable>
-              );
-            }}
+          <AppIconButton
+            variant="ghost"
+            size={32}
+            icon={<X size={18} color={colors.textMuted} strokeWidth={2.2} />}
+            onPress={onClose}
+            accessibilityLabel="Close profile"
+            style={styles.closeBtn}
           />
         </View>
+
+        {/* Quick Stats Grid */}
+        <View style={styles.statsContainer}>
+          <View style={[styles.statBox, { backgroundColor: colors.surface2, borderColor: colors.border }]}>
+            <Text style={[styles.statValue, { color: colors.text }]}>{stats.totalJobs}</Text>
+            <Text style={[styles.statLabel, { color: colors.textMuted }]}>Total Jobs</Text>
+          </View>
+
+          <View style={[styles.statBox, { backgroundColor: colors.surface2, borderColor: colors.border }]}>
+            <Text style={[styles.statValue, { color: colors.success }]}>
+              {formatCurrency(stats.totalSpent)}
+            </Text>
+            <Text style={[styles.statLabel, { color: colors.textMuted }]}>Total Spent</Text>
+          </View>
+
+          <View style={[styles.statBox, { backgroundColor: colors.surface2, borderColor: colors.border }]}>
+            <Text
+              style={[
+                styles.statValue,
+                { color: stats.activeWarrantiesCount > 0 ? colors.accent : colors.textMuted },
+              ]}
+            >
+              {stats.activeWarrantiesCount}
+            </Text>
+            <Text style={[styles.statLabel, { color: colors.textMuted }]}>Warranties</Text>
+          </View>
+        </View>
+
+        {/* Quick Action Buttons */}
+        <View style={styles.actionsRow}>
+          <AppButton
+            variant="outline"
+            leftIcon={<Phone size={15} color={colors.accent} />}
+            onPress={handleCall}
+            style={styles.actionBtn}
+          >
+            Call
+          </AppButton>
+
+          <AppButton
+            variant="secondary"
+            leftIcon={<WhatsAppIcon size={15} />}
+            onPress={handleWhatsApp}
+            style={styles.actionBtn}
+          >
+            WhatsApp
+          </AppButton>
+
+          <AppButton
+            variant="primary"
+            leftIcon={<PlusCircle size={15} color="#FFFFFF" />}
+            onPress={() => {
+              onClose();
+              onNewRepair(customer);
+            }}
+            style={styles.newJobBtn}
+          >
+            New Job
+          </AppButton>
+        </View>
+
+        {/* Past Repairs Timeline Section */}
+        <View style={styles.timelineTitleRow}>
+          <Wrench size={14} color={colors.accent} />
+          <Text style={[styles.timelineTitle, { color: colors.text }]}>
+            REPAIR HISTORY ({customerRepairs.length})
+          </Text>
+        </View>
+
+        <FlatList
+          data={customerRepairs}
+          keyExtractor={(item) => String(item.id)}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <Text style={[styles.emptyText, { color: colors.textMuted }]}>
+              No repair records found for this customer.
+            </Text>
+          }
+          renderItem={({ item }) => {
+            const statusItem = REPAIR_STATUSES.find((s) => s.value === item.status);
+            const statusLabel = statusItem?.label || item.status;
+            const wInfo = getWarrantyInfo(item.dateReceived, item.warranty);
+            const isPaid = item.isPaid;
+            const due = Math.max(0, item.repairCost - item.advanceAmount);
+
+            return (
+              <Pressable
+                onPress={() => {
+                  onClose();
+                  onSelectRepair(item.id);
+                }}
+                style={[styles.jobCard, { backgroundColor: colors.surface2, borderColor: colors.border }]}
+                android_ripple={{ color: colors.border }}
+              >
+                <View style={styles.jobCardHeader}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Text style={[styles.orderCode, { color: colors.accent }]}>
+                      {item.orderCode || `ord#${item.id}`}
+                    </Text>
+                    <Text style={[styles.jobDate, { color: colors.textMuted }]}>
+                      • {item.dateReceived}
+                    </Text>
+                  </View>
+
+                  <View
+                    style={[
+                      styles.statusPill,
+                      {
+                        backgroundColor:
+                          item.status === 'completed' || item.status === 'delivered'
+                            ? accentAlpha(colors.success, 0.15)
+                            : accentAlpha(colors.accent, 0.15),
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.statusText,
+                        {
+                          color:
+                            item.status === 'completed' || item.status === 'delivered'
+                              ? colors.success
+                              : colors.accent,
+                        },
+                      ]}
+                    >
+                      {statusLabel}
+                    </Text>
+                  </View>
+                </View>
+
+                <Text style={[styles.deviceModel, { color: colors.text }]} numberOfLines={1}>
+                  {item.deviceModel}
+                </Text>
+                <Text style={[styles.problemText, { color: colors.textMuted }]} numberOfLines={2}>
+                  {item.problem || 'No problem notes'}
+                </Text>
+
+                <View style={styles.jobCardFooter}>
+                  {/* Payment Info */}
+                  <Text style={[styles.costText, { color: isPaid ? colors.success : due > 0 ? colors.danger : colors.text }]}>
+                    {isPaid
+                      ? `Paid ${formatCurrency(item.repairCost)}`
+                      : due > 0
+                      ? `Due ${formatCurrency(due)}`
+                      : formatCurrency(item.repairCost)}
+                  </Text>
+
+                  {/* Warranty Indicator */}
+                  <View
+                    style={[
+                      styles.warrantyBadge,
+                      {
+                        backgroundColor: wInfo.active
+                          ? accentAlpha(colors.success, 0.12)
+                          : accentAlpha(colors.text, 0.05),
+                      },
+                    ]}
+                  >
+                    {wInfo.active ? (
+                      <ShieldCheck size={12} color={colors.success} />
+                    ) : (
+                      <ShieldAlert size={12} color={colors.textMuted} />
+                    )}
+                    <Text
+                      style={[
+                        styles.warrantyText,
+                        { color: wInfo.active ? colors.success : colors.textMuted },
+                      ]}
+                    >
+                      {wInfo.label}
+                    </Text>
+                  </View>
+
+                  <ChevronRight size={16} color={colors.textMuted} style={{ marginLeft: 'auto' }} />
+                </View>
+              </Pressable>
+            );
+          }}
+        />
       </View>
-    </Modal>
+    </AppModal>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
   container: {
-    height: '82%',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    borderWidth: 1,
-    borderBottomWidth: 0,
-    paddingTop: 16,
-    paddingHorizontal: 16,
+    backgroundColor: 'transparent',
+    flex: 1,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingBottom: 14,
-    borderBottomWidth: 1,
+    borderBottomWidth: sizes.hairline,
   },
   headerLeft: {
     flex: 1,
@@ -423,8 +401,8 @@ const styles = StyleSheet.create({
   avatar: {
     width: 44,
     height: 44,
-    borderRadius: 22,
-    borderWidth: 1,
+    borderRadius: radius.full,
+    borderWidth: sizes.hairline,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -445,22 +423,19 @@ const styles = StyleSheet.create({
   closeBtn: {
     width: 32,
     height: 32,
-    borderRadius: 16,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderRadius: radius.lg,
   },
   statsContainer: {
     flexDirection: 'row',
-    gap: 8,
+    gap: spacing.sm,
     marginTop: 14,
   },
   statBox: {
     flex: 1,
-    borderRadius: 12,
-    borderWidth: 1,
+    borderRadius: radius.md,
+    borderWidth: sizes.hairline,
     paddingVertical: 10,
-    paddingHorizontal: 8,
+    paddingHorizontal: spacing.sm,
     alignItems: 'center',
   },
   statValue: {
@@ -475,36 +450,19 @@ const styles = StyleSheet.create({
   },
   actionsRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: spacing.sm,
     marginTop: 12,
   },
   actionBtn: {
     flex: 1,
     height: 36,
-    borderRadius: 10,
-    borderWidth: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-  },
-  actionBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
+    borderRadius: radius.md,
+    borderWidth: sizes.hairline,
   },
   newJobBtn: {
     flex: 1.2,
     height: 36,
-    borderRadius: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-  },
-  newJobBtnText: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '700',
+    borderRadius: radius.md,
   },
   timelineTitleRow: {
     flexDirection: 'row',
@@ -528,8 +486,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   jobCard: {
-    borderRadius: 14,
-    borderWidth: 1,
+    borderRadius: radius.lg,
+    borderWidth: sizes.hairline,
     padding: 12,
   },
   jobCardHeader: {
@@ -546,9 +504,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   statusPill: {
-    paddingHorizontal: 8,
+    paddingHorizontal: spacing.sm,
     paddingVertical: 3,
-    borderRadius: 6,
+    borderRadius: radius.sm,
   },
   statusText: {
     fontSize: 11,
@@ -562,12 +520,12 @@ const styles = StyleSheet.create({
   problemText: {
     fontSize: 12,
     lineHeight: 16,
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   jobCardFooter: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: spacing.sm,
   },
   costText: {
     fontSize: 13,
@@ -576,10 +534,10 @@ const styles = StyleSheet.create({
   warrantyBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
+    gap: spacing.xs,
+    paddingHorizontal: spacing.sm,
     paddingVertical: 3,
-    borderRadius: 6,
+    borderRadius: radius.sm,
   },
   warrantyText: {
     fontSize: 11,

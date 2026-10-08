@@ -1,14 +1,13 @@
 import React from 'react';
-import { Text, View } from 'react-native';
-import { Camera } from 'lucide-react-native';
+import { Text } from 'react-native';
 import { RepairImagePairRow, RepairImageSlotCell } from '../../../components/RepairImageSlotRow';
 import type { RepairImageSlot } from '../../../types/repair';
 import type { RepairFormErrors } from '../../../utils/repairValidation';
 import type { AddRepairStyles } from '../styles';
+import { AppCard } from '../../../components/ui/AppCard';
 
 type Props = {
   images: Record<RepairImageSlot, string>;
-  /** Inline validation messages keyed by field. */
   errors?: RepairFormErrors;
   onChangeImageSlot: (slot: RepairImageSlot, uri: string) => void;
   styles: AddRepairStyles;
@@ -21,15 +20,8 @@ export const PhotosSection = React.memo(function PhotosSection({
   styles,
 }: Props) {
   return (
-    <View style={styles.formCard}>
-      <View style={styles.cardHeader}>
-        <View style={styles.cardHeaderIcon}>
-          <Camera size={16} color="#8B5CF6" />
-        </View>
-        <View style={styles.cardHeaderInfo}>
-          <Text style={styles.cardTitle}>Device Photos</Text>
-        </View>
-      </View>
+    <AppCard>
+      <Text style={styles.fieldLabel}>Device Photos</Text>
 
       <RepairImagePairRow>
         <RepairImageSlotCell
@@ -55,7 +47,6 @@ export const PhotosSection = React.memo(function PhotosSection({
           onChange={(uri) => onChangeImageSlot('id2', uri)}
         />
       </RepairImagePairRow>
-    </View>
+    </AppCard>
   );
 });
-

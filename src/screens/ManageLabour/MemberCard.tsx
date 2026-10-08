@@ -1,9 +1,12 @@
 import React from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { Edit2, Key, Trash2 } from 'lucide-react-native';
 import type { AppColors } from '../../theme';
 import { spacing } from '../../theme';
 import type { UserProfile } from '../../types/profile';
+import { AppCard } from '../../components/ui/AppCard';
+import { AppChip } from '../../components/ui/AppChip';
+import { AppIconButton } from '../../components/ui/AppIconButton';
 import { createStyles } from './styles';
 
 type Props = {
@@ -26,7 +29,7 @@ export const MemberCard = React.memo(function MemberCard({
   const styles = createStyles(colors);
 
   return (
-    <View style={styles.card}>
+    <AppCard variant="outlined" padding={spacing.md} containerStyle={styles.card}>
       <View style={styles.cardInfo}>
         <Text style={styles.cardName}>{item.name || '(No name)'}</Text>
         {item.phone ? <Text style={styles.cardPhone}>{item.phone}</Text> : null}
@@ -38,35 +41,38 @@ export const MemberCard = React.memo(function MemberCard({
             </Text>
           </Text>
         )}
-        <View
-          style={[
-            styles.badge,
-            item.role === 'owner' ? styles.badgeOwner : styles.badgeLabour,
-          ]}
+        <AppChip
+          variant={item.role === 'owner' ? 'primary' : 'success'}
+          containerStyle={styles.badge}
         >
-          <Text
-            style={[
-              styles.badgeText,
-              { color: item.role === 'owner' ? colors.accent : colors.success },
-            ]}
-          >
-            {item.role === 'owner' ? '👑 Owner' : '🔧 Team'}
-          </Text>
-        </View>
+          {item.role === 'owner' ? '👑 Owner' : '🔧 Team'}
+        </AppChip>
       </View>
       {item.role !== 'owner' && isOwner && (
         <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-          <Pressable onPress={() => onEdit(item)} style={styles.deleteBtn}>
-            <Edit2 size={18} color={colors.accent} />
-          </Pressable>
-          <Pressable onPress={() => onResetPassword(item)} style={styles.deleteBtn}>
-            <Key size={18} color={colors.accent} />
-          </Pressable>
-          <Pressable onPress={() => onDelete(item)} style={styles.deleteBtn}>
-            <Trash2 size={18} color={colors.danger} />
-          </Pressable>
+          <AppIconButton
+            variant="secondary"
+            size={36}
+            icon={<Edit2 size={18} color={colors.accent} />}
+            onPress={() => onEdit(item)}
+            accessibilityLabel={`Edit ${item.name || 'team member'}`}
+          />
+          <AppIconButton
+            variant="secondary"
+            size={36}
+            icon={<Key size={18} color={colors.accent} />}
+            onPress={() => onResetPassword(item)}
+            accessibilityLabel={`Reset password for ${item.name || 'team member'}`}
+          />
+          <AppIconButton
+            variant="secondary"
+            size={36}
+            icon={<Trash2 size={18} color={colors.danger} />}
+            onPress={() => onDelete(item)}
+            accessibilityLabel={`Remove ${item.name || 'team member'}`}
+          />
         </View>
       )}
-    </View>
+    </AppCard>
   );
 });

@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
-import { CheckCircle2, Phone, Search, User, UserPlus, X } from 'lucide-react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { AppColors } from '../../../theme';
-import { accentAlpha } from '../../../theme';
+import { radius, sizes } from '../../../theme';
 import { FormTextInput } from '../../../components/FormTextInput';
 import type { DirectoryCustomer } from '../../../types/customer';
 import {
@@ -12,13 +11,14 @@ import {
   type RepairFormErrors,
 } from '../../../utils/repairValidation';
 import type { AddRepairStyles } from '../styles';
+import { AppButton } from '../../../components/ui/AppButton';
+import { AppCard } from '../../../components/ui/AppCard';
 
 type Props = {
   customerName: string;
   phone: string;
   isEdit: boolean;
   directoryCustomers: DirectoryCustomer[];
-  /** Inline validation messages keyed by field. */
   errors?: RepairFormErrors;
   onChangeCustomerName: (name: string) => void;
   onChangePhone: (phone: string) => void;
@@ -45,8 +45,6 @@ export const CustomerSection = React.memo(function CustomerSection({
   const nameError = errors?.customerName;
   const phoneError = errors?.phone;
 
-  // The manual name/phone inputs are hidden in search mode. When validation
-  // fails for them, reveal the inputs so the red outline + message are visible.
   useEffect(() => {
     if (isEdit || selectedExisting) return;
     if (nameError || phoneError) setIsNewCustomerMode(true);
@@ -88,44 +86,55 @@ export const CustomerSection = React.memo(function CustomerSection({
     onChangePhone('');
   };
 
+  const localStyles = StyleSheet.create({
+    selectedCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: colors.surface2,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      borderRadius: radius.md,
+      borderWidth: sizes.hairline,
+      borderColor: colors.border,
+    },
+    selectedInfo: {
+      flex: 1,
+    },
+    selectedName: {
+      color: colors.text,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    selectedPhone: {
+      color: colors.textMuted,
+      fontSize: 12,
+      marginTop: 2,
+    },
+  });
+
   return (
-    <View style={styles.formCard}>
-      <View style={styles.cardHeader}>
-        <View style={styles.cardHeaderIcon}>
-          <User size={16} color={colors.accent} />
-        </View>
-        <View style={styles.cardHeaderInfo}>
-          <Text style={styles.cardTitle}>Customer Information</Text>
-        </View>
-      </View>
-
-      {/* Mode 1: Search Customer (if not in edit mode and not in new customer manual mode) */}
+    <AppCard>
+      {/* Mode 1: Search Customer */}
       {!isEdit && !isNewCustomerMode && !selectedExisting && (
-        <View style={{ zIndex: 10 }}>
-          <View style={styles.searchCustomerRow}>
-            <FormTextInput
-              placeholder="Search customer (Name or Phone)..."
-              value={searchQuery}
-              onChangeText={(t) => {
-                setSearchQuery(t);
-                setShowSuggestions(true);
-              }}
-              onFocus={() => setShowSuggestions(true)}
-              icon={Search}
-              containerStyle={styles.inputFlex}
-              style={styles.searchInputText}
-              accessibilityLabel="Search customer"
-            />
-
-            <Pressable
-              onPress={handleToggleNewCustomer}
-              style={({ pressed }) => [styles.newCustomerBtn, pressed && { opacity: 0.8 }]}
-              accessibilityRole="button"
-              accessibilityLabel="Add new customer"
-            >
-              <UserPlus size={18} color="#FFFFFF" strokeWidth={2.4} />
-            </Pressable>
-          </View>
+        <View>
+          <FormTextInput
+            label="Customer"
+            rightAction={{
+              label: 'Add New',
+              onPress: handleToggleNewCustomer,
+              accessibilityLabel: 'Add new customer',
+            }}
+            placeholder="Search customer (Name or Phone)"
+            value={searchQuery}
+            onChangeText={(t) => {
+              setSearchQuery(t);
+              setShowSuggestions(true);
+            }}
+            onFocus={() => setShowSuggestions(true)}
+            containerStyle={styles.inputTight}
+            accessibilityLabel="Search customer"
+          />
 
           {matches.length > 0 && (
             <View style={styles.suggestionsContainer}>
@@ -133,7 +142,6 @@ export const CustomerSection = React.memo(function CustomerSection({
                 <Pressable
                   key={c.phone}
                   style={styles.suggestionItem}
-                  android_ripple={{ color: colors.border }}
                   onPress={() => handleSelectCustomer(c)}
                   accessibilityRole="button"
                   accessibilityLabel={`Select customer ${c.customerName}`}
@@ -147,90 +155,50 @@ export const CustomerSection = React.memo(function CustomerSection({
         </View>
       )}
 
-      {/* Selected Existing Customer Card */}
+      {/* Selected Existing Customer */}
       {!isEdit && selectedExisting && (
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            backgroundColor: accentAlpha(colors.accent, 0.1),
-            padding: 12,
-            borderRadius: 10,
-            borderWidth: 1,
-            borderColor: accentAlpha(colors.accent, 0.3),
-          }}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
-            <CheckCircle2 size={20} color={colors.accent} />
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: colors.text, fontSize: 14.5, fontWeight: '700' }}>
-                {customerName}
-              </Text>
-              <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 1 }}>
-                {phone}
-              </Text>
+        <View>
+          <Text style={styles.fieldLabel}>Customer</Text>
+          <View style={localStyles.selectedCard}>
+            <View style={localStyles.selectedInfo}>
+              <Text style={localStyles.selectedName}>{customerName}</Text>
+              <Text style={localStyles.selectedPhone}>{phone}</Text>
             </View>
+            <AppButton
+              variant="tertiary"
+              onPress={handleClearSelection}
+              accessibilityLabel="Change customer"
+            >
+              Change
+            </AppButton>
           </View>
-
-          <Pressable
-            onPress={handleClearSelection}
-            style={{
-              paddingHorizontal: 10,
-              paddingVertical: 5,
-              borderRadius: 6,
-              backgroundColor: colors.surface,
-              borderWidth: 1,
-              borderColor: colors.border,
-            }}
-          >
-            <Text style={{ color: colors.text, fontSize: 11.5, fontWeight: '600' }}>Change</Text>
-          </Pressable>
         </View>
       )}
 
-      {/* Mode 2: Separate Column Inputs for Customer Name and Phone (Shown in Edit mode OR when user clicks New Customer) */}
+      {/* Mode 2: Manual Customer Name and Phone */}
       {(isEdit || isNewCustomerMode) && (
-        <View style={{ gap: 8 }}>
-          {!isEdit && (
-            <View
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: 2,
-              }}
-            >
-              <Text style={{ color: colors.accent, fontSize: 12, fontWeight: '700' }}>
-                ✦ New Customer
-              </Text>
-              <Pressable
-                onPress={() => {
-                  setIsNewCustomerMode(false);
-                  setShowSuggestions(false);
-                }}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
-              >
-                <Search size={12} color={colors.textMuted} />
-                <Text style={{ color: colors.textMuted, fontSize: 11.5, fontWeight: '600' }}>
-                  Search Directory
-                </Text>
-              </Pressable>
-            </View>
-          )}
-
-          {/* Separate Column 1: Customer Name */}
+        <View>
           <FormTextInput
             label="Customer Name"
-            placeholder="Enter customer full name"
+            rightAction={
+              !isEdit
+                ? {
+                    label: 'Search',
+                    onPress: () => {
+                      setIsNewCustomerMode(false);
+                      setShowSuggestions(false);
+                    },
+                    accessibilityLabel: 'Search Directory',
+                  }
+                : undefined
+            }
+            placeholder="Enter customer name"
             value={customerName}
             onChangeText={(t) => onChangeCustomerName(sanitizeCustomerNameInput(t))}
             error={nameError}
-            icon={User}
             accessibilityLabel="Customer Name"
           />
 
-          {/* Separate Column 2: Customer Phone Number */}
           <FormTextInput
             label="Phone Number"
             placeholder="Enter 10-digit mobile number"
@@ -239,13 +207,11 @@ export const CustomerSection = React.memo(function CustomerSection({
             keyboardType="number-pad"
             maxLength={10}
             error={phoneError}
-            icon={Phone}
+            containerStyle={styles.inputTight}
             accessibilityLabel="Phone Number"
           />
         </View>
       )}
-    </View>
+    </AppCard>
   );
 });
-
-

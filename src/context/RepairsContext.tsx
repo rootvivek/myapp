@@ -6,7 +6,7 @@ import { repairService } from '../services/repairService';
 import { rowToRepair } from '../db/database';
 import { supabase } from '../lib/supabase';
 import type { Repair } from '../types/repair';
-import { appendItem, removeItem, updateItem, upsertItem } from '../utils/cacheHelpers';
+import { removeItem, updateItem, upsertItem } from '../utils/cacheHelpers';
 import { logger } from '../utils/logger';
 
 type RepairsStateContextValue = {
@@ -18,10 +18,8 @@ type RepairsStateContextValue = {
 type RepairsActionsContextValue = {
   refresh: (force?: boolean) => Promise<void>;
   deleteRepair: (repairId: number) => Promise<void>;
-  addRepairToState: (repair: Repair) => void;
   updateRepairInState: (repairId: number, updates: Partial<Repair>) => void;
   upsertRepairInState: (repair: Repair) => void;
-  deleteRepairFromState: (repairId: number) => void;
 };
 
 type RepairsContextValue = RepairsStateContextValue & RepairsActionsContextValue;
@@ -67,6 +65,11 @@ export function RepairsProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (err) {
       logger.warn('[RepairsContext] Error fetching repairs:', err);
+      // Mark ready even on failure so the UI leaves the loading skeleton and
+      // shows the empty/error state instead of hanging forever.
+      if (currentRequestId === requestIdRef.current && mountedRef.current) {
+        setReady(true);
+      }
     } finally {
       if (currentRequestId === requestIdRef.current && mountedRef.current) {
         setLoading(false);
@@ -91,9 +94,15 @@ export function RepairsProvider({ children }: { children: React.ReactNode }) {
   }, [userId, refresh]);
 
   // Realtime Subscription (Syncs INSERT, UPDATE, DELETE across devices without full table refetch)
+  //
+  // Re-subscribe whenever the signed-in user changes: a channel binds the JWT
+  // it was created with, so keeping the old channel after a user switch would
+  // leave it authorized as the previous user.
   useEffect(() => {
+    if (!userId) return;
+
     const channel = supabase
-      .channel('public:repairs')
+      .channel(`public:repairs:${userId}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'repairs' },
@@ -118,23 +127,15 @@ export function RepairsProvider({ children }: { children: React.ReactNode }) {
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, []);
+  }, [userId]);
 
   // Reusable Cache Actions
-  const addRepairToState = useCallback((newRepair: Repair) => {
-    setRepairs((current) => appendItem(current, newRepair, 'id'));
-  }, []);
-
   const updateRepairInState = useCallback((repairId: number, updates: Partial<Repair>) => {
     setRepairs((current) => updateItem(current, repairId, updates, 'id'));
   }, []);
 
-  const upsertRepairInState = useCallback((repair: Repair) => {
-    setRepairs((current) => upsertItem(current, repair, 'id'));
-  }, []);
-
-  const deleteRepairFromState = useCallback((repairId: number) => {
-    setRepairs((current) => removeItem(current, repairId, 'id'));
+  const upsertRepairInState = useCallback((newRepair: Repair) => {
+    setRepairs((current) => upsertItem(current, newRepair, 'id'));
   }, []);
 
   // Optimistic Delete with automatic rollback on error
@@ -165,19 +166,10 @@ export function RepairsProvider({ children }: { children: React.ReactNode }) {
     () => ({
       refresh,
       deleteRepair,
-      addRepairToState,
       updateRepairInState,
       upsertRepairInState,
-      deleteRepairFromState,
     }),
-    [
-      refresh,
-      deleteRepair,
-      addRepairToState,
-      updateRepairInState,
-      upsertRepairInState,
-      deleteRepairFromState,
-    ]
+    [refresh, deleteRepair, updateRepairInState, upsertRepairInState]
   );
 
   return (
@@ -207,23 +199,10 @@ export function useRepairs(): RepairsContextValue {
   return useMemo(() => ({ ...state, ...actions }), [state, actions]);
 }
 
-/**
- * Finer-grained selector hooks to minimize re-render scope
- */
-export function useRepairById(repairId: number): Repair | undefined {
-  const { repairs } = useRepairsState();
-  return useMemo(() => repairs.find((r) => r.id === repairId), [repairs, repairId]);
-}
-
 export function useFilteredRepairs(statusFilter: string): Repair[] {
   const { repairs } = useRepairsState();
   return useMemo(() => {
     if (statusFilter === 'all') return repairs;
     return repairs.filter((r) => r.status === statusFilter);
   }, [repairs, statusFilter]);
-}
-
-export function useRepairsCount(): number {
-  const { repairs } = useRepairsState();
-  return repairs.length;
 }

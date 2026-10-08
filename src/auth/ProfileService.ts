@@ -67,6 +67,7 @@ async function ensureOwnerProfile(
       let userMetaName = '';
       let userMetaShopName = '';
       let userMetaPhone = '';
+      let userMetaRole = '';
       let authenticatedUserFound = false;
       try {
         const {
@@ -83,6 +84,7 @@ async function ensureOwnerProfile(
           userMetaName = userMetaName || user.user_metadata?.name || '';
           userMetaShopName = userMetaShopName || user.user_metadata?.shop_name || '';
           userMetaPhone = userMetaPhone || String(user.user_metadata?.phone ?? '').trim();
+          userMetaRole = userMetaRole || String(user.user_metadata?.role ?? '').trim();
         }
       } catch (e) {
         logError('ensureOwnerProfile auth user check', e);
@@ -101,6 +103,7 @@ async function ensureOwnerProfile(
             userMetaName = userMetaName || session.user.user_metadata?.name || '';
             userMetaShopName = userMetaShopName || session.user.user_metadata?.shop_name || '';
             userMetaPhone = userMetaPhone || String(session.user.user_metadata?.phone ?? '').trim();
+            userMetaRole = userMetaRole || String(session.user.user_metadata?.role ?? '').trim();
           }
         } catch (e) {
           logError('ensureOwnerProfile session fallback', e);
@@ -130,6 +133,11 @@ async function ensureOwnerProfile(
       const initialShopName = customShopName?.trim() || userMetaShopName?.trim() || DEFAULT_SHOP_NAME;
       const phone = existing?.phone || userMetaPhone;
 
+      // A labour account must never be turned into a shop owner. The role comes
+      // from the auth metadata (written at signup); if no profile row exists we
+      // recreate it with the correct role and never auto-create a shop for staff.
+      const isLabourAccount = userMetaRole === 'labour';
+
       // Resolve the shop. A failure here must NOT abort profile creation: the
       // profile row is what makes an account usable at all, so keep whatever
       // shop id we already have (e.g. the one created by the DB trigger) and
@@ -150,8 +158,9 @@ async function ensureOwnerProfile(
         }
       }
 
-      // If no shop found, attempt to create one — independently of the lookup
-      if (!shopId) {
+      // If no shop found, attempt to create one — independently of the lookup.
+      // Staff never own a shop, so skip this for labour accounts.
+      if (!shopId && !isLabourAccount) {
         try {
           const shop = await createShop(targetUserId, initialShopName, phone, client);
           shopId = shop.id;
@@ -191,7 +200,7 @@ async function ensureOwnerProfile(
           id: targetUserId,
           name,
           phone,
-          role: 'owner',
+          role: isLabourAccount ? 'labour' : 'owner',
           shop_id: shopId || null,
         },
         { onConflict: 'id' }
@@ -202,8 +211,9 @@ async function ensureOwnerProfile(
       }
 
       // If the shop wasn't created in the first attempt (e.g. DB trigger missing
-      // or column mismatch), try again now that the profile exists.
-      if (!shopId) {
+      // or column mismatch), try again now that the profile exists. Staff never
+      // own a shop, so skip this for labour accounts.
+      if (!shopId && !isLabourAccount) {
         // Look for existing shops first
         try {
           const retryShops = await getUserShops(targetUserId, client);

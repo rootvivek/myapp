@@ -128,6 +128,57 @@ create policy "profiles_update_own_or_owner" on public.profiles
     )
   );
 
+-- A user may edit their own name/phone/username/logo, but only owners may
+-- change `role` or `shop_id` (see the trigger below). Without this, any
+-- authenticated user could self-promote to owner and/or join another shop.
+create or replace function public.guard_profile_privileges()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_actor uuid := auth.uid();
+  v_actor_role text;
+  v_actor_shop_id uuid;
+begin
+  if v_actor is null then
+    return new;
+  end if;
+
+  if new.role is not distinct from old.role
+     and new.shop_id is not distinct from old.shop_id then
+    return new;
+  end if;
+
+  select role, shop_id into v_actor_role, v_actor_shop_id
+  from public.profiles
+  where id = v_actor;
+
+  if v_actor_role is distinct from 'owner' then
+    raise exception 'Only owners can change a profile role or shop';
+  end if;
+
+  if new.shop_id is not null
+     and new.shop_id is distinct from v_actor_shop_id
+     and not exists (
+       select 1 from public.shops s
+       where s.id = new.shop_id and s.owner_id = v_actor
+     )
+  then
+    raise exception 'Cannot move a profile to a shop you do not own';
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists guard_profile_privileges_trigger on public.profiles;
+create trigger guard_profile_privileges_trigger
+  before update on public.profiles
+  for each row
+  execute function public.guard_profile_privileges();
+
 -- Owner can delete labour profiles in their shop
 drop policy if exists "profiles_delete_owner" on public.profiles;
 create policy "profiles_delete_owner" on public.profiles
@@ -456,32 +507,32 @@ drop policy if exists "inventory_select_own" on public.inventory;
 drop policy if exists "inventory_select_shop" on public.inventory;
 create policy "inventory_select_shop" on public.inventory
   for select using (
-    public.get_user_shop_id(auth.uid()) is null
-    or shop_id = public.get_user_shop_id(auth.uid())
+    user_id = auth.uid()
+    or (shop_id is not null and shop_id = public.get_user_shop_id(auth.uid()))
   );
 
 drop policy if exists "inventory_insert_own" on public.inventory;
 drop policy if exists "inventory_insert_shop" on public.inventory;
 create policy "inventory_insert_shop" on public.inventory
   for insert with check (
-    public.get_user_shop_id(auth.uid()) is null
-    or shop_id = public.get_user_shop_id(auth.uid())
+    user_id = auth.uid()
+    and (shop_id is null or shop_id = public.get_user_shop_id(auth.uid()))
   );
 
 drop policy if exists "inventory_update_own" on public.inventory;
 drop policy if exists "inventory_update_shop" on public.inventory;
 create policy "inventory_update_shop" on public.inventory
   for update using (
-    public.get_user_shop_id(auth.uid()) is null
-    or shop_id = public.get_user_shop_id(auth.uid())
+    user_id = auth.uid()
+    or (shop_id is not null and shop_id = public.get_user_shop_id(auth.uid()))
   );
 
 drop policy if exists "inventory_delete_own" on public.inventory;
 drop policy if exists "inventory_delete_shop" on public.inventory;
 create policy "inventory_delete_shop" on public.inventory
   for delete using (
-    public.get_user_shop_id(auth.uid()) is null
-    or shop_id = public.get_user_shop_id(auth.uid())
+    user_id = auth.uid()
+    or (shop_id is not null and shop_id = public.get_user_shop_id(auth.uid()))
   );
 
 -- ══════════════════════════════════════════════════════
@@ -596,6 +647,7 @@ as $$
 declare
   v_caller_role text;
   v_caller_shop_id uuid;
+  v_labour_role text;
   v_labour_shop_id uuid;
 begin
   -- 1. Get the caller's role and shop_id
@@ -604,18 +656,30 @@ begin
   where id = auth.uid();
 
   -- Check if caller is owner/admin
-  if v_caller_role != 'owner' then
+  if v_caller_role is distinct from 'owner' then
     raise exception 'Only owners can reset labour passwords';
   end if;
 
-  -- 2. Get the target labour's shop_id
-  select shop_id into v_labour_shop_id
+  if v_caller_shop_id is null then
+    raise exception 'Your account is not linked to a shop';
+  end if;
+
+  -- 2. Get the target's role and shop_id
+  select role, shop_id into v_labour_role, v_labour_shop_id
   from public.profiles
   where id = p_labour_id;
 
-  -- Check if they belong to the same shop
-  if v_caller_shop_id != v_labour_shop_id then
+  if v_labour_role is distinct from 'labour' then
+    raise exception 'Only labour accounts can be reset with this action';
+  end if;
+
+  -- `is distinct from` (not `!=`) so a NULL shop on either side is rejected.
+  if v_labour_shop_id is distinct from v_caller_shop_id then
     raise exception 'Labour user does not belong to your shop';
+  end if;
+
+  if coalesce(length(p_new_password), 0) < 6 then
+    raise exception 'Password must be at least 6 characters';
   end if;
 
   -- 3. Update the password in auth.users

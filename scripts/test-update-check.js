@@ -4,10 +4,11 @@
  * Run: node scripts/test-update-check.js
  */
 
-const fetch = require('node-fetch');
-
 const BASE_URL = process.env.UPDATE_API_URL || 'http://localhost:3001';
 const ENDPOINT = '/app/update/check';
+
+// Node 18+ provides a global `fetch` (declared in backend/package.json engines).
+// Do not `require('node-fetch')` — it is not a dependency of this project.
 
 async function testUpdateCheck() {
   console.log(`Testing ${BASE_URL}${ENDPOINT}...\n`);
@@ -23,11 +24,11 @@ async function testUpdateCheck() {
       },
     },
     {
-      name: 'Current version (no update)',
+      name: 'Latest version (no update)',
       body: {
         platform: 'android',
-        currentVersionCode: 6,
-        currentVersionName: '1.0.5',
+        currentVersionCode: 7,
+        currentVersionName: '1.0.6',
         packageName: 'com.myapp',
       },
     },
@@ -46,6 +47,14 @@ async function testUpdateCheck() {
         platform: 'ios',
         currentVersionCode: 5,
         currentVersionName: '1.0.4',
+        packageName: 'com.myapp',
+      },
+    },
+    {
+      name: 'Invalid platform (should be rejected)',
+      body: {
+        platform: 'windows',
+        currentVersionCode: 5,
         packageName: 'com.myapp',
       },
     },

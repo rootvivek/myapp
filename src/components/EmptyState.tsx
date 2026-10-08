@@ -1,7 +1,8 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { spacing } from '../theme';
+import { AppButton } from './ui/AppButton';
 
 type EmptyStateProps = {
   icon?: React.ReactNode;
@@ -24,23 +25,17 @@ export function EmptyState({
 
   return (
     <View style={[styles.container, style]}>
-      {icon && (
-        <View style={{ marginBottom: spacing.md }}>
-          {icon}
-        </View>
-      )}
+      {icon && <View style={styles.iconWrapper}>{icon}</View>}
       <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
       {description && <Text style={[styles.description, { color: colors.textMuted }]}>{description}</Text>}
       {actionLabel && onAction && (
-        <Pressable
+        <AppButton
+          variant="primary"
           onPress={onAction}
-          style={[styles.button, { backgroundColor: colors.accent }]}
-          accessibilityRole="button"
           accessibilityLabel={actionLabel}
-          android_ripple={{ color: 'rgba(255,255,255,0.2)' }}
         >
-          <Text style={styles.buttonText}>{actionLabel}</Text>
-        </Pressable>
+          {actionLabel}
+        </AppButton>
       )}
     </View>
   );
@@ -54,11 +49,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xxl,
   },
   iconWrapper: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
     marginBottom: spacing.md,
   },
   title: {
@@ -72,18 +62,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: spacing.lg,
-  },
-  button: {
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.sm + 4,
-    borderRadius: 4,
-    minHeight: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttonText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '700',
   },
 });

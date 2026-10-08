@@ -1,16 +1,9 @@
 import React from 'react';
-import {
-  ActivityIndicator,
-  Modal,
-  Pressable,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
-import type { AppColors } from '../../theme';
-import { spacing } from '../../theme';
+
+import { AppButton } from '../../components/ui/AppButton';
+import { AppInput } from '../../components/ui/AppInput';
+import { AppModal } from '../../components/ui/AppModal';
 import type { UserProfile } from '../../types/profile';
-import { createStyles } from './styles';
 
 type Props = {
   visible: boolean;
@@ -20,7 +13,6 @@ type Props = {
   resetBusy: boolean;
   onClose: () => void;
   onReset: () => void;
-  colors: AppColors;
 };
 
 export const ResetPasswordModal = React.memo(function ResetPasswordModal({
@@ -31,49 +23,49 @@ export const ResetPasswordModal = React.memo(function ResetPasswordModal({
   resetBusy,
   onClose,
   onReset,
-  colors,
 }: Props) {
-  const styles = createStyles(colors);
-
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalCard}>
-          <Text style={styles.modalTitle}>Reset Password</Text>
-          {resettingUser ? (
-            <Text style={[styles.label, { marginBottom: spacing.md, textTransform: 'none' }]}>
-              Set new password for {resettingUser.name || 'team member'}
-            </Text>
-          ) : null}
-
-          <Text style={styles.label}>New Password</Text>
-          <TextInput
-            value={resetPassword}
-            onChangeText={setResetPassword}
-            placeholder="Min 6 characters"
-            placeholderTextColor={colors.textMuted}
-            style={styles.input}
-            secureTextEntry
-          />
-
-          <View style={styles.modalActions}>
-            <Pressable onPress={onClose} style={styles.cancelBtn}>
-              <Text style={styles.cancelBtnText}>Cancel</Text>
-            </Pressable>
-            <Pressable
-              onPress={onReset}
-              disabled={resetBusy}
-              style={[styles.saveBtn, resetBusy && styles.dim]}
-            >
-              {resetBusy ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.saveBtnText}>Reset</Text>
-              )}
-            </Pressable>
-          </View>
-        </View>
-      </View>
-    </Modal>
+    <AppModal
+      visible={visible}
+      onClose={onClose}
+      title="Reset Password"
+      subtitle={
+        resettingUser
+          ? `Set new password for ${resettingUser.name || 'team member'}`
+          : undefined
+      }
+      closeOnOverlayPress={false}
+      dismissableBackButton
+      footer={
+        <>
+          <AppButton
+            variant="secondary"
+            onPress={onClose}
+            accessibilityLabel="Cancel"
+            containerStyle={{ flex: 1 }}
+          >
+            Cancel
+          </AppButton>
+          <AppButton
+            variant="primary"
+            loading={resetBusy}
+            onPress={onReset}
+            accessibilityLabel="Reset password"
+            containerStyle={{ flex: 1 }}
+          >
+            Reset
+          </AppButton>
+        </>
+      }
+    >
+      <AppInput
+        label="New Password"
+        value={resetPassword}
+        onChangeText={setResetPassword}
+        placeholder="Min 6 characters"
+        secureTextEntry
+        accessibilityLabel="New password"
+      />
+    </AppModal>
   );
 });

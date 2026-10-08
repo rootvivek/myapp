@@ -1,9 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Linking,
-  Pressable,
   ScrollView,
   Text,
   View,
@@ -11,20 +9,25 @@ import {
 import Clipboard from '@react-native-clipboard/clipboard';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import LinearGradient from 'react-native-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Appbar } from 'react-native-paper';
 import { ArrowLeft, Copy } from 'lucide-react-native';
 
 import { AccessoryRow } from '../components/AccessoryRow';
 import { PhotoGrid } from '../components/PhotoGrid';
+import { AppActivityIndicator } from '../components/ui/AppActivityIndicator';
+import { AppButton } from '../components/ui/AppButton';
+import { AppCard } from '../components/ui/AppCard';
+import { WhatsAppIcon } from '../components/WhatsAppIcon';
 import { useAuth } from '../context/AuthContext';
 import { useRepairs } from '../context/RepairsContext';
 import { useTheme } from '../context/ThemeContext';
-import { useTab } from './MainTabScreen';
+import { useTab } from '../context/TabContext';
 import { repairService } from '../services/repairService';
 import type { RootStackParamList } from '../navigation/types';
 import type { Repair } from '../types/repair';
 import { ACCESSORY_ITEMS, REPAIR_STATUSES } from '../types/repair';
+import { accentAlpha, spacing } from '../theme';
 import { shareReceiptPdf } from '../utils/receipt';
 import { dialPhone } from '../utils/phone';
 
@@ -41,11 +44,12 @@ export function RepairDetailScreen({ navigation, route }: Props) {
   const { repairs, deleteRepair, updateRepairInState } = useRepairs();
   const { isOwner, user } = useAuth();
   const { setActiveTab } = useTab();
-  const styles = useMemo(() => createStyles(colors, mode), [colors, mode]);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { repairId } = route.params;
 
   const [repair, setRepair] = useState<Repair | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [revealLock, setRevealLock] = useState(false);
   const [historyVisible, setHistoryVisible] = useState(false);
 
@@ -70,6 +74,14 @@ export function RepairDetailScreen({ navigation, route }: Props) {
       const r = await repairService.getById(repairId);
       if (mountedRef.current) {
         setRepair(r);
+        setLoadError(false);
+      }
+    } catch (err) {
+      // Keep a distinct error state: previously a network failure fell through
+      // to "Job not found" and rejected the promise with no handler.
+      console.warn('[RepairDetail] Failed to load repair:', err);
+      if (mountedRef.current) {
+        setLoadError(true);
       }
     } finally {
       if (mountedRef.current) {
@@ -115,6 +127,13 @@ export function RepairDetailScreen({ navigation, route }: Props) {
     if (!repair?.orderCode) return;
     Clipboard.setString(repair.orderCode);
     Alert.alert('Copied', `Order code "${repair.orderCode}" copied to clipboard.`);
+  }
+
+  function handleBack(): void {
+    // Switch the tab behind the stack, then pop this screen so the
+    // dashboard is actually visible (previously it only set the tab).
+    setActiveTab('home');
+    navigation.navigate('Home');
   }
 
   async function handleMarkAsPaid(): Promise<void> {
@@ -172,10 +191,39 @@ export function RepairDetailScreen({ navigation, route }: Props) {
 
   if (loading || !repair) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top']}>
+      <SafeAreaView style={styles.safe} edges={['bottom']}>
+        {/* Header is shown here too: this screen has headerShown:false, so
+            without it the user would have no way back on a load failure. */}
+        <Appbar.Header
+          mode="center-aligned"
+          style={{ backgroundColor: colors.surface, elevation: 0 }}
+        >
+          <Appbar.Action
+            icon={() => <ArrowLeft size={22} color={colors.text} />}
+            onPress={handleBack}
+            accessibilityLabel="Back to home"
+          />
+          <Appbar.Content
+            title="Job details"
+            titleStyle={{ fontSize: 17, fontWeight: '700', color: colors.text }}
+          />
+        </Appbar.Header>
+
         <View style={styles.centered}>
           {loading ? (
-            <ActivityIndicator size="large" color={colors.accent} />
+            <AppActivityIndicator size="large" color={colors.accent} />
+          ) : loadError ? (
+            <>
+              <Text style={styles.muted}>Could not load this job. Check your connection.</Text>
+              <AppButton
+                variant="outline"
+                onPress={() => void load()}
+                accessibilityLabel="Retry loading job"
+                containerStyle={{ marginTop: spacing.sm }}
+              >
+                Retry
+              </AppButton>
+            </>
           ) : (
             <Text style={styles.muted}>Job not found.</Text>
           )}
@@ -186,30 +234,31 @@ export function RepairDetailScreen({ navigation, route }: Props) {
 
   const statusLabel = REPAIR_STATUSES.find((s) => s.value === repair.status)?.label ?? repair.status;
   const balance = Math.max(0, repair.repairCost - repair.advanceAmount);
-  const cardColors = mode === 'dark' ? ['rgba(255,255,255,0.06)', 'rgba(255,255,255,0.02)'] : [colors.surface, colors.surface];
+  const cardColors = mode === 'dark' ? [accentAlpha(colors.text, 0.06), accentAlpha(colors.text, 0.02)] : [colors.surface, colors.surface];
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      <LinearGradient colors={colors.bgGradient} style={{ position: 'absolute', width: '100%', height: '100%' }} />
+    <SafeAreaView style={styles.safe} edges={['bottom']}>
 
       {/* Header */}
-      <View style={styles.header}>
-        <Pressable
-          onPress={() => setActiveTab('home')}
-          style={styles.headerBtn}
-          android_ripple={{ color: 'rgba(255,255,255,0.1)' }}
-        >
-          <ArrowLeft size={20} color={colors.text} strokeWidth={2} />
-        </Pressable>
-        <Text style={styles.headerTitle}>Job details</Text>
-        <Pressable
+      <Appbar.Header
+        mode="center-aligned"
+        style={{ backgroundColor: colors.surface, elevation: 0 }}
+      >
+        <Appbar.Action
+          icon={() => <ArrowLeft size={22} color={colors.text} />}
+          onPress={handleBack}
+          accessibilityLabel="Back to home"
+        />
+        <Appbar.Content
+          title="Job details"
+          titleStyle={{ fontSize: 17, fontWeight: '700', color: colors.text }}
+        />
+        <Appbar.Action
+          icon={() => <Copy size={22} color={colors.text} />}
           onPress={handleCopy}
-          style={styles.headerBtn}
-          android_ripple={{ color: 'rgba(255,255,255,0.1)' }}
-        >
-          <Copy size={16} color={colors.textMuted} strokeWidth={1.8} />
-        </Pressable>
-      </View>
+          accessibilityLabel="Copy order code"
+        />
+      </Appbar.Header>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* Customer & Device Info */}
@@ -220,7 +269,6 @@ export function RepairDetailScreen({ navigation, route }: Props) {
           setRevealLock={setRevealLock}
           onCall={handleCall}
           onViewHistory={() => setHistoryVisible(true)}
-          mode={mode}
           colors={colors}
           cardColors={cardColors}
         />
@@ -229,23 +277,23 @@ export function RepairDetailScreen({ navigation, route }: Props) {
         <View style={styles.sectionTitle}>
           <Text style={styles.sectionTitleText}>Accessories received</Text>
         </View>
-        <View style={styles.accessoryCard}>
-          <View style={styles.accessoryCardInner}>
+        <AppCard variant="outlined" containerStyle={styles.sectionCard}>
+          <View style={styles.listCardBody}>
             {ACCESSORY_ITEMS.map(({ key, label }) => (
               <AccessoryRow key={key} label={label} value={repair[key]} styles={styles} />
             ))}
           </View>
-        </View>
+        </AppCard>
 
         {/* Device Photos */}
         <View style={styles.sectionTitle}>
           <Text style={styles.sectionTitleText}>Device photos</Text>
         </View>
-        <View style={styles.photoCard}>
-          <View style={styles.photoCardInner}>
+        <AppCard variant="outlined" containerStyle={styles.sectionCard}>
+          <View style={styles.photoCardBody}>
             <PhotoGrid repair={repair} styles={styles} />
           </View>
-        </View>
+        </AppCard>
 
         {/* Payment Details */}
         <View style={styles.sectionTitle}>
@@ -255,7 +303,6 @@ export function RepairDetailScreen({ navigation, route }: Props) {
           repair={repair}
           balance={balance}
           onMarkAsPaid={() => void handleMarkAsPaid()}
-          mode={mode}
           colors={colors}
         />
 
@@ -265,16 +312,21 @@ export function RepairDetailScreen({ navigation, route }: Props) {
           onPdf={() => void handlePdf()}
           onEdit={() => navigation.navigate('AddRepair', { repairId: repair.id })}
           onDelete={() => void handleDelete()}
-          mode={mode}
           colors={colors}
         />
 
         {/* WhatsApp Status Notification */}
-        <Pressable onPress={handleNotifyWhatsApp} style={[styles.actionBtnSecondary, { borderColor: 'rgba(34, 197, 94, 0.4)', backgroundColor: 'rgba(34, 197, 94, 0.08)', marginTop: 10, marginHorizontal: 16 }]}>
-          <Text style={[styles.actionBtnSecondaryText, { color: '#22C55E', fontWeight: '700' }]}>
-            💬 Send Status Update on WhatsApp
-          </Text>
-        </Pressable>
+        <View style={{ marginHorizontal: spacing.md, marginTop: spacing.sm + 2 }}>
+          <AppButton
+            variant="secondary"
+            fullWidth
+            leftIcon={<WhatsAppIcon size={16} />}
+            onPress={handleNotifyWhatsApp}
+            accessibilityLabel="Send status update on WhatsApp"
+          >
+            Send Status Update on WhatsApp
+          </AppButton>
+        </View>
       </ScrollView>
 
       <CustomerHistoryModal

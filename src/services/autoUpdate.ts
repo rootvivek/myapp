@@ -91,8 +91,6 @@ export interface CodePushUpdateInfo {
   mandatory?: boolean;
 }
 
-export type UpdateChannel = 'production' | 'staging' | 'development';
-
 export interface UpdateConfig {
   apiUrl: string;
   codePushKey?: string;
@@ -112,7 +110,9 @@ const DEFAULT_CONFIG: UpdateConfig = {
   codePushKey: undefined, // Add CodePush deployment key if using
   checkInterval: parseInt(UPDATE_CHECK_INTERVAL || '14400000', 10),
   enableCodePush: ENABLE_CODE_PUSH === 'true',
-  enableApkUpdate: ENABLE_APK_UPDATE !== 'false',
+  // Fail closed: with no configured update host we must not poll a placeholder
+  // third-party domain, so APK updates stay disabled.
+  enableApkUpdate: ENABLE_APK_UPDATE !== 'false' && Boolean((UPDATE_API_URL || '').trim()),
   autoDownloadApk: AUTO_DOWNLOAD_APK !== 'false',
   showReleaseNotes: SHOW_RELEASE_NOTES !== 'false',
 };
@@ -127,10 +127,6 @@ let isChecking = false;
 
 export function configureAutoUpdate(userConfig: Partial<UpdateConfig>) {
   config = { ...config, ...userConfig };
-}
-
-export function getUpdateConfig(): UpdateConfig {
-  return { ...config };
 }
 
 // ============================================================================
@@ -213,7 +209,10 @@ export async function syncCodePush(): Promise<boolean> {
 // APK Update Check
 // ============================================================================
 
-const UPDATE_REQUEST_TIMEOUT_MS = 10000;
+// Render's free tier spins the backend down after ~15 min idle; the first
+// request then takes 30-50s for a cold start. A tight timeout would report the
+// backend as "unreachable" and skip every update check until it warms up.
+const UPDATE_REQUEST_TIMEOUT_MS = 45000;
 
 /** `fetch` with a timeout so an unreachable backend can't hang the check. */
 function fetchWithTimeout(url: string, options: RequestInit = {}): Promise<Response> {
@@ -239,6 +238,10 @@ function fetchWithTimeout(url: string, options: RequestInit = {}): Promise<Respo
 async function fetchLatestVersion(): Promise<UpdateInfo> {
   const { versionName, versionCode } = await getCurrentVersion();
   const apiBaseUrl = resolveApiBaseUrl(config.apiUrl);
+
+  if (!apiBaseUrl.startsWith('http')) {
+    return { hasUpdate: false, versionName, versionCode, downloadUrl: '' };
+  }
 
   try {
     const response = await fetchWithTimeout(`${apiBaseUrl}/app/update/check`, {
@@ -310,7 +313,7 @@ async function removeIfExists(path: string): Promise<void> {
   }
 }
 
-function downloadOnce(url: string, onProgress?: (progress: number) => void): Promise<void> {
+function downloadOnce(url: string): Promise<void> {
   return new Promise((resolve, reject) => {
     const options = {
       fromUrl: url,
@@ -318,11 +321,6 @@ function downloadOnce(url: string, onProgress?: (progress: number) => void): Pro
       // `background: true` would hand off to Android's DownloadManager, which only writes
       // to public external storage. Keep it in-process so we can target our own dir.
       background: false,
-      progressDivider: 5,
-      progress: (res: any) => {
-        const progress = res.contentLength > 0 ? res.bytesWritten / res.contentLength : 0;
-        onProgress?.(Math.min(progress, 1));
-      },
     };
 
     RNFS.downloadFile(options)
@@ -345,7 +343,7 @@ const DOWNLOAD_ATTEMPTS = 3;
  * archive ("EOCD not found"), so we compare the on-disk size with the server's Content-Length
  * and retry when they differ.
  */
-async function downloadApk(url: string, onProgress?: (progress: number) => void): Promise<string> {
+async function downloadApk(url: string): Promise<string> {
   const expectedSize = await getRemoteSize(url);
   let lastError: unknown = null;
 
@@ -354,7 +352,7 @@ async function downloadApk(url: string, onProgress?: (progress: number) => void)
     await removeIfExists(APK_PATH);
 
     try {
-      await downloadOnce(url, onProgress);
+      await downloadOnce(url);
 
       const stat = await RNFS.stat(APK_PATH);
       const actualSize = Number(stat.size);
@@ -392,33 +390,6 @@ export async function installApk(apkPath: string): Promise<void> {
 }
 
 // ============================================================================
-// Update Manager
-// ============================================================================
-
-let updateState: 'idle' | 'checking' | 'downloading' | 'ready' | 'error' = 'idle';
-let updateProgress = 0;
-let latestUpdateInfo: UpdateInfo | null = null;
-const listeners = new Set<(state: typeof updateState, progress: number, info: UpdateInfo | null) => void>();
-
-function notifyListeners() {
-  listeners.forEach((cb) => cb(updateState, updateProgress, latestUpdateInfo));
-}
-
-export function addUpdateListener(
-  cb: (state: typeof updateState, progress: number, info: UpdateInfo | null) => void
-) {
-  listeners.add(cb);
-  cb(updateState, updateProgress, latestUpdateInfo);
-  return () => {
-    listeners.delete(cb);
-  };
-}
-
-export function getUpdateState() {
-  return { state: updateState, progress: updateProgress, info: latestUpdateInfo };
-}
-
-// ============================================================================
 // Main Update Check Function
 // ============================================================================
 
@@ -429,19 +400,12 @@ export async function checkForUpdates(showAlert = true): Promise<{
 }> {
   if (isChecking) return { hasUpdate: false, type: 'none' };
   isChecking = true;
-  updateState = 'checking';
-  updateProgress = 0;
-  notifyListeners();
 
   try {
     // 1. Check CodePush first (instant JS updates)
     if (config.enableCodePush) {
       const cpUpdate = await checkCodePushUpdate();
       if (cpUpdate.hasUpdate) {
-        latestUpdateInfo = cpUpdate as any;
-        updateState = 'ready';
-        notifyListeners();
-
         if (showAlert) {
           showUpdateAlert('New Update Available', 'A new version is ready. Restart the app to apply changes.', () =>
             syncCodePush()
@@ -455,10 +419,6 @@ export async function checkForUpdates(showAlert = true): Promise<{
     if (config.enableApkUpdate && Platform.OS === 'android') {
       const apkUpdate = await fetchLatestVersion();
       if (apkUpdate.hasUpdate && apkUpdate.downloadUrl) {
-        latestUpdateInfo = apkUpdate;
-        updateState = 'ready';
-        notifyListeners();
-
         if (config.autoDownloadApk) {
           await downloadAndPrepareApk(apkUpdate, showAlert);
         } else if (showAlert) {
@@ -475,14 +435,9 @@ export async function checkForUpdates(showAlert = true): Promise<{
       }
     }
 
-    updateState = 'idle';
-    latestUpdateInfo = null;
-    notifyListeners();
     return { hasUpdate: false, type: 'none' };
   } catch (error) {
     console.warn('[AutoUpdate] Check failed:', error instanceof Error ? error.message : error);
-    updateState = 'error';
-    notifyListeners();
     return { hasUpdate: false, type: 'none' };
   } finally {
     isChecking = false;
@@ -490,19 +445,8 @@ export async function checkForUpdates(showAlert = true): Promise<{
 }
 
 async function downloadAndPrepareApk(info: UpdateInfo, showAlert = true) {
-  updateState = 'downloading';
-  updateProgress = 0;
-  notifyListeners();
-
   try {
-    await downloadApk(info.downloadUrl!, (progress) => {
-      updateProgress = progress;
-      notifyListeners();
-    });
-
-    updateState = 'ready';
-    updateProgress = 1;
-    notifyListeners();
+    await downloadApk(info.downloadUrl!);
 
     // Show install prompt
     Alert.alert(
@@ -516,7 +460,7 @@ async function downloadAndPrepareApk(info: UpdateInfo, showAlert = true) {
             try {
               await installApk(APK_PATH);
             } catch (error) {
-              console.error('[AutoUpdate] Install failed:', error);
+              console.warn('[AutoUpdate] Install failed:', error);
               Alert.alert('Install Failed', 'Could not open installer. Please install manually from Downloads.');
             }
           },
@@ -525,9 +469,7 @@ async function downloadAndPrepareApk(info: UpdateInfo, showAlert = true) {
       { cancelable: !info.mandatory }
     );
   } catch (error) {
-    console.error('[AutoUpdate] Download failed:', error);
-    updateState = 'error';
-    notifyListeners();
+    console.warn('[AutoUpdate] Download failed:', error);
     if (showAlert) {
       Alert.alert('Update Failed', 'Failed to download update. Please try again later.');
     }
@@ -558,20 +500,28 @@ function showUpdateAlert(
 // Auto Check Scheduler
 // ============================================================================
 
+const timers: ReturnType<typeof setTimeout>[] = [];
+
 export function startAutoUpdateCheck() {
   if (updateCheckTimer) return;
 
-  // Initial check after app stabilizes
-  setTimeout(() => {
-    checkForUpdates(false).catch(console.error);
+  // Initial check after app stabilizes. Keep the handle so stopAutoUpdateCheck
+  // can cancel it too.
+  const initialTimer = setTimeout(() => {
+    checkForUpdates(false).catch((err) =>
+      console.warn('[AutoUpdate] Initial check failed:', err instanceof Error ? err.message : err)
+    );
   }, 5000);
 
   // Periodic checks
   updateCheckTimer = setInterval(() => {
-    checkForUpdates(false).catch(console.error);
+    checkForUpdates(false).catch((err) =>
+      console.warn('[AutoUpdate] Periodic check failed:', err instanceof Error ? err.message : err)
+    );
   }, config.checkInterval);
 
-  console.log('[AutoUpdate] Auto-check started, interval:', config.checkInterval);
+  // Store both handles in one place so the stop function clears everything.
+  timers.push(initialTimer);
 }
 
 export function stopAutoUpdateCheck() {
@@ -579,41 +529,8 @@ export function stopAutoUpdateCheck() {
     clearInterval(updateCheckTimer);
     updateCheckTimer = null;
   }
-}
-
-// ============================================================================
-// Manual Trigger
-// ============================================================================
-
-export async function checkAndUpdate() {
-  return checkForUpdates(true);
-}
-
-export async function installPendingUpdate() {
-  if (latestUpdateInfo && updateState === 'ready' && latestUpdateInfo.downloadUrl) {
-    await installApk(APK_PATH);
+  while (timers.length > 0) {
+    const t = timers.pop();
+    if (t) clearTimeout(t);
   }
-}
-
-// ============================================================================
-// React Hook for Components
-// ============================================================================
-
-import { useEffect, useState } from 'react';
-
-export function useAutoUpdate() {
-  const [state, setState] = useState(getUpdateState());
-
-  useEffect(() => {
-    const unsubscribe = addUpdateListener((s, p, i) => setState({ state: s, progress: p, info: i }));
-    return () => unsubscribe();
-  }, []);
-
-  return {
-    ...state,
-    checkForUpdates: (showAlert?: boolean) => checkForUpdates(showAlert ?? true),
-    installPendingUpdate,
-    startAutoCheck: startAutoUpdateCheck,
-    stopAutoCheck: stopAutoUpdateCheck,
-  };
 }
