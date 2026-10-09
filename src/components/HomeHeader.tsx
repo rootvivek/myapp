@@ -52,7 +52,7 @@ function createStyles(colors: AppColors) {
     searchRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingHorizontal: spacing.md,
+      paddingHorizontal: spacing.gutter,
       paddingTop: spacing.sm,
       paddingBottom: spacing.xs,
       gap: spacing.xs,
@@ -77,7 +77,7 @@ function createStyles(colors: AppColors) {
     },
     filterSection: {
       paddingVertical: spacing.xs,
-      paddingHorizontal: spacing.md,
+      paddingHorizontal: spacing.gutter,
     },
     filterScroll: {
       gap: spacing.xs,

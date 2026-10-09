@@ -3,7 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import { useTheme } from '../context/ThemeContext';
-import { AddRepairScreen } from '../screens/AddRepairScreen';
+import { AddRepairScreen } from '../screens/AddRepair';
 import { MainTabScreen } from '../screens/MainTabScreen';
 import { RepairDetailScreen } from '../screens/RepairDetailScreen';
 import { ScanImeiScreen } from '../screens/ScanImeiScreen';

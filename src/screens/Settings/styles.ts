@@ -14,7 +14,7 @@ export function createStyles(colors: AppColors) {
       alignItems: 'center',
     },
     content: {
-      paddingHorizontal: spacing.sm + 4,
+      paddingHorizontal: spacing.gutter,
       paddingTop: spacing.xs,
       paddingBottom: 100,
       gap: spacing.sm + 2,

@@ -7,7 +7,6 @@ import { rowToInventory } from '../db/inventoryRepository';
 import { supabase } from '../lib/supabase';
 import type { InventoryItem } from '../types/inventory';
 import { appendItem, removeItem, updateItem, upsertItem } from '../utils/cacheHelpers';
-import { logger } from '../utils/logger';
 
 type InventoryStateContextValue = {
   inventory: InventoryItem[];
@@ -61,7 +60,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
         lastFetchTimeRef.current = Date.now();
       }
     } catch (err) {
-      logger.warn('[InventoryContext] Error fetching inventory:', err);
+      // Failed to fetch inventory
     } finally {
       if (currentRequestId === requestIdRef.current && mountedRef.current) {
         setLoading(false);

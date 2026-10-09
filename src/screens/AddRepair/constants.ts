@@ -1,5 +1,3 @@
-import { CardSim, SmartphoneCharging } from 'lucide-react-native';
-
 export const COMMON_PROBLEMS = [
   'Folder replace',
   'Battery change',
@@ -41,9 +39,4 @@ export const WARRANTY_OPTIONS = [
   { label: '30 Days', type: '30' as const, value: '30 Days' },
   { label: '90 Days', type: '90' as const, value: '90 Days' },
   { label: '180 Days', type: '180' as const, value: '180 Days' },
-] as const;
-
-export const ACCESSORY_UI = [
-  { icon: CardSim, title: 'SIM tray', key: 'accSimTray' as const },
-  { icon: SmartphoneCharging, title: 'Back cover', key: 'accBackCover' as const },
 ] as const;

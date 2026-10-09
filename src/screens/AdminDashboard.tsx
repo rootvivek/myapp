@@ -288,7 +288,7 @@ export function AdminDashboard({ navigation }: Props) {
       </Appbar.Header>
 
       <ScrollView
-        contentContainerStyle={{ padding: spacing.md }}
+        contentContainerStyle={{ paddingHorizontal: spacing.gutter, paddingVertical: spacing.md }}
         showsVerticalScrollIndicator={false}
       >
         {loading && !stats ? (

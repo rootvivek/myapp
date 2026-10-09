@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Image, ImageProps } from 'react-native';
 import { supabase } from '../lib/supabase';
-import { logger } from '../utils/logger';
 
 const SIGNED_URL_TTL_MS = 15 * 60 * 1000;
 // Refresh a little before expiry so an image never renders an expired URL.
@@ -77,7 +76,7 @@ export function useSecureImage(imageUrl: string | null | undefined) {
             if (isMounted) setSignedUrl(data.signedUrl);
           }
         } catch (err) {
-          logger.warn('[useSecureImage] error signing url:', err);
+          // Failed to sign URL, falling back to original
           if (isMounted) setSignedUrl(imageUrl);
         } finally {
           if (isMounted) setLoading(false);

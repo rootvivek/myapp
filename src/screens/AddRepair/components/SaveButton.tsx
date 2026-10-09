@@ -29,7 +29,7 @@ export const SaveButton = React.memo(function SaveButton({
       right: 0,
       paddingTop: spacing.sm,
       paddingBottom: bottomPadding,
-      paddingHorizontal: spacing.md,
+      paddingHorizontal: spacing.gutter,
       backgroundColor: colors.surface,
       borderTopWidth: sizes.hairline,
       borderTopColor: colors.border,

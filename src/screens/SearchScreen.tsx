@@ -26,7 +26,7 @@ function createStyles(colors: AppColors): ReturnType<typeof StyleSheet.create> {
     searchRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginHorizontal: spacing.md,
+      marginHorizontal: spacing.gutter,
       marginTop: spacing.xs,
       marginBottom: spacing.sm,
       gap: spacing.sm,
@@ -222,7 +222,7 @@ export function SearchScreen({ navigation }: Props) {
 
       {/* ── Recent searches ── */}
       {query.trim() === '' && recentSearches.length > 0 && (
-        <View style={{ paddingHorizontal: spacing.md, marginTop: spacing.md, marginBottom: spacing.sm }}>
+        <View style={{ paddingHorizontal: spacing.gutter, marginTop: spacing.md, marginBottom: spacing.sm }}>
           <Text style={{ fontSize: 11, fontWeight: '700', color: colors.textMuted, marginBottom: spacing.sm, textTransform: 'uppercase', letterSpacing: 0.8 }}>
             Recent Searches
           </Text>

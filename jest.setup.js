@@ -28,10 +28,6 @@ jest.mock('react-native-share', () => ({
   share: jest.fn(),
 }));
 
-jest.mock('react-native-html-to-pdf', () => ({
-  convert: jest.fn().mockResolvedValue({ filePath: '/mock/path.pdf' }),
-}), { virtual: true });
-
 jest.mock('@supabase/supabase-js', () => ({
   createClient: jest.fn(() => ({
     auth: {

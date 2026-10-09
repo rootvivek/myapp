@@ -6,7 +6,8 @@ export function createStyles(colors: AppColors) {
   return StyleSheet.create({
     safe: { flex: 1, backgroundColor: colors.bg },
     list: {
-      padding: spacing.md,
+      paddingHorizontal: spacing.gutter,
+      paddingTop: spacing.md,
       paddingBottom: 40,
     },
     card: {

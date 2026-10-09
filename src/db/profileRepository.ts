@@ -1,6 +1,5 @@
 import { supabase } from '../lib/supabase';
 import type { UserProfile, UserRole } from '../types/profile';
-import { logger } from '../utils/logger';
 import { requireUserContext } from './helpers';
 
 /**
@@ -32,7 +31,7 @@ export async function getShopLabourList(): Promise<UserProfile[]> {
     .order('created_at', { ascending: true });
 
   if (error && (error.message.includes('column') || error.message.includes('does not exist'))) {
-    logger.warn('[getShopLabourList] Retrying without username column...');
+    // Retry without username column for backwards compatibility
     const retry = await supabase
       .from('profiles')
       .select('id, name, phone, role, shop_id')
@@ -42,9 +41,6 @@ export async function getShopLabourList(): Promise<UserProfile[]> {
     error = retry.error;
   }
 
-  if (error) {
-    logger.error('[getShopLabourList] Error:', error);
-  }
   if (error || !data) return [];
   return data.map((row: Record<string, unknown>) => ({
     id: String(row.id),

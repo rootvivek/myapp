@@ -15,7 +15,7 @@ export function createStyles(colors: AppColors) {
 
     /* Section cards — fill, radius and border come from AppCard */
     sectionCard: {
-      marginHorizontal: spacing.md,
+      marginHorizontal: spacing.gutter,
       marginBottom: spacing.md,
     },
     sectionCardBody: {
@@ -169,7 +169,7 @@ export function createStyles(colors: AppColors) {
 
     /* Section Title */
     sectionTitle: {
-      marginHorizontal: spacing.md,
+      marginHorizontal: spacing.gutter,
       marginTop: spacing.xs,
       marginBottom: spacing.xs + 2,
     },
@@ -278,7 +278,7 @@ export function createStyles(colors: AppColors) {
 
     /* Action buttons */
     actions: {
-      marginHorizontal: spacing.md,
+      marginHorizontal: spacing.gutter,
       marginTop: spacing.xs,
       gap: spacing.sm,
     },

@@ -6,7 +6,6 @@ import {
 } from '@env';
 
 import { getSupabaseAuthStorage } from './supabaseAuthStorage';
-import { logger } from '../utils/logger';
 
 const supabaseUrl = (
   ENV_SUPABASE_URL ||
@@ -21,8 +20,8 @@ const supabaseAnonKey = (
 ).trim();
 
 if (__DEV__ && (!supabaseUrl || !supabaseAnonKey)) {
-  logger.warn(
-    '[supabase] Missing EXPO_PUBLIC_SUPABASE_URL or EXPO_PUBLIC_SUPABASE_ANON_KEY in .env',
+  console.warn(
+    '[supabase] Missing EXPO_PUBLIC_SUPABASE_URL or EXPO_PUBLIC_SUPABASE_ANON_KEY in .env'
   );
 }
 

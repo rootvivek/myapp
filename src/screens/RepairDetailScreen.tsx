@@ -316,7 +316,7 @@ export function RepairDetailScreen({ navigation, route }: Props) {
         />
 
         {/* WhatsApp Status Notification */}
-        <View style={{ marginHorizontal: spacing.md, marginTop: spacing.sm + 2 }}>
+        <View style={{ marginHorizontal: spacing.gutter, marginTop: spacing.sm + 2 }}>
           <AppButton
             variant="secondary"
             fullWidth

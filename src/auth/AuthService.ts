@@ -2,7 +2,6 @@ import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { normalizePhone } from '../services/msg91Service';
 import { isValidEmail, normalizeEmail } from '../utils/email';
-import { logger } from '../utils/logger';
 import { saveShopBranding } from '../utils/shopSettings';
 import {
   DEFAULT_SHOP_NAME,
@@ -102,7 +101,7 @@ async function recoverSignupSession(email: string, password: string) {
     // here only risks leaving the user signed out if the retry fails.
     return await ensureFreshSession(email, password);
   } catch (err) {
-    logger.warn('[AuthService] session recovery after signup failed:', err);
+    // Session recovery failed - user may need to sign in again
     return null;
   }
 }
@@ -165,7 +164,7 @@ export async function signInUser(
       // Also self-heals accounts left with no profile/shop row by older builds.
       userProfile = await loadProfileWithRetry(userId, 2, supabase);
     } catch (err) {
-      logger.warn('[AuthService] profile repair failed during sign in:', err);
+      // Profile repair failed, falling back to direct fetch
       userProfile = await fetchProfile(userId);
     }
   }
@@ -276,10 +275,7 @@ export async function signUpUser(
       try {
         return await handleExistingUserSignUp(normalizedPhone, password);
       } catch (confirmErr) {
-        logger.warn(
-          '[AuthService] signup returned no session; email confirmation is likely enabled:',
-          confirmErr
-        );
+        // Signup returned no session; email confirmation may be enabled
         // If handleExistingUserSignUp already handled this (returned a result), use it
         if (confirmErr instanceof Error && confirmErr.message.includes('already registered')) {
           throw confirmErr;

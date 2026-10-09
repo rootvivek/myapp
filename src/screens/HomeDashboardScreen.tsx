@@ -150,14 +150,14 @@ function createStyles(colors: AppColors) {
     return StyleSheet.create({
         safe: { flex: 1, backgroundColor: colors.bg },
         scroll: { paddingBottom: 96 },
-        content: { paddingHorizontal: spacing.md },
+        content: { paddingHorizontal: spacing.gutter },
 
         /* Header */
         header: {
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
-            paddingHorizontal: spacing.md,
+            paddingHorizontal: spacing.gutter,
             paddingTop: spacing.xs,
             paddingBottom: spacing.sm,
             gap: 12,

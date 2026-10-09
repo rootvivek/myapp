@@ -56,7 +56,7 @@ export function BottomNavBar() {
         <AppIconButton
           key={tab.key}
           variant={isActive ? 'primary' : 'ghost'}
-          size={36}
+          size={32}
           icon={<Icon size={20} color={isActive ? '#FFFFFF' : colors.textMuted} strokeWidth={2.2} />}
           accessibilityRole="tab"
           accessibilityState={{ selected: isActive }}
@@ -93,7 +93,7 @@ export function BottomNavBar() {
           color={colors.accent}
           icon={(props) => (
             <View style={styles.fabIconWrapper}>
-              <Plus size={props.size} color={props.color} strokeWidth={2.4} />
+              <Plus size={20} color={props.color} strokeWidth={2.2} />
             </View>
           )}
         />
@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: spacing.xs,
-    gap: 2,
+    gap: 0,
   },
   centerButtonContainer: {
     flex: 1,
@@ -151,14 +151,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   centerLabel: {
-    fontSize: 10.5,
-    fontWeight: '700',
-    marginTop: 3,
-    letterSpacing: 0.1,
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 1,
   },
   tabLabel: {
     fontSize: 11,
     fontWeight: '600',
-    marginTop: 1,
+    marginTop: 0,
   },
 });

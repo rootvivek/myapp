@@ -85,10 +85,17 @@ const AppInput = forwardRef<AppInputRef, AppInputProps>(
     const labelTextStyle = appFieldLabelStyle(colors);
 
     const trailing = RightIcon ? <RightIcon size={18} color={colors.textMuted} strokeWidth={2} /> : null;
+    const hasTrailing = Boolean(rightAction || trailing);
+    /* Paper only renders its `right` adornment for TextInputAffix/TextInputIcon
+       nodes; a custom node is silently dropped, so the trailing action is
+       overlaid inside the field instead. Reserve room so text/placeholder
+       doesn't run underneath it. */
+    const trailingReserve = (rightAction ? 92 : 0) + (trailing ? 26 : 0);
 
     return (
       <View style={groupStyle}>
         {label ? <Text style={labelTextStyle}>{label}</Text> : null}
+        <View>
         <TextInput
           /* Paper declares two overlapping `ref` types on `TextInput` (the
              public handle and the native input's), and `forwardRef` can only
@@ -105,26 +112,6 @@ const AppInput = forwardRef<AppInputRef, AppInputProps>(
           selectionColor={colors.accent}
           cursorColor={colors.accent}
           underlineColor="transparent"
-          right={
-            trailing || rightAction ? (
-              <View style={trailingRowStyle}>
-                {rightAction ? (
-                  <Button
-                    mode="text"
-                    compact
-                    textColor={colors.accent}
-                    onPress={rightAction.onPress}
-                    accessibilityLabel={rightAction.accessibilityLabel ?? rightAction.label}
-                    style={trailingActionStyle}
-                    labelStyle={{ fontSize: 13, fontWeight: '600' }}
-                  >
-                    {rightAction.label}
-                  </Button>
-                ) : null}
-                {trailing}
-              </View>
-            ) : undefined
-          }
           style={[
             {
               backgroundColor: editable ? colors.surface2 : colors.surface,
@@ -132,6 +119,7 @@ const AppInput = forwardRef<AppInputRef, AppInputProps>(
               height: dense ? sizes.inputHeightDense : multiline ? undefined : sizes.inputHeight,
               minHeight: multiline ? 96 : undefined,
               fontSize: 15,
+              paddingRight: hasTrailing ? trailingReserve : undefined,
             },
             multiline && { paddingTop: spacing.sm },
             inputStyle,
@@ -157,6 +145,25 @@ const AppInput = forwardRef<AppInputRef, AppInputProps>(
             onBlur?.(e);
           }}
         />
+        {hasTrailing ? (
+          <View style={trailingRowStyle}>
+            {rightAction ? (
+              <Button
+                mode="text"
+                compact
+                textColor={colors.accent}
+                onPress={rightAction.onPress}
+                accessibilityLabel={rightAction.accessibilityLabel ?? rightAction.label}
+                style={trailingActionStyle}
+                labelStyle={{ fontSize: 13, fontWeight: '600' }}
+              >
+                {rightAction.label}
+              </Button>
+            ) : null}
+            {trailing}
+          </View>
+        ) : null}
+        </View>
         {hasError ? (
           <HelperText type="error" visible padding="none" style={errorTextStyle}>
             {error}
@@ -168,9 +175,12 @@ const AppInput = forwardRef<AppInputRef, AppInputProps>(
 );
 
 const trailingRowStyle: ViewStyle = {
+  position: 'absolute',
+  right: spacing.xs,
+  top: 0,
+  bottom: 0,
   flexDirection: 'row',
   alignItems: 'center',
-  paddingRight: spacing.xs,
   gap: spacing.xs,
 };
 

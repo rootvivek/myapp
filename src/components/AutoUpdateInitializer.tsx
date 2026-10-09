@@ -11,7 +11,6 @@ import {
 import {
   UPDATE_API_URL,
   UPDATE_CHECK_INTERVAL,
-  ENABLE_CODE_PUSH,
   ENABLE_APK_UPDATE,
   AUTO_DOWNLOAD_APK,
   SHOW_RELEASE_NOTES,
@@ -24,7 +23,6 @@ import {
  * Configuration lives in `.env`:
  * - UPDATE_API_URL: update check API base URL (required for APK updates)
  * - UPDATE_CHECK_INTERVAL: check interval in ms (default 4 hours)
- * - ENABLE_CODE_PUSH: enable CodePush for JS updates
  * - ENABLE_APK_UPDATE: enable APK update checks
  * - AUTO_DOWNLOAD_APK: auto-download the APK when an update is found
  * - SHOW_RELEASE_NOTES: show release notes in the update dialog
@@ -36,8 +34,6 @@ export function AutoUpdateInitializer() {
     configureAutoUpdate({
       apiUrl: apiUrl || 'https://api.yourdomain.com',
       checkInterval: parseInt(UPDATE_CHECK_INTERVAL || '14400000', 10),
-      enableCodePush: ENABLE_CODE_PUSH === 'true',
-      // Fail closed: no configured update host means no update checks.
       enableApkUpdate: ENABLE_APK_UPDATE !== 'false' && apiUrl.length > 0,
       autoDownloadApk: AUTO_DOWNLOAD_APK !== 'false',
       showReleaseNotes: SHOW_RELEASE_NOTES !== 'false',

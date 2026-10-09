@@ -137,13 +137,3 @@ export function firstInvalidRepairField(errors: RepairFormErrors): RepairFormFie
   }
   return null;
 }
-
-/**
- * Message of the first invalid field, or `null` when the form is valid.
- * Kept for callers that only need a single message.
- */
-export function validateRepairFormFields(params: RepairFormFieldValues): string | null {
-  const errors = validateRepairFormErrors(params);
-  const field = firstInvalidRepairField(errors);
-  return field ? errors[field] ?? null : null;
-}

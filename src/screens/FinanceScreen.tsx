@@ -738,7 +738,7 @@ function createStyles(colors: AppColors): ReturnType<typeof StyleSheet.create> {
       flex: 1,
     },
     periodContainer: {
-      marginHorizontal: 18,
+      marginHorizontal: spacing.gutter,
       marginBottom: 14,
       height: 38,
     },
@@ -748,13 +748,13 @@ function createStyles(colors: AppColors): ReturnType<typeof StyleSheet.create> {
     periodScrollContent: {
       flexDirection: 'row',
       gap: spacing.sm,
-      paddingRight: 18,
+      paddingRight: spacing.gutter,
       alignItems: 'center',
     },
     customDateContainer: {
       flexDirection: 'row',
       gap: 10,
-      marginHorizontal: 18,
+      marginHorizontal: spacing.gutter,
       marginBottom: 12,
     },
     customDateBtn: {
@@ -767,7 +767,7 @@ function createStyles(colors: AppColors): ReturnType<typeof StyleSheet.create> {
     statsContainer: {
       flexDirection: 'row',
       gap: 10,
-      marginHorizontal: 18,
+      marginHorizontal: spacing.gutter,
       marginBottom: spacing.sm,
     },
     statCard: {
@@ -777,7 +777,7 @@ function createStyles(colors: AppColors): ReturnType<typeof StyleSheet.create> {
       borderWidth: sizes.hairline,
     },
     fullStatCard: {
-      marginHorizontal: 18,
+      marginHorizontal: spacing.gutter,
       marginBottom: 14,
       padding: 14,
       borderRadius: radius.lg,
@@ -811,12 +811,12 @@ function createStyles(colors: AppColors): ReturnType<typeof StyleSheet.create> {
     },
     tabContainer: {
       flexDirection: 'row',
-      marginHorizontal: 18,
+      marginHorizontal: spacing.gutter,
       marginBottom: 12,
       gap: spacing.sm,
     },
     list: {
-      paddingHorizontal: 18,
+      paddingHorizontal: spacing.gutter,
       paddingBottom: 100,
     },
     row: {

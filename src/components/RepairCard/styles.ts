@@ -10,6 +10,8 @@ export function createCardStyles(colors: AppColors) {
     card: {
       marginBottom: spacing.sm + 2,
       overflow: 'hidden',
+      /** Tighter bottom padding — the footer row sits close to the card edge. */
+      paddingBottom: 4,
     },
 
     /* ── Card Top Row ─────────────── */
@@ -110,8 +112,8 @@ export function createCardStyles(colors: AppColors) {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      marginTop: spacing.sm + 2,
-      paddingTop: spacing.sm,
+      marginTop: spacing.xs + 2,
+      paddingTop: spacing.xs,
       borderTopWidth: sizes.hairline,
       borderTopColor: colors.border,
       gap: spacing.sm,

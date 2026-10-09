@@ -31,7 +31,7 @@ function createStyles(colors: AppColors) {
   return StyleSheet.create({
     safe: { flex: 1, backgroundColor: colors.bg },
     header: {
-      paddingHorizontal: spacing.md,
+      paddingHorizontal: spacing.gutter,
       paddingTop: spacing.md,
       paddingBottom: spacing.sm,
       flexDirection: 'row',
@@ -40,14 +40,14 @@ function createStyles(colors: AppColors) {
     },
     title: { color: colors.text, fontSize: 28, fontWeight: '800' },
     searchbar: {
-      marginHorizontal: spacing.md,
+      marginHorizontal: spacing.gutter,
       marginBottom: spacing.md,
       backgroundColor: colors.surface2,
       borderRadius: radius.md,
       borderWidth: sizes.hairline,
       borderColor: colors.border,
     },
-    list: { paddingHorizontal: spacing.md, paddingBottom: 120 },
+    list: { paddingHorizontal: spacing.gutter, paddingBottom: 120 },
     card: {
       backgroundColor: colors.surface,
       borderRadius: radius.md,

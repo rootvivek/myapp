@@ -31,7 +31,7 @@ function createStyles(colors: AppColors) {
     safe: { flex: 1, backgroundColor: colors.bg },
     main: { flex: 1, position: 'relative' },
 
-    list: { paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: 120 },
+    list: { paddingHorizontal: spacing.gutter, paddingTop: spacing.sm, paddingBottom: 120 },
   });
   return s;
 }

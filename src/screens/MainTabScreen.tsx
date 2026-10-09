@@ -15,10 +15,6 @@ import { useTheme } from '../context/ThemeContext';
 import { useTab } from '../context/TabContext';
 import type { RootStackParamList } from '../navigation/types';
 
-// Re-exported for backwards compatibility: screens/components previously
-// imported `useTab` and `TabType` from this module.
-export { useTab, type TabType } from '../context/TabContext';
-
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
 export function MainTabScreen({ navigation, route }: Props) {

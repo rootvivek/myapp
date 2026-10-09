@@ -4,6 +4,7 @@
   "main": "index.js",
   "scripts": {
     "start": "react-native start",
+    "start:fresh": "react-native start --reset-cache",
     "android": "node scripts/run-with-jdk.js npx react-native run-android && sed -i '' 's/-webkit-appearance: button/-webkit-appearance: button; appearance: button/g; s/-webkit-appearance: textfield/-webkit-appearance: textfield; appearance: textfield/g; s/-webkit-appearance: none/-webkit-appearance: none; appearance: none/g' android/build/reports/problems/problems-report.html 2>/dev/null || true",
     "apk": "node scripts/run-with-jdk.js ./gradlew assembleRelease",
     "build": "node scripts/run-with-jdk.js ./gradlew assembleRelease",
@@ -13,7 +14,10 @@
     "build:apk": "node scripts/run-with-jdk.js ./gradlew assembleRelease",
     "deploy:backend": "node scripts/deploy-backend.js",
     "verify:prod": "node scripts/verify-production.js",
-    "postinstall": "patch-package"
+    "postinstall": "patch-package",
+    "fix:crash": "./scripts/fix-app-crash.sh",
+    "fix:quick": "./scripts/quick-fix.sh",
+    "clean": "rm -rf node_modules/.cache && rm -rf android/app/build && rm -rf android/build && watchman watch-del-all || true"
   },
   "dependencies": {
     "@msg91comm/sendotp-react-native": "^3.0.0",
@@ -54,6 +58,7 @@
     "@testing-library/react-native": "^14.0.1",
     "@types/jest": "^30.0.0",
     "@types/react": "^19.0.0",
+    "expo-modules-autolinking": "^57.0.14",
     "identity-obj-proxy": "^3.0.0",
     "jest": "^30.5.2",
     "jest-environment-jsdom": "^30.5.2",
@@ -63,7 +68,7 @@
     "typescript": "~5.9.2"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=18 <21"
   },
   "private": true
 }

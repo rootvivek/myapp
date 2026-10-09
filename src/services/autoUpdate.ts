@@ -7,7 +7,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   UPDATE_API_URL,
   UPDATE_CHECK_INTERVAL,
-  ENABLE_CODE_PUSH,
   ENABLE_APK_UPDATE,
   AUTO_DOWNLOAD_APK,
   SHOW_RELEASE_NOTES,
@@ -83,19 +82,9 @@ export interface UpdateInfo {
   minVersionCode?: number;
 }
 
-export interface CodePushUpdateInfo {
-  hasUpdate: boolean;
-  label?: string;
-  packageSize?: number;
-  failedInstall?: boolean;
-  mandatory?: boolean;
-}
-
 export interface UpdateConfig {
   apiUrl: string;
-  codePushKey?: string;
   checkInterval: number; // ms
-  enableCodePush: boolean;
   enableApkUpdate: boolean;
   autoDownloadApk: boolean;
   showReleaseNotes: boolean;
@@ -107,11 +96,7 @@ export interface UpdateConfig {
 
 const DEFAULT_CONFIG: UpdateConfig = {
   apiUrl: UPDATE_API_URL || 'https://api.yourdomain.com',
-  codePushKey: undefined, // Add CodePush deployment key if using
   checkInterval: parseInt(UPDATE_CHECK_INTERVAL || '14400000', 10),
-  enableCodePush: ENABLE_CODE_PUSH === 'true',
-  // Fail closed: with no configured update host we must not poll a placeholder
-  // third-party domain, so APK updates stay disabled.
   enableApkUpdate: ENABLE_APK_UPDATE !== 'false' && Boolean((UPDATE_API_URL || '').trim()),
   autoDownloadApk: AUTO_DOWNLOAD_APK !== 'false',
   showReleaseNotes: SHOW_RELEASE_NOTES !== 'false',
@@ -142,66 +127,6 @@ async function getCurrentVersion(): Promise<{ versionName: string; versionCode: 
   } catch {
     // Fallback to package.json
     return { versionName: '1.0.4', versionCode: 5 };
-  }
-}
-
-// ============================================================================
-// CodePush Integration (Optional)
-// ============================================================================
-
-let codePush: any = null;
-
-async function loadCodePush() {
-  if (!config.enableCodePush) return null;
-  try {
-    codePush = await import('react-native-code-push');
-    return codePush.default || codePush;
-  } catch {
-    console.warn('[AutoUpdate] CodePush not installed. Run: npm i react-native-code-push');
-    return null;
-  }
-}
-
-export async function checkCodePushUpdate(): Promise<CodePushUpdateInfo> {
-  const cp = await loadCodePush();
-  if (!cp) return { hasUpdate: false };
-
-  try {
-    const update = await cp.checkForUpdate(config.codePushKey || '');
-    if (update) {
-      return {
-        hasUpdate: true,
-        label: update.label,
-        packageSize: update.packageSize,
-        mandatory: update.isMandatory,
-        failedInstall: update.failedInstall,
-      };
-    }
-    return { hasUpdate: false };
-  } catch (error) {
-    console.error('[AutoUpdate] CodePush check failed:', error);
-    return { hasUpdate: false };
-  }
-}
-
-export async function syncCodePush(): Promise<boolean> {
-  const cp = await loadCodePush();
-  if (!cp) return false;
-
-  try {
-    await cp.sync({
-      deploymentKey: config.codePushKey,
-      updateDialog: {
-        appendReleaseDescription: true,
-        descriptionPrefix: '\n\nChanges:\n',
-      },
-      installMode: cp.InstallMode.ON_NEXT_RESTART,
-      minimumBackgroundDuration: 30 * 1000,
-    });
-    return true;
-  } catch (error) {
-    console.error('[AutoUpdate] CodePush sync failed:', error);
-    return false;
   }
 }
 
@@ -395,27 +320,14 @@ export async function installApk(apkPath: string): Promise<void> {
 
 export async function checkForUpdates(showAlert = true): Promise<{
   hasUpdate: boolean;
-  type: 'codepush' | 'apk' | 'none';
-  info?: UpdateInfo | CodePushUpdateInfo;
+  type: 'apk' | 'none';
+  info?: UpdateInfo;
 }> {
   if (isChecking) return { hasUpdate: false, type: 'none' };
   isChecking = true;
 
   try {
-    // 1. Check CodePush first (instant JS updates)
-    if (config.enableCodePush) {
-      const cpUpdate = await checkCodePushUpdate();
-      if (cpUpdate.hasUpdate) {
-        if (showAlert) {
-          showUpdateAlert('New Update Available', 'A new version is ready. Restart the app to apply changes.', () =>
-            syncCodePush()
-          );
-        }
-        return { hasUpdate: true, type: 'codepush', info: cpUpdate };
-      }
-    }
-
-    // 2. Check APK update
+    // Check APK updates (Android only)
     if (config.enableApkUpdate && Platform.OS === 'android') {
       const apkUpdate = await fetchLatestVersion();
       if (apkUpdate.hasUpdate && apkUpdate.downloadUrl) {
@@ -424,7 +336,7 @@ export async function checkForUpdates(showAlert = true): Promise<{
         } else if (showAlert) {
           showUpdateAlert(
             'App Update Available',
-            apkUpdate.releaseNotes
+            config.showReleaseNotes && apkUpdate.releaseNotes
               ? `Version ${apkUpdate.versionName} is available.\n\n${apkUpdate.releaseNotes}`
               : `Version ${apkUpdate.versionName} is available.`,
             () => downloadAndPrepareApk(apkUpdate, true),

@@ -9,7 +9,7 @@ export function createAddRepairStyles(colors: AppColors) {
       backgroundColor: colors.bg,
     },
     content: {
-      paddingHorizontal: spacing.md,
+      paddingHorizontal: spacing.gutter,
       paddingTop: 6,
       paddingBottom: 110,
       gap: 12,

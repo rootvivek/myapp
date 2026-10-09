@@ -1,4 +1,3 @@
-import { logger } from '../utils/logger';
 import { TIMEOUTS } from './constants';
 
 export function withTimeout<T>(
@@ -13,7 +12,10 @@ export function withTimeout<T>(
 }
 
 export function logError(context: string, error: unknown): void {
-  logger.warn(`[AuthContext:${context}]`, error);
+  // Logger is disabled - use console.warn in __DEV__ if needed
+  if (__DEV__) {
+    console.warn(`[AuthContext:${context}]`, error);
+  }
 }
 
 export function handleAuthError(error: unknown, fallbackMsg: string): Error {

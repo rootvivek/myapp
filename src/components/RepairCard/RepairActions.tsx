@@ -34,21 +34,36 @@ export const RepairActions = React.memo(function RepairActions({
 
   return (
     <View style={styles.cardFooter}>
-      {/* ── Status Pill ── */}
+      {/* ── Status Pill (set-status dropdown) ── */}
       <AppChip
         variant="default"
-        dense
         showSelectedCheck={false}
-        icon={() => <Text style={styles.statusIcon}>{pill.icon}</Text>}
         onPress={onStatusChipPress}
         disabled={!onStatusChipPress}
         accessibilityLabel={`Status: ${statusLabel}. Tap to change.`}
-        containerStyle={{ backgroundColor: pill.bg, borderColor: pill.border, flexShrink: 1, paddingHorizontal: 6, paddingVertical: 1 }}
-        labelStyle={{ color: pill.text, fontWeight: '700', fontSize: 9 }}
+        hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+        containerStyle={{
+          backgroundColor: pill.bg,
+          borderColor: pill.border,
+          flexShrink: 1,
+          minHeight: 28,
+          paddingHorizontal: 10,
+          paddingVertical: 4,
+        }}
+        labelStyle={{
+          color: pill.text,
+          fontWeight: '700',
+          fontSize: 11,
+          lineHeight: 14,
+          marginVertical: 0,
+          marginLeft: 0,
+          marginRight: 0,
+        }}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-          <Text style={{ color: pill.text, fontWeight: '700' }}>{statusLabel}</Text>
-          <ChevronDown size={10} color={pill.text} strokeWidth={2.5} />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          <Text style={styles.statusIcon}>{pill.icon}</Text>
+          <Text style={{ color: pill.text, fontWeight: '700', fontSize: 11, lineHeight: 14 }}>{statusLabel}</Text>
+          <ChevronDown size={11} color={pill.text} strokeWidth={2.5} />
         </View>
       </AppChip>
 

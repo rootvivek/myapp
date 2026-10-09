@@ -6,6 +6,8 @@ export const spacing = {
   lg: 24,
   xl: 32,
   xxl: 48,
+  /** Screen-level left/right gutter — applied on every screen (tabs + stack screens). */
+  gutter: 4,
 };
 
 /** One corner-radius system for the whole app. */

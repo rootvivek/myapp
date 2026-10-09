@@ -27,10 +27,6 @@ const layoutStyles = StyleSheet.create({
     marginBottom: spacing.md,
     alignItems: 'flex-start',
   },
-  pairSpacer: {
-    flex: 1,
-    minWidth: 0,
-  },
 });
 
 function createCellStyles(colors: AppColors) {
@@ -170,9 +166,4 @@ export function RepairImageSlotCell({ label, uri, onChange, error, fullWidth, st
 /** Two equal columns: left | right (e.g. front & back, or ID 1 & ID 2). */
 export function RepairImagePairRow({ children }: { children: ReactNode }) {
   return <View style={layoutStyles.pairRow}>{children}</View>;
-}
-
-/** Empty second column so a single cell stays the same width as front/back (half row). */
-export function RepairImagePairSpacer() {
-  return <View style={layoutStyles.pairSpacer} />;
 }

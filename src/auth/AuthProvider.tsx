@@ -9,7 +9,6 @@ import React, {
   type ReactNode,
 } from 'react';
 
-import { logger } from '../utils/logger';
 import { isSupabaseConfigured as _isSupabaseConfigured, supabase as _supabase } from '../lib/supabase';
 import { saveShopBranding } from '../utils/shopSettings';
 import { signInUser, signUpUser } from './AuthService';
@@ -53,13 +52,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         p = await loadProfileWithRetry(userId);
       } catch (err) {
-        // Never let a transient profile/propagation failure drop the session or
-        // leave the account without a profile: retry once more before giving up.
-        logger.warn('[AuthProvider] profile load failed, retrying once:', err);
+        // Retry once on failure to handle transient issues
         try {
           p = await loadProfileWithRetry(userId, 3);
         } catch (retryErr) {
-          logger.warn('[AuthProvider] profile load failed after retry:', retryErr);
+          // Profile load failed after retry - will remain logged in but without profile data
         }
       }
       if (!mountedRef.current) return;
@@ -104,7 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           await loadProfile(s.user.id);
         }
       } catch (err) {
-        logger.warn('[AuthProvider] Error initializing auth:', err);
+        // Auth initialization failed - will retry on next session state change
       } finally {
         if (!cancelled && mountedRef.current) {
           initializingRef.current = false;

@@ -7,7 +7,6 @@ import { rowToRepair } from '../db/database';
 import { supabase } from '../lib/supabase';
 import type { Repair } from '../types/repair';
 import { removeItem, updateItem, upsertItem } from '../utils/cacheHelpers';
-import { logger } from '../utils/logger';
 
 type RepairsStateContextValue = {
   repairs: Repair[];
@@ -64,9 +63,7 @@ export function RepairsProvider({ children }: { children: React.ReactNode }) {
         lastFetchTimeRef.current = Date.now();
       }
     } catch (err) {
-      logger.warn('[RepairsContext] Error fetching repairs:', err);
-      // Mark ready even on failure so the UI leaves the loading skeleton and
-      // shows the empty/error state instead of hanging forever.
+      // Mark ready on failure so UI shows empty/error state
       if (currentRequestId === requestIdRef.current && mountedRef.current) {
         setReady(true);
       }
