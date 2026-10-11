@@ -1,4 +1,6 @@
 import type { Session } from '@supabase/supabase-js';
+// @ts-ignore react-native-dotenv exposes the app's build-time environment values.
+import { UPDATE_API_URL } from '@env';
 import { supabase } from '../lib/supabase';
 import { normalizePhone } from '../services/msg91Service';
 import { isValidEmail, normalizeEmail } from '../utils/email';
@@ -48,7 +50,8 @@ function isPhoneLike(identifier: string): boolean {
  * Every alias an identifier could have been created with, in priority order:
  *   • "user@x.com"          → that email
  *   • "9876543210"          → <digits>@msg91.local, then <digits>@mcaphonewala.internal
- *   • "ravi.a1b2c3d4"       → <username>@mcaphonewala.internal (team member), then @msg91.local
+ *   • "ravi123"            → <username>@mcaphonewala.internal (team member)
+ *   • legacy "ravi.a1b2c3d4" → old shop-scoped staff alias
  */
 function getSignInCandidates(identifier: string): string[] {
   const trimmed = identifier.trim();
@@ -60,7 +63,39 @@ function getSignInCandidates(identifier: string): string[] {
   }
 
   const username = normalizeEmail(trimmed);
+  // This also preserves sign-in for existing staff whose Login ID includes
+  // the old shop suffix (for example, ravi.a1b2c3d4).
   return INTERNAL_DOMAINS.map((domain) => normalizeEmail(`${username}@${domain}`));
+}
+
+async function signInLabourWithIdentifier(identifier: string, password: string): Promise<Session | null> {
+  const apiUrl = String(UPDATE_API_URL ?? '').replace(/\/$/, '');
+  if (!apiUrl) return null;
+
+  try {
+    const response = await fetch(`${apiUrl}/api/labour/sign-in`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifier: identifier.trim(), password }),
+    });
+    if (!response.ok) return null;
+
+    const result = (await response.json()) as {
+      access_token?: string;
+      refresh_token?: string;
+    };
+    if (!result.access_token || !result.refresh_token) return null;
+
+    const { data, error } = await supabase.auth.setSession({
+      access_token: result.access_token,
+      refresh_token: result.refresh_token,
+    });
+    return error ? null : data.session;
+  } catch {
+    // The regular Supabase alias sign-in remains available if the app backend
+    // is temporarily unreachable.
+    return null;
+  }
 }
 
 function isEmailNotConfirmed(error: unknown): boolean {
@@ -142,6 +177,13 @@ export async function signInUser(
       session = data.session;
       break;
     }
+  }
+
+  // Staff may use either their simple Login ID or their phone number. The
+  // backend resolves those identifiers privately, without exposing profile
+  // lookup or auth email details to unauthenticated clients.
+  if (!session && !isEmailLogin) {
+    session = await signInLabourWithIdentifier(trimmed, password);
   }
 
   if (!session) {

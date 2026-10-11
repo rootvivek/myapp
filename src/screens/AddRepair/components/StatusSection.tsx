@@ -9,14 +9,12 @@ import { AppChip } from '../../../components/ui/AppChip';
 type Props = {
   status: RepairStatus;
   onChangeStatus: (s: RepairStatus) => void;
-  isEdit: boolean;
   styles: AddRepairStyles;
 };
 
 export const StatusSection = React.memo(function StatusSection({
   status,
   onChangeStatus,
-  isEdit,
   styles,
 }: Props) {
   const visibleStatuses = REPAIR_STATUSES;

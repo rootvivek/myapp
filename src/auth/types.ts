@@ -38,7 +38,7 @@ export interface AuthContextValue {
     password: string,
     name: string,
     shopName?: string
-  ) => Promise<{ needsPhoneConfirm: boolean }>;
+  ) => Promise<{ needsPhoneConfirm: boolean; session: Session | null }>;
   signOut: () => Promise<void>;
   createLabourAccount: (name: string, password: string, phone: string) => Promise<void>;
   resetLabourPassword: (labourUserId: string, newPassword: string) => Promise<void>;

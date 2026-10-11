@@ -17,34 +17,34 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
     ArrowRight,
     BatteryCharging,
-    Bell,
+    BookOpen,
     Database,
     Headphones,
     Home,
-    Plus,
     QrCode,
     Search,
     ShieldCheck,
     ShoppingBag,
     Smartphone,
     Sparkles,
-    Tag,
     User,
     Users,
     Wrench,
 } from 'lucide-react-native';
-
-import { showComingSoon } from '../components/ComingSoon';
+import Svg, { Circle, Ellipse, G, Path, Rect } from 'react-native-svg';
 import { AppButton } from '../components/ui/AppButton';
 import { AppCard } from '../components/ui/AppCard';
 import { AppIconButton } from '../components/ui/AppIconButton';
+import { ThreeDIcon } from '../components/ui/ThreeDIcon';
 import { useAuth } from '../context/AuthContext';
-import { useRepairsState } from '../context/RepairsContext';
 import { useTheme } from '../context/ThemeContext';
 import type { RootStackParamList } from '../navigation/types';
 import { accentAlpha, radius, sizes, spacing } from '../theme';
 import type { AppColors } from '../theme';
 import { useTab } from '../context/TabContext';
+import { dialPhone } from '../utils/phone';
+
+const HELPDESK_PHONE = '8881765192';
 
 type Props = {
     navigation: NativeStackNavigationProp<RootStackParamList, 'Home'>;
@@ -59,35 +59,35 @@ type Props = {
 type ServiceItem = {
     key: string;
     label: string;
+    Icon: React.ComponentType<any>;
     /** Category identity tint. Brand services omit it → app accent colour. */
     color?: string;
-    Icon: React.ComponentType<any>;
-    live?: boolean; // only Repair is live right now
+    action?: 'jobs' | 'inventory' | 'helpdesk';
+    route?: keyof RootStackParamList;
+    requiresAuth?: boolean;
 };
-
 const SERVICES: ServiceItem[] = [
-    { key: 'repair', label: 'Repairs', Icon: Wrench, live: true },
-    { key: 'buy_sell', label: 'Buy / Sell', color: '#F97316', Icon: Smartphone },
-    { key: 'accessories', label: 'Accessories', color: '#EC4899', Icon: ShoppingBag },
-    { key: 'warranty', label: 'Warranty', color: '#10B981', Icon: ShieldCheck },
-    { key: 'offers', label: 'Offers', color: '#EF4444', Icon: Tag },
-    { key: 'support', label: 'Helpdesk', color: '#06B6D4', Icon: Headphones },
+    { key: 'repair', label: 'Repairs', Icon: Wrench, action: 'jobs', requiresAuth: true },
+    { key: 'khata_book', label: 'Khata Book', color: '#F97316', Icon: BookOpen, route: 'Khata', requiresAuth: true },
+    { key: 'accessories', label: 'Accessories', color: '#EC4899', Icon: ShoppingBag, action: 'inventory', requiresAuth: true },
+    { key: 'warranty', label: 'Warranty', color: '#10B981', Icon: ShieldCheck, action: 'jobs', requiresAuth: true },
+    { key: 'customers', label: 'Customers', Icon: Users, route: 'CustomerDirectory', requiresAuth: true },
+    { key: 'support', label: 'Helpdesk', color: '#06B6D4', Icon: Headphones, action: 'helpdesk' },
 ];
 
 type PopularService = {
     key: string;
     label: string;
-    desc: string;
     Icon: React.ComponentType<any>;
     /** Category identity tint. Brand services omit it → app accent colour. */
     color?: string;
 };
 
 const POPULAR_SERVICES: PopularService[] = [
-    { key: 'screen', label: 'Screen Replacement', desc: 'Original & OLED screens', Icon: Smartphone },
-    { key: 'battery', label: 'Battery Replacement', desc: 'High capacity cells', Icon: BatteryCharging, color: '#10B981' },
-    { key: 'water', label: 'Water Damage Clean', desc: 'Ultrasonic board service', Icon: Sparkles, color: '#F59E0B' },
-    { key: 'data', label: 'Data & Chip Recovery', desc: 'Dead phone storage extraction', Icon: Database },
+    { key: 'screen', label: 'Screen Replacement', Icon: Smartphone },
+    { key: 'battery', label: 'Battery Replacement', Icon: BatteryCharging, color: '#10B981' },
+    { key: 'water', label: 'Water Damage Clean', Icon: Sparkles, color: '#F59E0B' },
+    { key: 'data', label: 'Data & Chip Recovery', Icon: Database },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -103,6 +103,8 @@ type Banner = {
     color: 'accent' | 'success' | 'warning' | 'danger';
     badge?: string;
     repairs?: boolean; // CTA opens the repair flow
+    inventory?: boolean;
+    support?: boolean;
 };
 
 const BANNERS: Banner[] = [
@@ -131,16 +133,78 @@ const BANNERS: Banner[] = [
         cta: 'View Inventory',
         color: 'warning',
         badge: 'Stock Care',
+        inventory: true,
     },
     {
-        key: 'sell-phone',
-        title: 'Refurbished &\nDevice Exchange',
-        subtitle: 'Best value for used smartphone models',
-        cta: 'Explore Trade-in',
+        key: 'helpdesk',
+        title: 'Need help with\nyour device?',
+        subtitle: 'Call our team for repair support',
+        cta: 'Contact Helpdesk',
         color: 'danger',
-        badge: 'Upcoming',
+        support: true,
     },
 ];
+
+/** Decorative, locally-rendered mobile shop artwork for each promo banner. */
+function BannerArtwork({ type }: { type: Banner['key'] }) {
+    const screenColor = type === 'parts' ? '#FDBA74' : type === 'helpdesk' ? '#67E8F9' : '#A5B4FC';
+
+    return (
+        <Svg width="100%" height="100%" viewBox="0 0 156 180" preserveAspectRatio="xMidYMid slice">
+            <Circle cx="111" cy="90" r="68" fill="#FFFFFF" fillOpacity={0.13} />
+            <Circle cx="143" cy="37" r="23" fill="#FFFFFF" fillOpacity={0.1} />
+            <Path d="M66 180 144 84l42 96H66Z" fill="#FFFFFF" fillOpacity={0.08} />
+
+            {/* Smartphone with a colorful service screen */}
+            <G rotation={8} origin="111, 99">
+                <Rect x="86" y="36" width="54" height="112" rx="13" fill="#111827" fillOpacity={0.3} />
+                <Rect x="83" y="31" width="54" height="112" rx="13" fill="#0F172A" stroke="#FFFFFF" strokeOpacity={0.6} strokeWidth="1.5" />
+                <Rect x="88" y="40" width="44" height="94" rx="8" fill="#F8FAFC" />
+                <Rect x="88" y="40" width="44" height="39" rx="8" fill={screenColor} />
+                <Rect x="101" y="45" width="18" height="3" rx="1.5" fill="#0F172A" fillOpacity={0.62} />
+                <Circle cx="110" cy="65" r="9" fill="#FFFFFF" fillOpacity={0.78} />
+                <Path d="m106 65 3 3 6-7" fill="none" stroke="#0F172A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <Rect x="94" y="87" width="32" height="6" rx="3" fill="#CBD5E1" />
+                <Rect x="94" y="99" width="23" height="5" rx="2.5" fill="#E2E8F0" />
+                <Rect x="94" y="111" width="32" height="13" rx="4" fill={screenColor} fillOpacity={0.7} />
+            </G>
+
+            {/* Small themed details make each banner artwork distinct. */}
+            {type === 'expert' ? (
+                <G rotation={-35} origin="58, 106">
+                    <Rect x="54" y="88" width="8" height="39" rx="4" fill="#FDE68A" />
+                    <Rect x="52" y="83" width="12" height="12" rx="4" fill="#FFFFFF" />
+                    <Path d="M58 127v9" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" />
+                </G>
+            ) : null}
+            {type === 'screen-offer' ? (
+                <G>
+                    <Circle cx="63" cy="65" r="17" fill="#34D399" />
+                    <Path d="m56 65 5 5 10-11" fill="none" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                    <Circle cx="66" cy="128" r="5" fill="#FDE68A" />
+                </G>
+            ) : null}
+            {type === 'parts' ? (
+                <G>
+                    <Rect x="47" y="107" width="24" height="27" rx="4" fill="#FDBA74" />
+                    <Path d="m47 114 12 7 12-7M59 121v13" fill="none" stroke="#FFFFFF" strokeWidth="1.7" strokeLinejoin="round" />
+                    <Rect x="53" y="82" width="16" height="16" rx="4" fill="#FFFFFF" fillOpacity={0.85} />
+                    <Circle cx="61" cy="90" r="4" fill="#FB923C" />
+                </G>
+            ) : null}
+            {type === 'helpdesk' ? (
+                <G>
+                    <Path d="M47 97v-8a18 18 0 0 1 36 0v8" fill="none" stroke="#FFFFFF" strokeWidth="6" strokeLinecap="round" />
+                    <Rect x="45" y="91" width="10" height="19" rx="5" fill="#67E8F9" />
+                    <Rect x="75" y="91" width="10" height="19" rx="5" fill="#67E8F9" />
+                    <Path d="M80 108c-3 8-9 11-17 11" fill="none" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" />
+                    <Circle cx="60" cy="119" r="4" fill="#FDE68A" />
+                </G>
+            ) : null}
+            <Ellipse cx="112" cy="155" rx="39" ry="6" fill="#0F172A" fillOpacity={0.18} />
+        </Svg>
+    );
+}
 
 /* ------------------------------------------------------------------ */
 /*  Styles                                                             */
@@ -239,37 +303,6 @@ function createStyles(colors: AppColors) {
             color: colors.textMuted,
         },
 
-        /* Quick Action Row */
-        quickActionBar: {
-            flexDirection: 'row',
-            gap: 10,
-            marginTop: spacing.sm,
-            marginBottom: spacing.xs,
-        },
-        quickActionItem: {
-            flex: 1,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: spacing.sm,
-            paddingVertical: 12,
-            paddingHorizontal: spacing.sm,
-            borderRadius: radius.lg,
-            borderWidth: sizes.hairline,
-            borderColor: colors.border,
-            backgroundColor: colors.surface,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 1 },
-            shadowOpacity: 0.04,
-            shadowRadius: 3,
-            elevation: 1,
-        },
-        quickActionText: {
-            fontSize: 12.5,
-            fontWeight: '700',
-            color: colors.text,
-        },
-
         /* Promo banner carousel */
         bannerRow: {
             marginTop: spacing.xs,
@@ -278,7 +311,22 @@ function createStyles(colors: AppColors) {
             borderRadius: radius.xl,
             overflow: 'hidden',
         },
-        bannerInner: { padding: spacing.md + 2, gap: spacing.sm },
+        bannerArtwork: {
+            ...StyleSheet.absoluteFillObject,
+            left: '52%',
+        },
+        bannerScrim: {
+            ...StyleSheet.absoluteFillObject,
+            backgroundColor: '#0F172A',
+            opacity: 0.22,
+        },
+        bannerInner: {
+            minHeight: 194,
+            padding: spacing.md + 2,
+            paddingRight: '30%',
+            gap: spacing.sm,
+            justifyContent: 'center',
+        },
         bannerBadge: {
             alignSelf: 'flex-start',
             backgroundColor: colors.surface,
@@ -329,24 +377,11 @@ function createStyles(colors: AppColors) {
             marginTop: spacing.lg,
             marginBottom: spacing.sm,
         },
-        sectionTitleWrap: {
-            gap: 2,
-        },
         sectionTitle: {
             fontSize: 16,
             fontWeight: '800',
             color: colors.text,
             letterSpacing: 0.2,
-        },
-        sectionSubtitle: {
-            fontSize: 11.5,
-            color: colors.textMuted,
-            fontWeight: '500',
-        },
-        seeAll: {
-            fontSize: 13,
-            fontWeight: '700',
-            color: colors.accent,
         },
         grid: {
             flexDirection: 'row',
@@ -370,9 +405,8 @@ function createStyles(colors: AppColors) {
             elevation: 1,
         },
         tileIcon: {
-            width: 44,
-            height: 44,
-            borderRadius: radius.full,
+            width: 42,
+            height: 42,
             alignItems: 'center',
             justifyContent: 'center',
         },
@@ -382,35 +416,6 @@ function createStyles(colors: AppColors) {
             color: colors.text,
             textAlign: 'center',
         },
-        soonPill: {
-            marginTop: 2,
-            paddingHorizontal: 7,
-            paddingVertical: 2,
-            borderRadius: radius.full,
-            backgroundColor: accentAlpha(colors.textMuted, 0.12),
-        },
-        soonPillText: {
-            fontSize: 9,
-            fontWeight: '800',
-            letterSpacing: 0.4,
-            color: colors.textMuted,
-            textTransform: 'uppercase',
-        },
-        livePill: {
-            marginTop: 2,
-            paddingHorizontal: 7,
-            paddingVertical: 2,
-            borderRadius: radius.full,
-            backgroundColor: accentAlpha(colors.success, 0.14),
-        },
-        livePillText: {
-            fontSize: 9,
-            fontWeight: '800',
-            letterSpacing: 0.4,
-            color: colors.success,
-            textTransform: 'uppercase',
-        },
-
         /* Popular services */
         popularScroll: { gap: 10, paddingRight: spacing.xs },
         popularCard: {
@@ -440,12 +445,6 @@ function createStyles(colors: AppColors) {
             fontWeight: '700',
             color: colors.text,
             lineHeight: 17,
-        },
-        popularDesc: {
-            fontSize: 11,
-            fontWeight: '500',
-            color: colors.textMuted,
-            lineHeight: 15,
         },
 
         /* Trust strip */
@@ -510,7 +509,6 @@ export function HomeDashboardScreen({ navigation }: Props) {
     const bannerWidth = windowWidth - spacing.md * 2;
     const { setActiveTab } = useTab();
     const { session, profile, isOwner } = useAuth();
-    const { repairs } = useRepairsState();
 
     /* ── Floating "Back to home" pill (smooth-scrolls the page back to top) ── */
     const insets = useSafeAreaInsets();
@@ -576,23 +574,6 @@ export function HomeDashboardScreen({ navigation }: Props) {
         [backToHomeAnim]
     );
 
-    const pendingCount = useMemo(
-        () => repairs.filter((r) => r.status === 'pending' || r.status === 'in_progress').length,
-        [repairs]
-    );
-    const readyCount = useMemo(
-        () => repairs.filter((r) => r.status === 'completed').length,
-        [repairs]
-    );
-    const duesTotal = useMemo(() => {
-        return repairs.reduce((sum, r) => {
-            const cost = Number(r.repairCost) || 0;
-            const adv = Number(r.advanceAmount) || 0;
-            const due = Math.max(0, cost - adv);
-            return sum + (r.isPaid ? 0 : due);
-        }, 0);
-    }, [repairs]);
-
     const handleOpenRepairs = useCallback(() => {
         if (!session) {
             setActiveTab('settings');
@@ -600,14 +581,6 @@ export function HomeDashboardScreen({ navigation }: Props) {
         }
         setActiveTab('jobs');
     }, [session, setActiveTab]);
-
-    const handleNewRepair = useCallback(() => {
-        if (!session) {
-            setActiveTab('settings');
-            return;
-        }
-        navigation.navigate('AddRepair', {});
-    }, [session, setActiveTab, navigation]);
 
     const handleSearch = useCallback(() => {
         if (!session) {
@@ -625,28 +598,34 @@ export function HomeDashboardScreen({ navigation }: Props) {
         navigation.navigate('ScanQr');
     }, [session, setActiveTab, navigation]);
 
-    const handleCustomers = useCallback(() => {
-        if (!session) {
-            setActiveTab('settings');
-            return;
-        }
-        navigation.navigate('CustomerDirectory');
-    }, [session, setActiveTab, navigation]);
-
     const handleServicePress = useCallback(
         (service: ServiceItem) => {
-            if (service.live) {
-                handleOpenRepairs();
+            if (service.requiresAuth && !session) {
+                setActiveTab('settings');
                 return;
             }
-            showComingSoon(service.label);
+            if (service.route) {
+                navigation.navigate(service.route as 'Khata' | 'CustomerDirectory');
+                return;
+            }
+            if (service.action === 'helpdesk') {
+                void dialPhone(HELPDESK_PHONE);
+                return;
+            }
+            if (service.action === 'inventory') {
+                setActiveTab('inventory');
+                return;
+            }
+            if (service.action === 'jobs') {
+                handleOpenRepairs();
+            }
         },
-        [handleOpenRepairs]
+        [handleOpenRepairs, navigation, session, setActiveTab]
     );
 
     const shopTitle = profile?.shopName || 'MCA Phone Wala';
 
-    /** Flat tile fills for the promo banners, resolved from the active theme. */
+    /** Banner base colors are resolved from the active theme; artwork overlays them. */
     const bannerTints: Record<Banner['color'], string> = {
         accent: colors.accent,
         success: colors.success,
@@ -674,14 +653,6 @@ export function HomeDashboardScreen({ navigation }: Props) {
                 </View>
 
                 <View style={styles.headerActions}>
-                    <AppIconButton
-                        variant="secondary"
-                        size={40}
-                        icon={<Bell size={18} color={colors.text} strokeWidth={2.2} />}
-                        onPress={() => showComingSoon('Notifications')}
-                        accessibilityRole="button"
-                        accessibilityLabel="Notifications"
-                    />
                     <AppIconButton
                         variant="secondary"
                         size={40}
@@ -745,6 +716,10 @@ export function HomeDashboardScreen({ navigation }: Props) {
                                     { width: bannerWidth, marginRight: 12, backgroundColor: bannerTints[banner.color] },
                                 ]}
                             >
+                                <View pointerEvents="none" style={styles.bannerArtwork}>
+                                    <BannerArtwork type={banner.key} />
+                                </View>
+                                <View pointerEvents="none" style={styles.bannerScrim} />
                                 <View style={styles.bannerInner}>
                                     {banner.badge ? (
                                         <View style={styles.bannerBadge}>
@@ -756,11 +731,16 @@ export function HomeDashboardScreen({ navigation }: Props) {
                                         <Text style={styles.bannerSubtitle}>{banner.subtitle}</Text>
                                     ) : null}
                                     <Pressable
-                                        onPress={() =>
-                                            banner.repairs
-                                                ? handleOpenRepairs()
-                                                : showComingSoon(banner.title.replace('\n', ' '))
-                                        }
+                                        onPress={() => {
+                                            if (banner.repairs) {
+                                                handleOpenRepairs();
+                                            } else if (banner.inventory) {
+                                                if (session) setActiveTab('inventory');
+                                                else setActiveTab('settings');
+                                            } else if (banner.support) {
+                                                void dialPhone(HELPDESK_PHONE);
+                                            }
+                                        }}
                                         style={styles.bannerBtn}
                                         android_ripple={{ color: accentAlpha(colors.accent, 0.1) }}
                                         accessibilityRole="button"
@@ -776,57 +756,13 @@ export function HomeDashboardScreen({ navigation }: Props) {
                         ))}
                     </ScrollView>
 
-                    {/* ── Quick action shortcuts ── */}
-                    <View style={styles.quickActionBar}>
-                        <Pressable
-                            onPress={handleNewRepair}
-                            style={styles.quickActionItem}
-                            android_ripple={{ color: accentAlpha(colors.accent, 0.1) }}
-                            accessibilityRole="button"
-                        >
-                            <Plus size={16} color={colors.accent} strokeWidth={2.6} />
-                            <Text style={styles.quickActionText} numberOfLines={1}>New Repair</Text>
-                        </Pressable>
-
-                        <Pressable
-                            onPress={handleOpenRepairs}
-                            style={styles.quickActionItem}
-                            android_ripple={{ color: accentAlpha(colors.accent, 0.1) }}
-                            accessibilityRole="button"
-                        >
-                            <Wrench size={16} color={colors.accent} strokeWidth={2.4} />
-                            <Text style={styles.quickActionText} numberOfLines={1}>Job Desk</Text>
-                        </Pressable>
-
-                        <Pressable
-                            onPress={handleCustomers}
-                            style={styles.quickActionItem}
-                            android_ripple={{ color: accentAlpha(colors.accent, 0.1) }}
-                            accessibilityRole="button"
-                        >
-                            <Users size={16} color={colors.accent} strokeWidth={2.4} />
-                            <Text style={styles.quickActionText} numberOfLines={1}>Customers</Text>
-                        </Pressable>
-                    </View>
-
                     {/* ── Services grid ── */}
                     <View style={styles.sectionRow}>
-                        <View style={styles.sectionTitleWrap}>
-                            <Text style={styles.sectionTitle}>Our Services</Text>
-                            <Text style={styles.sectionSubtitle}>One tap for every counter service</Text>
-                        </View>
-                        <Pressable
-                            onPress={() => showComingSoon('All services')}
-                            accessibilityRole="button"
-                        >
-                            <Text style={styles.seeAll}>See All</Text>
-                        </Pressable>
+                        <Text style={styles.sectionTitle}>Our Services</Text>
                     </View>
 
                     <View style={styles.grid}>
                         {SERVICES.map((service) => {
-                            const { Icon } = service;
-                            const tint = service.color ?? colors.accent;
                             return (
                                 <Pressable
                                     key={service.key}
@@ -836,20 +772,15 @@ export function HomeDashboardScreen({ navigation }: Props) {
                                     accessibilityRole="button"
                                     accessibilityLabel={service.label}
                                 >
-                                    <View
-                                        style={[
-                                            styles.tileIcon,
-                                            { backgroundColor: accentAlpha(tint, 0.14) },
-                                        ]}
-                                    >
-                                        <Icon size={22} color={tint} strokeWidth={2.2} />
+                                    <View style={styles.tileIcon}>
+                                        <ThreeDIcon
+                                            icon={service.Icon}
+                                            color={service.color ?? colors.accent}
+                                            size={36}
+                                            iconSize={19}
+                                        />
                                     </View>
                                     <Text style={styles.tileLabel}>{service.label}</Text>
-                                    <View style={service.live ? styles.livePill : styles.soonPill}>
-                                        <Text style={service.live ? styles.livePillText : styles.soonPillText}>
-                                            {service.live ? 'Live' : 'Coming Soon'}
-                                        </Text>
-                                    </View>
                                 </Pressable>
                             );
                         })}
@@ -857,16 +788,7 @@ export function HomeDashboardScreen({ navigation }: Props) {
 
                     {/* ── Popular services ── */}
                     <View style={styles.sectionRow}>
-                        <View style={styles.sectionTitleWrap}>
-                            <Text style={styles.sectionTitle}>Popular Services</Text>
-                            <Text style={styles.sectionSubtitle}>Most booked repairs this month</Text>
-                        </View>
-                        <Pressable
-                            onPress={() => showComingSoon('Popular services')}
-                            accessibilityRole="button"
-                        >
-                            <Text style={styles.seeAll}>See All</Text>
-                        </Pressable>
+                        <Text style={styles.sectionTitle}>Popular Services</Text>
                     </View>
 
                     <ScrollView
@@ -874,12 +796,12 @@ export function HomeDashboardScreen({ navigation }: Props) {
                         showsHorizontalScrollIndicator={false}
                         contentContainerStyle={styles.popularScroll}
                     >
-                        {POPULAR_SERVICES.map(({ key, label, desc, Icon, color }) => {
+                        {POPULAR_SERVICES.map(({ key, label, Icon, color }) => {
                             const tint = color ?? colors.accent;
                             return (
                                 <Pressable
                                     key={key}
-                                    onPress={() => showComingSoon(label)}
+                                    onPress={handleOpenRepairs}
                                     style={styles.popularCard}
                                     android_ripple={{ color: accentAlpha(colors.accent, 0.1) }}
                                     accessibilityRole="button"
@@ -894,9 +816,6 @@ export function HomeDashboardScreen({ navigation }: Props) {
                                         <Icon size={22} color={tint} strokeWidth={2.3} />
                                     </View>
                                     <Text style={styles.popularLabel}>{label}</Text>
-                                    <Text style={styles.popularDesc} numberOfLines={2}>
-                                        {desc}
-                                    </Text>
                                 </Pressable>
                             );
                         })}

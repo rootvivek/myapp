@@ -354,7 +354,6 @@ export function AddRepairScreen({ navigation, route }: Props) {
             errors={fieldErrors}
             onChangeProblem={(val) => updateField('problem', val)}
             styles={styles}
-            colors={colors}
           />
         </View>
 
@@ -399,7 +398,6 @@ export function AddRepairScreen({ navigation, route }: Props) {
         <StatusSection
           status={state.status}
           onChangeStatus={(val) => setField('status', val)}
-          isEdit={isEdit}
           styles={styles}
         />
 

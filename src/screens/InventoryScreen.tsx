@@ -10,17 +10,16 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Searchbar } from 'react-native-paper';
 import { Plus, Package, Trash2, Search, X } from 'lucide-react-native';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { AppActivityIndicator } from '../components/ui/AppActivityIndicator';
 import { AppButton } from '../components/ui/AppButton';
+import { EmptyState } from '../components/EmptyState';
 import { AppIconButton } from '../components/ui/AppIconButton';
 import { AppInput } from '../components/ui/AppInput';
 import { AppModal } from '../components/ui/AppModal';
 import { useInventory } from '../context/InventoryContext';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
-import type { RootStackParamList } from '../navigation/types';
 import type { AppColors } from '../theme';
 import { radius, sizes, spacing } from '../theme';
 import { formatCurrency } from '../utils/format';
@@ -73,21 +72,13 @@ function createStyles(colors: AppColors) {
     cardStats: { alignItems: 'flex-end', marginLeft: 8 },
     itemPrice: { color: colors.accent, fontSize: 16, fontWeight: '800' },
     itemStock: { color: colors.textMuted, fontSize: 12, fontWeight: '600', marginTop: 2 },
-    empty: {
-      color: colors.textMuted,
-      textAlign: 'center',
-      marginTop: spacing.xxl,
-      fontSize: 15,
-    },
     row: { flexDirection: 'row', gap: spacing.md },
     flex1: { flex: 1 },
     modalActions: { flexDirection: 'row', gap: spacing.md, alignItems: 'center' },
   });
 }
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Home'>; // or a specific prop type if needed
-
-export function InventoryScreen({ navigation }: Props) {
+export function InventoryScreen() {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { inventory, loading, refresh, deleteItem, addInventoryToState, updateInventoryInState } = useInventory();
@@ -250,8 +241,8 @@ export function InventoryScreen({ navigation }: Props) {
         onChangeText={setQuery}
         value={query}
         style={[styles.searchbar, { height: 46, justifyContent: 'center' }]}
-        icon={({ size }) => <Search size={18} color={colors.accent} />}
-        clearIcon={({ size }) => <X size={18} color={colors.textMuted} />}
+        icon={() => <Search size={18} color={colors.accent} />}
+        clearIcon={() => <X size={18} color={colors.textMuted} />}
         inputStyle={{ color: colors.text, fontSize: 14, minHeight: 0, paddingVertical: 0, alignSelf: 'center' }}
         theme={{ colors: { elevation: { level3: colors.surface } } }}
       />
@@ -266,9 +257,10 @@ export function InventoryScreen({ navigation }: Props) {
           refreshing={refreshing}
           onRefresh={handleRefresh}
           ListEmptyComponent={
-            <Text style={styles.empty}>
-              {inventory.length === 0 ? 'No inventory items yet. Add one!' : 'No matches found.'}
-            </Text>
+            <EmptyState
+              title={inventory.length === 0 ? 'No inventory items yet.' : 'No matches found.'}
+              description={inventory.length === 0 ? 'Add one!' : undefined}
+            />
           }
           renderItem={({ item }) => (
             <Pressable 

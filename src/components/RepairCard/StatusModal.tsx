@@ -10,7 +10,7 @@ import { AppButton } from '../../components/ui/AppButton';
 type Props = {
   visible: boolean;
   onClose: () => void;
-  onSelect: (status: RepairStatus, sendWhatsApp?: boolean) => void;
+  onSelect: (status: RepairStatus) => void;
   currentStatus: RepairStatus;
   deviceModel: string;
 };
@@ -38,7 +38,7 @@ export const StatusModal = React.memo(function StatusModal({
             <AppButton
               variant={isCurrent ? 'primary' : 'outline'}
               fullWidth
-              onPress={() => onSelect(s.value, false)}
+              onPress={() => onSelect(s.value)}
               accessibilityRole="button"
               accessibilityLabel={`${s.label}${isCurrent ? ', current status' : ''}`}
               accessibilityState={{ selected: isCurrent }}

@@ -17,11 +17,13 @@ export async function createLabourAccount(
   if (!trimmedUsername) {
     throw new Error(ERROR_MESSAGES.USERNAME_REQUIRED);
   }
+  if (!/^[a-z0-9_]{3,20}$/.test(trimmedUsername)) {
+    throw new Error('Login ID must be 3–20 characters and use only letters, numbers, or underscores.');
+  }
 
-  // Generate a shop-scoped internal email address to avoid collisions
-  const shopCode = ownerProfile.shopId.substring(0, 8);
-  const loginUsername = `${trimmedUsername}.${shopCode}`;
-  const generatedEmail = `${loginUsername}@${INTERNAL_EMAIL_DOMAIN}`;
+  // Keep the account ID short and human-readable. The synthetic email remains
+  // internal to Supabase Auth and is never shown to staff.
+  const generatedEmail = `${trimmedUsername}@${INTERNAL_EMAIL_DOMAIN}`;
 
   const tempClient = createTempClient();
   const { data: signUpData, error: signUpError } = await tempClient.auth.signUp({
@@ -33,6 +35,9 @@ export async function createLabourAccount(
   });
 
   if (signUpError) {
+    if (/already registered|already exists/i.test(signUpError.message)) {
+      throw new Error('That Login ID is already taken. Please choose another.');
+    }
     throw new Error(`Failed to create account: ${signUpError.message}`);
   }
 
@@ -47,7 +52,7 @@ export async function createLabourAccount(
     {
       id: newUserId,
       name: username.trim(),
-      username: loginUsername,
+      username: trimmedUsername,
       phone: phone.trim(),
       role: 'labour',
       shop_id: ownerProfile.shopId,

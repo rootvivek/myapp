@@ -1,4 +1,4 @@
-import React, { type ReactNode } from 'react';
+import React from 'react';
 import { Divider, type DividerProps } from 'react-native-paper';
 import { type StyleProp, type ViewStyle } from 'react-native';
 import { useTheme as useAppTheme } from '../../context/ThemeContext';

@@ -8,9 +8,6 @@ declare module '@env' {
   export const EXPO_PUBLIC_SUPABASE_URL: string;
   export const EXPO_PUBLIC_SUPABASE_ANON_KEY: string;
 
-  export const EXPO_PUBLIC_MSG91_TOKEN_AUTH: string;
-  export const EXPO_PUBLIC_MSG91_WIDGET_ID: string;
-
   export const UPDATE_API_URL: string;
   export const UPDATE_CHECK_INTERVAL: string;
   export const ENABLE_CODE_PUSH: string;

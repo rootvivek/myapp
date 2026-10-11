@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { Linking, View } from 'react-native';
+import { Alert, Linking } from 'react-native';
 
 import { useTheme } from '../../context/ThemeContext';
 import type { Repair, RepairStatus } from '../../types/repair';
@@ -11,6 +11,7 @@ import { RepairInfo } from './RepairInfo';
 import { StatusModal } from './StatusModal';
 import { createCardStyles } from './styles';
 import { AppCard } from '../../components/ui/AppCard';
+import { buildRepairStatusMessage, getWhatsAppPhone } from '../../utils/repairStatusNotification';
 
 import Animated, { FadeInUp } from 'react-native-reanimated';
 
@@ -48,8 +49,39 @@ export const RepairCard = React.memo(function RepairCard({
     setStatusModal(true);
   }, []);
 
+  const promptWhatsAppNotification = useCallback((status: RepairStatus) => {
+    const phone = getWhatsAppPhone(repair.phone);
+    if (!phone) return;
+
+    const message = buildRepairStatusMessage(repair, status);
+    const encodedMessage = encodeURIComponent(message);
+    const whatsappUrl = `whatsapp://send?phone=${phone}&text=${encodedMessage}`;
+    const webUrl = `https://wa.me/${phone}?text=${encodedMessage}`;
+
+    const openWhatsApp = async () => {
+      try {
+        await Linking.openURL(whatsappUrl);
+      } catch {
+        try {
+          await Linking.openURL(webUrl);
+        } catch {
+          Alert.alert('WhatsApp unavailable', 'Could not open WhatsApp or its web version.');
+        }
+      }
+    };
+
+    Alert.alert(
+      'Status updated',
+      `Would you like to notify ${repair.customerName} about this update on WhatsApp?`,
+      [
+        { text: 'Not now', style: 'cancel' },
+        { text: 'Send WhatsApp', onPress: () => void openWhatsApp() },
+      ],
+    );
+  }, [repair]);
+
   const handleStatusSelect = useCallback(
-    async (newStatus: RepairStatus, sendWhatsApp?: boolean) => {
+    async (newStatus: RepairStatus) => {
       if (statusBusyRef.current) return;
 
       setStatusModal(false);
@@ -64,21 +96,14 @@ export const RepairCard = React.memo(function RepairCard({
       statusBusyRef.current = true;
       try {
         await onStatusChange(repair.id, newStatus);
-        if (sendWhatsApp && repair.phone) {
-          const digits = repair.phone.replace(/\D/g, '');
-          const phone = digits.length === 10 ? `91${digits}` : digits;
-          const statusTxt = newStatus === 'completed' ? 'ready for pickup' : newStatus;
-          const msg = `Hello ${repair.customerName}, your repair order (${repair.deviceModel}) is now ${statusTxt}. Thank you!\nMCA Phone Wala`;
-          const url = `whatsapp://send?phone=${phone}&text=${encodeURIComponent(msg)}`;
-          await Linking.openURL(url).catch(() => {});
-        }
+        promptWhatsAppNotification(newStatus);
       } catch (err: unknown) {
         showError('Status Update Failed', err);
       } finally {
         statusBusyRef.current = false;
       }
     },
-    [onStatusChange, repair.id, repair.status, repair.phone, repair.customerName, repair.deviceModel],
+    [onStatusChange, promptWhatsAppNotification, repair.id, repair.status],
   );
 
   const handlePaymentClose = useCallback(() => {
@@ -97,7 +122,6 @@ export const RepairCard = React.memo(function RepairCard({
         <RepairInfo
           repair={repair}
           onPress={onPress}
-          onPaymentPress={onStatusChange ? () => setPaymentModal(true) : undefined}
           styles={styles}
           colors={colors}
         />
@@ -129,6 +153,7 @@ export const RepairCard = React.memo(function RepairCard({
             repairId={repair.id}
             deviceModel={repair.deviceModel}
             customerName={repair.customerName}
+            onStatusUpdated={promptWhatsAppNotification}
             styles={styles}
             colors={colors}
           />

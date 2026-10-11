@@ -23,16 +23,19 @@ type RepairsActionsContextValue = {
 
 type RepairsContextValue = RepairsStateContextValue & RepairsActionsContextValue;
 
+// In-memory only: repair records include personal data and should not be
+// persisted unencrypted in general-purpose device storage.
+const repairsCache = new Map<string, Repair[]>();
+
 const RepairsStateContext = createContext<RepairsStateContextValue | null>(null);
 const RepairsActionsContext = createContext<RepairsActionsContextValue | null>(null);
 
 export function RepairsProvider({ children }: { children: React.ReactNode }) {
-  const [repairs, setRepairs] = useState<Repair[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [ready, setReady] = useState(false);
-
   const { session } = useAuth();
   const userId = session?.user?.id;
+  const [repairs, setRepairs] = useState<Repair[]>(() => userId ? repairsCache.get(userId) ?? [] : []);
+  const [loading, setLoading] = useState(() => !userId || !repairsCache.has(userId));
+  const [ready, setReady] = useState(() => Boolean(userId && repairsCache.has(userId)));
 
   const requestIdRef = useRef(0);
   const lastFetchTimeRef = useRef(0);
@@ -54,11 +57,12 @@ export function RepairsProvider({ children }: { children: React.ReactNode }) {
     }
 
     const currentRequestId = ++requestIdRef.current;
-    setLoading(true);
+    if (!userId || !repairsCache.has(userId)) setLoading(true);
     try {
       const list = await repairService.getAll();
       if (currentRequestId === requestIdRef.current && mountedRef.current) {
         setRepairs(list);
+        if (userId) repairsCache.set(userId, list);
         setReady(true);
         lastFetchTimeRef.current = Date.now();
       }
@@ -72,7 +76,11 @@ export function RepairsProvider({ children }: { children: React.ReactNode }) {
         setLoading(false);
       }
     }
-  }, []);
+  }, [userId]);
+
+  useEffect(() => {
+    if (userId && ready) repairsCache.set(userId, repairs);
+  }, [userId, repairs, ready]);
 
   // Initial load + user change detection — merged to prevent double-fetch.
   useEffect(() => {
@@ -80,12 +88,17 @@ export function RepairsProvider({ children }: { children: React.ReactNode }) {
     lastUserIdRef.current = userId;
 
     if (userId && userId !== prevUserId) {
-      // User changed or first login — bypass throttle and fetch immediately.
+      // Display this account's cached repairs while refreshing in the background.
       lastFetchTimeRef.current = 0;
+      const cached = repairsCache.get(userId);
+      setRepairs(cached ?? []);
+      setReady(Boolean(cached));
+      setLoading(!cached);
       void refresh(true);
     } else if (!userId && prevUserId) {
       // Signed out — clear the stale list.
       setRepairs([]);
+      setLoading(false);
       setReady(false);
     }
   }, [userId, refresh]);

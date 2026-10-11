@@ -28,8 +28,6 @@ export const AddSellerModal = React.memo(function AddSellerModal({
 }: Props) {
   const [sellerName, setSellerName] = useState('');
   const [phone, setPhone] = useState('');
-  const [address, setAddress] = useState('');
-  const [notes, setNotes] = useState('');
   const [nameError, setNameError] = useState('');
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
@@ -37,8 +35,6 @@ export const AddSellerModal = React.memo(function AddSellerModal({
   const reset = useCallback(() => {
     setSellerName('');
     setPhone('');
-    setAddress('');
-    setNotes('');
     setNameError('');
     setSaving(false);
     savingRef.current = false;
@@ -70,8 +66,6 @@ export const AddSellerModal = React.memo(function AddSellerModal({
       const created = await sellerService.create({
         sellerName: trimmedName,
         phone: phone.trim(),
-        address: address.trim(),
-        notes: notes.trim(),
       });
       reset();
       onSaved(created);
@@ -82,11 +76,12 @@ export const AddSellerModal = React.memo(function AddSellerModal({
       savingRef.current = false;
       setSaving(false);
     }
-  }, [sellerName, phone, address, notes, onSaved, reset]);
+  }, [sellerName, phone, onSaved, reset]);
 
   const localStyles = StyleSheet.create({
     body: {
-      padding: spacing.lg,
+      paddingVertical: spacing.lg,
+      paddingHorizontal: spacing.sm,
       gap: spacing.xs,
     },
     requiredDot: {
@@ -100,7 +95,7 @@ export const AddSellerModal = React.memo(function AddSellerModal({
       onClose={handleClose}
       title="Add New Seller"
       subtitle="Seller details are saved for future jobs."
-      size="medium"
+      size="large"
       showCloseButton={true}
     >
       <View style={localStyles.body}>
@@ -134,30 +129,6 @@ export const AddSellerModal = React.memo(function AddSellerModal({
           accessibilityLabel="Seller phone"
           containerStyle={{ marginBottom: 2 }}
         />
-        <FormTextInput
-          label="Address (optional)"
-          placeholder="e.g. Shop 12, Nehru Market"
-          value={address}
-          onChangeText={setAddress}
-          autoCapitalize="sentences"
-          maxLength={200}
-          returnKeyType="next"
-          accessibilityLabel="Seller address"
-          containerStyle={{ marginBottom: 2 }}
-        />
-        <FormTextInput
-          label="Notes (optional)"
-          placeholder="e.g. Good for Samsung parts"
-          value={notes}
-          onChangeText={setNotes}
-          autoCapitalize="sentences"
-          maxLength={300}
-          returnKeyType="done"
-          onSubmitEditing={handleSave}
-          accessibilityLabel="Seller notes"
-          containerStyle={{ marginBottom: 2 }}
-        />
-
         <AppButton
           variant="primary"
           fullWidth
@@ -169,14 +140,6 @@ export const AddSellerModal = React.memo(function AddSellerModal({
           {saving ? 'Saving…' : 'Save Seller'}
         </AppButton>
 
-        <AppButton
-          variant="outline"
-          fullWidth
-          onPress={handleClose}
-          accessibilityLabel="Cancel add seller"
-        >
-          Cancel
-        </AppButton>
       </View>
     </AppModal>
   );

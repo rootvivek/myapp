@@ -10,7 +10,6 @@ import { useTheme } from '../context/ThemeContext';
 import { checkAppUpdate, CURRENT_VERSION_NAME } from '../components/AutoUpdater';
 import { AppActivityIndicator } from '../components/ui/AppActivityIndicator';
 import { AppCard } from '../components/ui/AppCard';
-import { logger } from '../utils/logger';
 import { launchLibraryForImage } from '../utils/pickImage';
 import {
   clearShopLogo,
@@ -53,7 +52,7 @@ export function SettingsScreen({ navigation }: Props) {
     try {
       const scopeKey = profile?.shopId || user?.id;
       const b = await getShopBranding(scopeKey);
-      setLogoUri(profile?.shopLogoUrl || b.logoUri);
+      setLogoUri(b.logoUri);
     } finally {
       setLoading(false);
     }
@@ -102,16 +101,20 @@ export function SettingsScreen({ navigation }: Props) {
       if (!uri) return;
       const scopeKey = profile?.shopId || user?.id;
       const logoUrl = await uploadShopLogoFromPickerUri(uri);
+      // The profile row is the durable source of truth; don't show success if it
+      // couldn't be updated (for example, if the database migration is missing).
+      await updateProfileLogo(logoUrl);
       await setShopLogoFromPickerUri(logoUrl, scopeKey);
-      try {
-        await updateProfileLogo(logoUrl);
-      } catch (dbNotice) {
-        logger.warn('[SettingsScreen] Non-blocking logo DB save notice:', dbNotice);
-      }
-      const b = await getShopBranding(scopeKey);
-      setLogoUri(b.logoUri);
-    } catch {
-      Alert.alert('Logo', 'Could not save the logo. Try another image.');
+      setLogoUri(logoUrl);
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      const needsMigration = /shop_logo_url|shop-logos|row-level security|policy/i.test(detail);
+      Alert.alert(
+        'Logo',
+        needsMigration
+          ? 'Could not save the logo because the database or Storage setup may be incomplete. Apply supabase/migrations/20261014_shop_logo_storage.sql in the Supabase SQL Editor, then try again.'
+          : `Could not save the logo: ${detail}`,
+      );
     } finally {
       setLogoBusy(false);
     }
@@ -121,13 +124,15 @@ export function SettingsScreen({ navigation }: Props) {
     setLogoBusy(true);
     try {
       const scopeKey = profile?.shopId || user?.id;
+      await updateProfileLogo(null);
       await clearShopLogo(scopeKey);
-      try {
-        await updateProfileLogo(null);
-      } catch (dbNotice) {
-        logger.warn('[SettingsScreen] Non-blocking logo DB clear notice:', dbNotice);
-      }
       setLogoUri(null);
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      Alert.alert(
+        'Logo',
+        `Could not remove the logo: ${detail}. If the database setup is incomplete, apply supabase/migrations/20261014_shop_logo_storage.sql in the Supabase SQL Editor.`,
+      );
     } finally {
       setLogoBusy(false);
     }

@@ -44,15 +44,15 @@ services:
 
       # ── Auto-update manifest: update these on every release ──
       - key: APP_LATEST_VERSION_NAME
-        value: 1.0.6
+        value: 1.2.1
       - key: APP_LATEST_VERSION_CODE
-        value: 7
+        value: 13
       - key: APP_DOWNLOAD_URL_ANDROID
-        value: https://github.com/rootvivek/myapp/releases/download/v1.0.6/app-release.apk
+        value: https://github.com/rootvivek/myapp/releases/download/v1.2.1/app-v1.2.1-13.apk
       - key: APP_DOWNLOAD_URL_IOS
         value: https://apps.apple.com/app/idYOUR_APP_ID
       - key: APP_RELEASE_NOTES
-        value: Auto-update feature added\nFixed customer screen UI\nPerformance improvements
+        value: Khata Book now requires an account.\nLogin screen keyboard and layout fixes.
       - key: APP_MANDATORY_UPDATE
         value: false
       - key: APP_MIN_VERSION_CODE

@@ -11,7 +11,6 @@ import type { CardStyles } from './styles';
 type Props = {
   repair: Repair;
   onPress: () => void;
-  onPaymentPress?: () => void;
   styles: CardStyles;
   colors: AppColors;
 };
@@ -19,7 +18,6 @@ type Props = {
 export const RepairInfo = React.memo(function RepairInfo({
   repair,
   onPress,
-  onPaymentPress,
   styles,
   colors,
 }: Props) {

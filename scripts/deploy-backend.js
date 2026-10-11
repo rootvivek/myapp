@@ -98,19 +98,19 @@ function buildEnvVars() {
     { key: 'MSG91_AUTHKEY', value: required('MSG91_AUTHKEY') },
     { key: 'MSG91_SENDER', value: env('MSG91_SENDER', 'MCAFONE') },
     { key: 'ALLOWED_ORIGINS', value: env('ALLOWED_ORIGINS', 'http://localhost:8081') },
-    { key: 'APP_LATEST_VERSION_NAME', value: env('APP_LATEST_VERSION_NAME', '1.0.6') },
-    { key: 'APP_LATEST_VERSION_CODE', value: env('APP_LATEST_VERSION_CODE', '7') },
+    { key: 'APP_LATEST_VERSION_NAME', value: env('APP_LATEST_VERSION_NAME', '1.2.1') },
+    { key: 'APP_LATEST_VERSION_CODE', value: env('APP_LATEST_VERSION_CODE', '13') },
     {
       key: 'APP_DOWNLOAD_URL_ANDROID',
       value: env(
         'APP_DOWNLOAD_URL_ANDROID',
-        'https://github.com/rootvivek/myapp/releases/download/v1.0.6/app-release.apk',
+        'https://github.com/rootvivek/myapp/releases/download/v1.2.1/app-v1.2.1-13.apk',
       ),
     },
     { key: 'APP_DOWNLOAD_URL_IOS', value: env('APP_DOWNLOAD_URL_IOS', 'https://apps.apple.com/app/idYOUR_APP_ID') },
     {
       key: 'APP_RELEASE_NOTES',
-      value: env('APP_RELEASE_NOTES', 'Auto-update feature added\\nFixed customer screen UI\\nPerformance improvements'),
+      value: env('APP_RELEASE_NOTES', 'Khata Book now requires an account.\nLogin screen keyboard and layout fixes.'),
     },
     { key: 'APP_MANDATORY_UPDATE', value: env('APP_MANDATORY_UPDATE', 'false') },
     { key: 'APP_MIN_VERSION_CODE', value: env('APP_MIN_VERSION_CODE', '4') },

@@ -6,6 +6,7 @@ import { ArrowLeft, UserPlus } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { AppActivityIndicator } from '../components/ui/AppActivityIndicator';
+import { EmptyState } from '../components/EmptyState';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { labourService } from '../services/labourService';
@@ -262,7 +263,10 @@ export function ManageLabourScreen({ navigation }: Props) {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
           ListEmptyComponent={
-            <Text style={styles.empty}>No team members yet. Add your first team member!</Text>
+            <EmptyState
+              title="No team members yet."
+              description="Add your first team member!"
+            />
           }
           renderItem={({ item }) => (
             <MemberCard

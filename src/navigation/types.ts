@@ -2,6 +2,7 @@ import type { DirectoryCustomer } from '../types/customer';
 
 export type RootStackParamList = {
   Home: undefined;
+  Khata: undefined;
   AddRepair:
     | { repairId?: number; scannedImei?: string; prefillCustomer?: DirectoryCustomer }
     | undefined;

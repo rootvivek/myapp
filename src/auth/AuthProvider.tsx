@@ -174,7 +174,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             await loadProfile(result.session.user.id);
           }
         }
-        return { needsPhoneConfirm: result.needsPhoneConfirm };
+        return { needsPhoneConfirm: result.needsPhoneConfirm, session: result.session };
       } finally {
         validatingLoginRef.current = false;
       }

@@ -37,11 +37,5 @@ export function createStyles(colors: AppColors) {
       justifyContent: 'center',
       alignItems: 'center',
     },
-    empty: {
-      color: colors.textMuted,
-      textAlign: 'center',
-      marginTop: spacing.xl,
-      fontSize: 15,
-    },
   });
 }

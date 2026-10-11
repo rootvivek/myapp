@@ -25,6 +25,7 @@ type Props = {
     status: RepairStatus,
     paymentUpdate?: PaymentUpdate,
   ) => Promise<void> | void;
+  onStatusUpdated: (status: RepairStatus) => void;
   repairId: number;
   deviceModel: string;
   customerName: string;
@@ -36,6 +37,7 @@ export const PaymentModal = React.memo(function PaymentModal({
   visible,
   onClose,
   onStatusChange,
+  onStatusUpdated,
   repairId,
   deviceModel,
   customerName,
@@ -66,6 +68,7 @@ export const PaymentModal = React.memo(function PaymentModal({
         setStep('paid_status');
         setLoadingTarget(null);
         onClose();
+        onStatusUpdated('delivered');
       } catch (err: unknown) {
         showError('Status Update Failed', err);
       } finally {
@@ -73,7 +76,7 @@ export const PaymentModal = React.memo(function PaymentModal({
         setLoadingTarget(null);
       }
     },
-    [onStatusChange, repairId, onClose],
+    [onStatusChange, onStatusUpdated, repairId, onClose],
   );
 
   return (

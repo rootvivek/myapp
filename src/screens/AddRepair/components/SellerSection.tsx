@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { View } from 'react-native';
 import { Plus } from 'lucide-react-native';
 import { sellerService } from '../../../services/sellerService';
 import { AddSellerModal } from './AddSellerModal';
@@ -93,18 +94,30 @@ export const SellerSection = React.memo(function SellerSection({
 
   return (
     <AppCard>
-      <AppSelect
-        label="Seller"
-        placeholder="Select seller…"
-        value={selectedSellerId ? String(selectedSellerId) : ''}
-        onChange={handleSelect}
-        options={options}
-        error={loadError || undefined}
-        disabled={loading}
-        searchable={true}
-        accessibilityLabel={selectedSeller ? `Selected seller: ${selectedSeller.sellerName}` : 'Select seller'}
-        containerStyle={{ marginBottom: 8 }}
-      />
+      <View style={{ flexDirection: 'row', alignItems: 'flex-end' }}>
+        <AppSelect
+          label="Seller"
+          placeholder="Select seller…"
+          value={selectedSellerId ? String(selectedSellerId) : ''}
+          onChange={handleSelect}
+          options={options}
+          error={loadError || undefined}
+          disabled={loading}
+          searchable={true}
+          accessibilityLabel={selectedSeller ? `Selected seller: ${selectedSeller.sellerName}` : 'Select seller'}
+          containerStyle={{ flex: 1, marginBottom: 8 }}
+        />
+
+        <AppButton
+          variant="outline"
+          leftIcon={<Plus size={13} color={colors.accent} strokeWidth={2.2} />}
+          onPress={() => setAddModalVisible(true)}
+          accessibilityLabel="Add new seller"
+          style={{ marginLeft: 8, marginBottom: 8, paddingHorizontal: 6, flexShrink: 1 }}
+        >
+          Add New Seller
+        </AppButton>
+      </View>
 
       {selectedSeller && (
         <AppButton
@@ -117,17 +130,6 @@ export const SellerSection = React.memo(function SellerSection({
           Clear seller
         </AppButton>
       )}
-
-      {/* Add New Seller row */}
-      <AppButton
-        variant="outline"
-        leftIcon={<Plus size={13} color={colors.accent} strokeWidth={2.2} />}
-        onPress={() => setAddModalVisible(true)}
-        accessibilityLabel="Add new seller"
-        style={{ marginTop: 8 }}
-      >
-        Add New Seller
-      </AppButton>
 
       {/* Add Seller Modal */}
       <AddSellerModal

@@ -52,9 +52,8 @@ export function BottomNavBar() {
     const Icon = tab.icon;
 
     return (
-      <View style={styles.tabBtn}>
+      <View key={tab.key} style={styles.tabBtn}>
         <AppIconButton
-          key={tab.key}
           variant={isActive ? 'primary' : 'ghost'}
           size={32}
           icon={<Icon size={20} color={isActive ? '#FFFFFF' : colors.textMuted} strokeWidth={2.2} />}

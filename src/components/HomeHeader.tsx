@@ -155,7 +155,7 @@ export function HomeHeader({ navigation, statusFilter, onStatusFilterChange, sea
                   fontSize: 11,
                 }}
               >
-                <Text style={{ fontSize: 11, marginRight: 6 }}>{icon}</Text>
+                <Text style={{ fontSize: 11 }}>{icon}{'  '}</Text>
                 {label}
               </AppChip>
             );

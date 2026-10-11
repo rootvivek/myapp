@@ -17,6 +17,7 @@ import { Appbar } from 'react-native-paper';
 import { Phone, CheckCircle, ArrowUpRight, Square, Pencil, CheckSquare, MessageSquare, ArrowLeft } from 'lucide-react-native';
 
 import { AppActivityIndicator } from '../components/ui/AppActivityIndicator';
+import { EmptyState } from '../components/EmptyState';
 import { AppButton } from '../components/ui/AppButton';
 import { AppChip } from '../components/ui/AppChip';
 import { AppInput } from '../components/ui/AppInput';
@@ -311,7 +312,7 @@ export function FinanceScreen({ navigation }: Props) {
     [editingRepair, editCost, editAdvance, editPaid, updatePaymentStatus]
   );
 
-  const handleStartDateChange = useCallback((event: any, date?: Date) => {
+  const handleStartDateChange = useCallback((_event: any, date?: Date) => {
     setShowStartDatePicker(Platform.OS === 'ios');
     if (date) {
       if (date > customEndDate) {
@@ -322,7 +323,7 @@ export function FinanceScreen({ navigation }: Props) {
     }
   }, [customEndDate]);
 
-  const handleEndDateChange = useCallback((event: any, date?: Date) => {
+  const handleEndDateChange = useCallback((_event: any, date?: Date) => {
     setShowEndDatePicker(Platform.OS === 'ios');
     if (date) {
       if (date < customStartDate) {
@@ -654,9 +655,10 @@ export function FinanceScreen({ navigation }: Props) {
           updateCellsBatchingPeriod={50}
           removeClippedSubviews={Platform.OS === 'android'}
           ListEmptyComponent={
-            <Text style={[styles.empty, { color: colors.textMuted }]}>
-              {subTab === 'dues' ? 'No unpaid jobs! All paid up.' : 'No paid jobs yet.'}
-            </Text>
+            <EmptyState
+              title={subTab === 'dues' ? 'No unpaid jobs!' : 'No paid jobs yet'}
+              description={subTab === 'dues' ? 'All paid up.' : undefined}
+            />
           }
           renderItem={renderItem}
         />
@@ -899,12 +901,6 @@ function createStyles(colors: AppColors): ReturnType<typeof StyleSheet.create> {
       justifyContent: 'center',
       alignItems: 'center',
       paddingVertical: 40,
-    },
-    empty: {
-      textAlign: 'center',
-      marginTop: 30,
-      fontSize: 14,
-      fontWeight: '500',
     },
     modalActions: {
       flexDirection: 'row',

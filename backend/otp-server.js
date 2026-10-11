@@ -57,6 +57,7 @@ const supabaseAdmin = hasSupabaseConfig
 
 const otpStore = new Map();
 const otpAttempts = new Map(); // Track failed OTP attempts per phone
+const phoneVerificationTickets = new Map();
 
 // ── Rate limiting ──────────────────────────────────────────────────
 const rateLimitStore = new Map();
@@ -97,6 +98,9 @@ setInterval(() => {
   }
   for (const [phone, entry] of otpAttempts) {
     if (entry.lockedUntil && now > entry.lockedUntil) otpAttempts.delete(phone);
+  }
+  for (const [ticket, entry] of phoneVerificationTickets) {
+    if (now > entry.expiresAt) phoneVerificationTickets.delete(ticket);
   }
 }, OTP_SWEEP_INTERVAL_MS);
 
@@ -173,6 +177,59 @@ function sanitizeString(value, maxLength = 200) {
 function isValidPhone(phone) {
   return /^\+91\d{10}$/.test(phone);
 }
+
+function isValidLabourLoginId(value) {
+  return /^[a-z0-9_]{3,20}$/i.test(String(value || '').trim());
+}
+
+function isPhoneLogin(value) {
+  return /^[+\d][\d\s().-]*$/.test(String(value || '').trim());
+}
+
+app.post('/api/labour/sign-in', async (req, res) => {
+  try {
+    if (!supabaseAdmin) return res.status(503).json({ error: 'Sign-in service is not configured.' });
+
+    const rateKey = `labour-sign-in:${req.ip}`;
+    if (!checkRateLimit(rateKey)) {
+      return res.status(429).json({ error: 'Too many sign-in attempts. Please try again later.' });
+    }
+
+    const identifier = sanitizeString(req.body.identifier, 64);
+    const password = String(req.body.password || '');
+    if (!identifier || !password) return res.status(400).json({ error: 'Login ID or phone and password are required.' });
+
+    let query = supabaseAdmin.from('profiles').select('id, phone, username').eq('role', 'labour');
+    if (isPhoneLogin(identifier)) {
+      const phone = normalizePhone(identifier);
+      if (!isValidPhone(phone)) return res.status(401).json({ error: 'Invalid login ID, phone, or password.' });
+      query = query.eq('phone', phone);
+    } else {
+      if (!isValidLabourLoginId(identifier)) return res.status(401).json({ error: 'Invalid login ID, phone, or password.' });
+      query = query.ilike('username', identifier.toLowerCase());
+    }
+
+    const { data: profiles, error: profileError } = await query.limit(2);
+    if (profileError) return sendServerError(res, profileError, 'Could not verify those sign-in details.');
+    if (!profiles || profiles.length !== 1) return res.status(401).json({ error: 'Invalid login ID, phone, or password.' });
+
+    const { data: userData, error: userError } = await supabaseAdmin.auth.admin.getUserById(profiles[0].id);
+    if (userError || !userData?.user?.email) return res.status(401).json({ error: 'Invalid login ID, phone, or password.' });
+
+    const { data: authData, error: authError } = await supabaseAdmin.auth.signInWithPassword({
+      email: userData.user.email,
+      password,
+    });
+    if (authError || !authData.session) return res.status(401).json({ error: 'Invalid login ID, phone, or password.' });
+
+    return res.json({
+      access_token: authData.session.access_token,
+      refresh_token: authData.session.refresh_token,
+    });
+  } catch (error) {
+    return sendServerError(res, error, 'Could not sign in. Please try again.');
+  }
+});
 
 // ── Routes ─────────────────────────────────────────────────────────
 app.post('/api/send-otp', async (req, res) => {
@@ -270,9 +327,50 @@ app.post('/api/verify-otp', (req, res) => {
 
     recordOtpAttempt(phone, true);
     otpStore.delete(phone);
-    return res.json({ ok: true, message: 'OTP verified successfully.' });
+    const verificationTicket = crypto.randomBytes(32).toString('hex');
+    phoneVerificationTickets.set(verificationTicket, { phone, expiresAt: Date.now() + 10 * 60 * 1000 });
+    return res.json({ ok: true, message: 'OTP verified successfully.', verificationTicket });
   } catch (error) {
     return sendServerError(res, error, 'OTP verification failed. Please try again.');
+  }
+});
+
+// Bind MSG91 verification to an authenticated Supabase identity. The ticket is
+// short-lived, one-use, server-generated, and bound to the exact verified phone.
+app.post('/api/claim-verified-phone', async (req, res) => {
+  try {
+    if (!supabaseAdmin) return res.status(503).json({ error: 'Phone identity service is not configured.' });
+    const rateKey = `claim-phone:${req.ip}`;
+    if (!checkRateLimit(rateKey)) return res.status(429).json({ error: 'Too many requests. Please try again later.' });
+
+    const authorization = String(req.headers.authorization || '');
+    const accessToken = authorization.startsWith('Bearer ') ? authorization.slice(7) : '';
+    if (!accessToken) return res.status(401).json({ error: 'Authentication required.' });
+    const { data: authData, error: authError } = await supabaseAdmin.auth.getUser(accessToken);
+    if (authError || !authData.user) return res.status(401).json({ error: 'Authentication required.' });
+
+    const phone = normalizePhone(req.body.phone);
+    const verificationTicket = String(req.body.verificationTicket || '');
+    if (!isValidPhone(phone) || !/^[a-f0-9]{64}$/.test(verificationTicket)) {
+      return res.status(400).json({ error: 'Phone verification is invalid or expired.' });
+    }
+    const ticket = phoneVerificationTickets.get(verificationTicket);
+    if (!ticket || ticket.phone !== phone || Date.now() > ticket.expiresAt) {
+      return res.status(400).json({ error: 'Phone verification is invalid or expired.' });
+    }
+
+    const { error: claimError } = await supabaseAdmin
+      .from('verified_phone_identities')
+      .upsert({ user_id: authData.user.id, phone_e164: phone, verified_at: new Date().toISOString() }, { onConflict: 'user_id' });
+    if (claimError) {
+      if (claimError.code === '23505') return res.status(409).json({ error: 'This phone number is already verified on another account.' });
+      return sendServerError(res, claimError, 'Could not save verified phone identity.');
+    }
+
+    phoneVerificationTickets.delete(verificationTicket);
+    return res.json({ ok: true });
+  } catch (error) {
+    return sendServerError(res, error, 'Could not save verified phone identity.');
   }
 });
 

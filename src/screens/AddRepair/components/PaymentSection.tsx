@@ -48,7 +48,7 @@ export const PaymentSection = React.memo(function PaymentSection({
     <AppCard>
       <Text style={styles.fieldLabel}>Billing & Payment</Text>
 
-      {/* Row 1: Cost & Expense */}
+      {/* Keep all three billing amounts together on one row. */}
       <View style={styles.billingRow}>
         <FormTextInput
           label="Total Cost (₹)"
@@ -69,17 +69,17 @@ export const PaymentSection = React.memo(function PaymentSection({
           containerStyle={styles.inputFlex}
           accessibilityLabel="Expense amount"
         />
-      </View>
 
-      {/* Row 2: Advance Paid */}
-      <FormTextInput
-        label="Advance Paid (₹)"
-        placeholder="0"
-        value={advanceAmount}
-        onChangeText={onChangeAdvanceAmount}
-        keyboardType="decimal-pad"
-        accessibilityLabel="Advance amount"
-      />
+        <FormTextInput
+          label="Advance Paid (₹)"
+          placeholder="0"
+          value={advanceAmount}
+          onChangeText={onChangeAdvanceAmount}
+          keyboardType="decimal-pad"
+          containerStyle={styles.inputFlex}
+          accessibilityLabel="Advance amount"
+        />
+      </View>
 
       {/* Live Balance / Due Pill */}
       <View style={styles.balancePreviewRow}>

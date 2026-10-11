@@ -43,7 +43,7 @@ export function MainTabScreen({ navigation, route }: Props) {
       case 'jobs':
         return <HomeScreen navigation={navigation} route={route} />;
       case 'inventory':
-        return <InventoryScreen navigation={navigation as any} route={route as any} />;
+        return <InventoryScreen />;
       case 'finance':
         return <FinanceScreen navigation={navigation as any} />;
       case 'settings':
@@ -53,7 +53,6 @@ export function MainTabScreen({ navigation, route }: Props) {
         }
         return (
           <View style={styles.authWrap}>
-            {/* Bottom back-to-home button is in AuthScreen — removed top duplicate */}
             <AuthScreen />
           </View>
         );

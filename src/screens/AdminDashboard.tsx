@@ -1,14 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import {
   Alert,
-  Pressable,
   ScrollView,
   Text,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Appbar } from 'react-native-paper';
-import { ArrowLeft, ChevronRight, RefreshCw, Users, Store, Wrench, Package } from 'lucide-react-native';
+import { ArrowLeft, RefreshCw, Users, Store, Wrench, Package } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -38,15 +37,6 @@ type StatCardProps = {
   colors: AppColors;
 };
 
-type QuickActionRowProps = {
-  label: string;
-  subtitle: string;
-  icon: React.ReactNode;
-  onPress: () => void;
-  colors: AppColors;
-  borderless?: boolean;
-};
-
 function StatCard({ icon, label, value, color, colors }: StatCardProps) {
   return (
     <AppCard variant="outlined" containerStyle={{ flex: 1 }}>
@@ -68,42 +58,6 @@ function StatCard({ icon, label, value, color, colors }: StatCardProps) {
       </Text>
       <Text style={{ fontSize: 12, fontWeight: '600', color: colors.textMuted }}>{label}</Text>
     </AppCard>
-  );
-}
-
-function QuickActionRow({ label, subtitle, icon, onPress, colors, borderless }: QuickActionRowProps) {
-  return (
-    <Pressable
-      onPress={onPress}
-      style={{
-        paddingHorizontal: spacing.md,
-        paddingVertical: 14,
-        borderBottomWidth: borderless ? 0 : 1,
-        borderBottomColor: colors.border,
-        flexDirection: 'row',
-        alignItems: 'center',
-      }}
-      android_ripple={{ color: accentAlpha(colors.text, 0.05) }}
-    >
-      <View
-        style={{
-          width: 36,
-          height: 36,
-          borderRadius: radius.md,
-          backgroundColor: colors.surface2,
-          justifyContent: 'center',
-          alignItems: 'center',
-          marginRight: spacing.md,
-        }}
-      >
-        {icon}
-      </View>
-      <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text }}>{label}</Text>
-        <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 1 }}>{subtitle}</Text>
-      </View>
-      <ChevronRight size={16} color={colors.textMuted} />
-    </Pressable>
   );
 }
 
@@ -164,41 +118,6 @@ function DashboardContent({
           colors={colors}
         />
       </View>
-
-      <Text
-        style={{
-          fontSize: 13,
-          fontWeight: '700',
-          color: colors.textMuted,
-          textTransform: 'uppercase',
-          letterSpacing: 0.5,
-          marginBottom: spacing.sm,
-        }}
-      >
-        Quick Actions
-      </Text>
-
-      <AppCard
-        variant="outlined"
-        padding={0}
-        containerStyle={{ marginBottom: spacing.md, overflow: 'hidden' }}
-      >
-        <QuickActionRow
-          label="Manage Shops"
-          subtitle="View all registered shops"
-          icon={<Store size={18} color={colors.accent} />}
-          onPress={() => Alert.alert('Coming soon', 'Shop management screen coming soon.')}
-          colors={colors}
-        />
-        <QuickActionRow
-          label="Manage Users"
-          subtitle="View all users & labour accounts"
-          icon={<Users size={18} color={colors.text} />}
-          onPress={() => Alert.alert('Coming soon', 'User management screen coming soon.')}
-          colors={colors}
-          borderless
-        />
-      </AppCard>
 
       <AppButton
         variant="danger"

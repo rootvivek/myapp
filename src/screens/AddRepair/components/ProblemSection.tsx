@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import type { AppColors } from '../../../theme';
+import React from 'react';
+import { StyleSheet, View } from 'react-native';
 import { FormTextInput } from '../../../components/FormTextInput';
 import { COMMON_PROBLEMS } from '../constants';
 import type { AddRepairStyles } from '../styles';
@@ -13,7 +12,6 @@ type Props = {
   errors?: RepairFormErrors;
   onChangeProblem: (text: string) => void;
   styles: AddRepairStyles;
-  colors: AppColors;
 };
 
 // Exclude 'Folder replace' from general chips since it's a dedicated secondary action
@@ -24,7 +22,6 @@ export const ProblemSection = React.memo(function ProblemSection({
   errors,
   onChangeProblem,
   styles,
-  colors,
 }: Props) {
   const handleAddProblemShortcut = (itemText: string) => {
     const trimmed = problem.trim();

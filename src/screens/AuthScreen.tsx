@@ -1,6 +1,7 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
+  BackHandler,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -9,7 +10,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { LogIn, ShieldAlert, UserPlus, Wrench } from 'lucide-react-native';
 
 import { useAuth } from '../context/AuthContext';
@@ -18,6 +19,7 @@ import { useTab } from '../context/TabContext';
 import type { AppColors } from '../theme';
 import { radius, sizes, spacing } from '../theme';
 import { normalizePhone, sendOtp, verifyOtp } from '../services/msg91Service';
+import { supabase } from '../lib/supabase';
 import { AppButton } from '../components/ui/AppButton';
 import { AppInput, type AppInputRef } from '../components/ui/AppInput';
 
@@ -163,19 +165,6 @@ function createStyles(colors: AppColors): ReturnType<typeof StyleSheet.create> {
       lineHeight: 19,
       textAlign: 'center',
     },
-    homeBtnLayer: {
-      position: 'absolute',
-      left: 0,
-      right: 0,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    backToHomeText: {
-      color: colors.accent,
-      fontSize: 14,
-      fontWeight: '700',
-      textDecorationLine: 'underline',
-    },
   });
 }
 
@@ -184,7 +173,15 @@ export function AuthScreen() {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { setActiveTab } = useTab();
-  const insets = useSafeAreaInsets();
+
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      setActiveTab('home');
+      return true;
+    });
+
+    return () => subscription.remove();
+  }, [setActiveTab]);
 
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [name, setName] = useState('');
@@ -330,6 +327,11 @@ export function AuthScreen() {
           setMode('signin');
           return;
         }
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (sessionData.session) {
+          const { claimVerifiedPhone } = await import('../services/msg91Service');
+          await claimVerifiedPhone(sessionData.session.access_token, normalizedPhone);
+        }
         Alert.alert(
           'Account created',
           'Your account is ready. Sign in with your phone number and password.'
@@ -386,7 +388,7 @@ export function AuthScreen() {
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
@@ -638,23 +640,6 @@ export function AuthScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-
-      {/* ── Back to home link (bottom center) ── */}
-      <View
-        pointerEvents="auto"
-        style={[
-          styles.homeBtnLayer,
-          { bottom: Math.max(insets.bottom, spacing.lg) },
-        ]}
-      >
-        <Pressable
-          onPress={() => setActiveTab('home')}
-          accessibilityRole="button"
-          accessibilityLabel="Back to home"
-        >
-          <Text style={styles.backToHomeText}>Back to home</Text>
-        </Pressable>
-      </View>
     </SafeAreaView>
   );
 }

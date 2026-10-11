@@ -1,7 +1,6 @@
 import { Platform, Alert, NativeModules } from 'react-native';
 import RNFS from 'react-native-fs';
 import FileViewer from 'react-native-file-viewer';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // @ts-ignore react-native-dotenv exposes the app's build-time environment values.
 import {

@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Search, X, ArrowLeft, Phone } from 'lucide-react-native';
 import { AppActivityIndicator } from '../components/ui/AppActivityIndicator';
+import { EmptyState } from '../components/EmptyState';
 import { AppIconButton } from '../components/ui/AppIconButton';
 import { useTheme } from '../context/ThemeContext';
 import { dialPhone } from '../utils/phone';
@@ -56,13 +57,6 @@ function createStyles(colors: AppColors): ReturnType<typeof StyleSheet.create> {
     list: {
       paddingHorizontal: 0,
       paddingBottom: 100,
-    },
-    empty: {
-      color: colors.textMuted,
-      textAlign: 'center',
-      marginTop: spacing.lg,
-      paddingHorizontal: spacing.md,
-      fontSize: 15,
     },
     row: {
       flexDirection: 'row',
@@ -259,8 +253,8 @@ export function CustomerDirectoryScreen({ navigation }: Props) {
           onChangeText={setQuery}
           value={query}
           style={styles.searchbar}
-          icon={({ size }) => <Search size={18} color={colors.accent} />}
-          clearIcon={({ size }) => <X size={18} color={colors.textMuted} />}
+          icon={() => <Search size={18} color={colors.accent} />}
+          clearIcon={() => <X size={18} color={colors.textMuted} />}
           inputStyle={{ color: colors.text, fontSize: 14, minHeight: 0, paddingVertical: 0, alignSelf: 'center' }}
           theme={{ colors: { elevation: { level3: colors.surface } } }}
         />
@@ -281,11 +275,14 @@ export function CustomerDirectoryScreen({ navigation }: Props) {
           removeClippedSubviews={Platform.OS === 'android'}
           keyboardShouldPersistTaps="handled"
           ListEmptyComponent={
-            <Text style={styles.empty}>
-              {customers.length === 0
-                ? 'No customers yet. Save a repair job to add people here.'
-                : 'No matches. Try another search.'}
-            </Text>
+            <EmptyState
+              title={customers.length === 0 ? 'No customers yet.' : 'No matches.'}
+              description={
+                customers.length === 0
+                  ? 'Save a repair job to add people here.'
+                  : 'Try another search.'
+              }
+            />
           }
           renderItem={renderItem}
         />

@@ -83,9 +83,10 @@ export function HomeScreen({ navigation }: Props) {
 
       try {
         await repairService.updateStatus(repairId, status, paymentUpdate);
-      } catch {
+      } catch (error) {
         // Rollback local state on error
         updateRepairInState(repairId, previousState);
+        throw error;
       }
     },
     [repairs, updateRepairInState]

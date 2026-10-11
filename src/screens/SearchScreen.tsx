@@ -168,8 +168,9 @@ export function SearchScreen({ navigation }: Props) {
 
       try {
         await repairService.updateStatus(repairId, status, paymentUpdate);
-      } catch {
+      } catch (error) {
         updateRepairInState(repairId, snapshot);
+        throw error;
       }
     },
     [repairs, updateRepairInState]
@@ -206,8 +207,8 @@ export function SearchScreen({ navigation }: Props) {
           onChangeText={handleQueryChange}
           value={query}
           style={styles.searchbar}
-          icon={({ size }) => <Search size={18} color={colors.accent} />}
-          clearIcon={({ size }) => <X size={18} color={colors.textMuted} />}
+          icon={() => <Search size={18} color={colors.accent} />}
+          clearIcon={() => <X size={18} color={colors.textMuted} />}
           inputStyle={{ color: colors.text, fontSize: 14, minHeight: 0, paddingVertical: 0, alignSelf: 'center' }}
           theme={{ colors: { elevation: { level3: colors.surface } } }}
           autoFocus

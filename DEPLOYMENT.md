@@ -55,7 +55,7 @@ The app **never** points at `localhost` in production. Loopback only works in de
    curl -X POST https://<your-service>.onrender.com/app/update/check \
      -H 'Content-Type: application/json' \
      -d '{"platform":"android","currentVersionCode":6}'
-   # → {"hasUpdate":true,"versionName":"1.0.6","versionCode":7,...}
+   # Response is based on the APP_LATEST_VERSION_* values configured on the service.
    ```
 
 ### Updating the served version later
@@ -128,13 +128,21 @@ The JS bundle and `.env` values are baked in, so rebuild whenever either changes
 
 ## Part E — Publish and roll out the update
 
-1. Bump the version in `android/app/build.gradle`, `app.json`, `.env`
-   (`APP_VERSION_NAME` / `APP_VERSION_CODE`) and `package.json`.
-2. `npm run build:apk`.
-3. Create a GitHub Release tagged `v<version>` and attach `app-release.apk`.
-4. Update the backend `APP_LATEST_VERSION_*` and `APP_DOWNLOAD_URL_ANDROID`
-   to match, then redeploy.
-5. Installed apps pick the update up on their next check and install it in-app.
+1. From the repository root, bump the app version and Android version code with
+   `npm run version:bump -- patch` (or `minor`, `major`, or an explicit `x.y.z`).
+   Use `--dry-run` first if desired. Review the diff: the script updates
+   `package.json`, `package-lock.json`, and `app.json`, plus
+   `android/app/build.gradle` and `.env` when those local files exist. Android
+   files are ignored/not tracked in this repository, so confirm the local
+   Gradle version name/code are correct before building.
+2. Set the release's `APP_LATEST_VERSION_NAME`, strictly increasing
+   `APP_LATEST_VERSION_CODE`, and `APP_DOWNLOAD_URL_ANDROID` in Render (or
+   `render.yaml`), then deploy/redeploy the backend.
+3. Build with `npm run build:apk`.
+4. Create a GitHub Release tagged `v<version>` and attach the generated APK at
+   the URL configured in `APP_DOWNLOAD_URL_ANDROID`.
+5. Verify `/health` and `POST /app/update/check` against the deployed service;
+   installed apps pick up the update on their next check.
 
 ---
 
