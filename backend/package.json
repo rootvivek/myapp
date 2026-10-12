@@ -8,6 +8,7 @@
   },
   "scripts": {
     "start": "node otp-server.js",
+    "test": "node --test",
     "migrate:phone": "node migrate-users-to-phone.js",
     "migrate:phone:apply": "node migrate-users-to-phone.js --apply"
   },

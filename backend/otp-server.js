@@ -4,6 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
+const { createLabourUser } = require('./labour-auth');
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -228,6 +229,46 @@ app.post('/api/labour/sign-in', async (req, res) => {
     });
   } catch (error) {
     return sendServerError(res, error, 'Could not sign in. Please try again.');
+  }
+});
+
+// Labour identities must be provisioned by the trusted server. Public Auth
+// signup metadata is user-controlled and must never grant a role or shop.
+app.post('/api/labour/create', async (req, res) => {
+  try {
+    if (!supabaseAdmin) return res.status(503).json({ error: 'Team management is not configured.' });
+
+    const rateKey = `labour-create:${req.ip}`;
+    if (!checkRateLimit(rateKey)) {
+      return res.status(429).json({ error: 'Too many requests. Please try again later.' });
+    }
+
+    const authorization = String(req.headers.authorization || '');
+    const accessToken = authorization.startsWith('Bearer ') ? authorization.slice(7) : '';
+    if (!accessToken) return res.status(401).json({ error: 'Authentication required.' });
+
+    const { data: authData, error: authError } = await supabaseAdmin.auth.getUser(accessToken);
+    if (authError || !authData.user) return res.status(401).json({ error: 'Authentication required.' });
+    if (authData.user.app_metadata?.role === 'labour') {
+      return res.status(403).json({ error: 'Only a shop owner can create team members.' });
+    }
+
+    const result = await createLabourUser({
+      supabaseAdmin,
+      ownerId: authData.user.id,
+      username: req.body?.username,
+      password: req.body?.password,
+      phone: req.body?.phone,
+    });
+
+    res.setHeader('Cache-Control', 'no-store');
+    return res.status(201).json({ ok: true, userId: result.userId });
+  } catch (error) {
+    if (error?.code === '23505' || /already registered|already exists/i.test(error?.message || '')) {
+      return res.status(409).json({ error: 'That Login ID is already taken. Please choose another.' });
+    }
+    if (error?.statusCode) return res.status(error.statusCode).json({ error: error.message });
+    return sendServerError(res, error, 'Could not create team member. Please try again.');
   }
 });
 

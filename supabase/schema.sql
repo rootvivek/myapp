@@ -38,11 +38,13 @@ create table if not exists public.shops (
   created_at timestamptz not null default now()
 );
 
--- Migration: ensure shops_owner_id_fkey points to auth.users (not profiles).
--- Older schemas may have the wrong constraint, which breaks the backfill below.
+-- Ensure the shop owner FK points to auth.users. Some legacy databases have
+-- shops.owner_id values without a matching Auth user. Add this NOT VALID so
+-- existing rows can be audited/repaired without blocking schema setup; new
+-- writes are still checked by PostgreSQL.
 alter table public.shops drop constraint if exists shops_owner_id_fkey;
 alter table public.shops add constraint shops_owner_id_fkey
-  foreign key (owner_id) references auth.users (id) on delete cascade;
+  foreign key (owner_id) references auth.users (id) on delete cascade not valid;
 
 -- Contact number printed on invoices, captured once at signup.
 alter table public.shops add column if not exists phone text not null default '';
@@ -108,12 +110,28 @@ create policy "profiles_select_shop" on public.profiles
 
 drop policy if exists "profiles_insert_own" on public.profiles;
 drop policy if exists "profiles_insert_own_or_owner" on public.profiles;
+drop policy if exists "profiles_insert_owner_staff" on public.profiles;
 create policy "profiles_insert_own_or_owner" on public.profiles
   for insert with check (
     id = (select auth.uid())
-    or (
-      (select public.get_user_role((select auth.uid()))) = 'owner'
-      and shop_id = (select public.get_user_shop_id((select auth.uid())))
+    and (
+      (
+        role = 'owner'
+        and coalesce((select auth.jwt() -> 'app_metadata' ->> 'role'), 'owner') = 'owner'
+        and (
+          shop_id is null
+          or exists (
+            select 1 from public.shops s
+            where s.id = public.profiles.shop_id
+              and s.owner_id = (select auth.uid())
+          )
+        )
+      )
+      or (
+        role = 'labour'
+        and (select auth.jwt() -> 'app_metadata' ->> 'role') = 'labour'
+        and shop_id::text = (select auth.jwt() -> 'app_metadata' ->> 'shop_id')
+      )
     )
   );
 
@@ -215,9 +233,25 @@ declare
   v_shop_name text;
   v_shop_id uuid;
 begin
-  v_role := coalesce(nullif(btrim(new.raw_user_meta_data ->> 'role'), ''), 'owner');
-  if v_role not in ('owner', 'labour') then
-    v_role := 'owner';
+  -- Never use raw_user_meta_data for privileges: public signUp callers control
+  -- it. Staff are provisioned by the trusted backend and have an app_metadata
+  -- role plus a shop owned by that backend-authenticated caller.
+  v_role := 'owner';
+  if new.raw_app_meta_data ->> 'role' = 'labour' then
+    begin
+      v_shop_id := nullif(btrim(new.raw_app_meta_data ->> 'shop_id'), '')::uuid;
+    exception when others then
+      v_shop_id := null;
+    end;
+
+    if v_shop_id is not null and exists (
+      select 1 from public.shops s
+      where s.id = v_shop_id and s.owner_id <> new.id
+    ) then
+      v_role := 'labour';
+    else
+      v_shop_id := null;
+    end if;
   end if;
 
   v_name := coalesce(btrim(new.raw_user_meta_data ->> 'name'), '');
@@ -227,14 +261,7 @@ begin
     'MCA Phone Wala'
   );
 
-  if v_role = 'labour' then
-    -- Staff never own a shop: attach to the owner's shop from the signup metadata.
-    begin
-      v_shop_id := nullif(btrim(new.raw_user_meta_data ->> 'shop_id'), '')::uuid;
-    exception when others then
-      v_shop_id := null;
-    end;
-  else
+  if v_role = 'owner' then
     -- Reuse the owner's existing shop when there is one (retries / re-runs stay idempotent).
     begin
       select s.id into v_shop_id
@@ -556,10 +583,9 @@ begin
     left join public.profiles p on p.id = au.id
     where p.id is null
   loop
-    v_role := coalesce(nullif(btrim(u.raw_user_meta_data ->> 'role'), ''), 'owner');
-    if v_role not in ('owner', 'labour') then
-      v_role := 'owner';
-    end if;
+    -- Legacy signup metadata is not an authorization source. Historical
+    -- labour records already have profiles; orphaned users recover as owners.
+    v_role := 'owner';
 
     v_name := coalesce(btrim(u.raw_user_meta_data ->> 'name'), '');
     v_phone := coalesce(btrim(u.raw_user_meta_data ->> 'phone'), '');
@@ -569,13 +595,6 @@ begin
     );
 
     v_shop_id := null;
-    if v_role = 'labour' then
-      begin
-        v_shop_id := nullif(btrim(u.raw_user_meta_data ->> 'shop_id'), '')::uuid;
-      exception when others then
-        v_shop_id := null;
-      end;
-    end if;
 
     if v_shop_id is null then
       select s.id into v_shop_id

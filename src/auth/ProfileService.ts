@@ -67,7 +67,8 @@ async function ensureOwnerProfile(
       let userMetaName = '';
       let userMetaShopName = '';
       let userMetaPhone = '';
-      let userMetaRole = '';
+      let trustedAppRole = '';
+      let trustedAppShopId = '';
       let authenticatedUserFound = false;
       try {
         const {
@@ -84,7 +85,8 @@ async function ensureOwnerProfile(
           userMetaName = userMetaName || user.user_metadata?.name || '';
           userMetaShopName = userMetaShopName || user.user_metadata?.shop_name || '';
           userMetaPhone = userMetaPhone || String(user.user_metadata?.phone ?? '').trim();
-          userMetaRole = userMetaRole || String(user.user_metadata?.role ?? '').trim();
+          trustedAppRole = String(user.app_metadata?.role ?? '').trim();
+          trustedAppShopId = String(user.app_metadata?.shop_id ?? '').trim();
         }
       } catch (e) {
         logError('ensureOwnerProfile auth user check', e);
@@ -103,7 +105,8 @@ async function ensureOwnerProfile(
             userMetaName = userMetaName || session.user.user_metadata?.name || '';
             userMetaShopName = userMetaShopName || session.user.user_metadata?.shop_name || '';
             userMetaPhone = userMetaPhone || String(session.user.user_metadata?.phone ?? '').trim();
-            userMetaRole = userMetaRole || String(session.user.user_metadata?.role ?? '').trim();
+            trustedAppRole = String(session.user.app_metadata?.role ?? '').trim();
+            trustedAppShopId = String(session.user.app_metadata?.shop_id ?? '').trim();
           }
         } catch (e) {
           logError('ensureOwnerProfile session fallback', e);
@@ -133,16 +136,25 @@ async function ensureOwnerProfile(
       const initialShopName = customShopName?.trim() || userMetaShopName?.trim() || DEFAULT_SHOP_NAME;
       const phone = existing?.phone || userMetaPhone;
 
-      // A labour account must never be turned into a shop owner. The role comes
-      // from the auth metadata (written at signup); if no profile row exists we
-      // recreate it with the correct role and never auto-create a shop for staff.
-      const isLabourAccount = userMetaRole === 'labour';
+      // User metadata is caller-controlled and is never an authority source.
+      // Preserve a labour role only when it came from the existing DB profile;
+      // if that row is missing entirely, recovery defaults to an owner profile.
+      const isLabourAccount = existing?.role === 'labour' || trustedAppRole === 'labour';
+
+      if (
+        existing?.role === 'labour' &&
+        trustedAppRole === 'labour' &&
+        trustedAppShopId &&
+        existing.shopId !== trustedAppShopId
+      ) {
+        throw new Error('Team membership could not be verified. Ask the shop owner to restore your account.');
+      }
 
       // Resolve the shop. A failure here must NOT abort profile creation: the
       // profile row is what makes an account usable at all, so keep whatever
       // shop id we already have (e.g. the one created by the DB trigger) and
       // let the next retry create the shop if it is still missing.
-      let shopId = existing?.shopId || '';
+      let shopId = existing?.shopId || (isLabourAccount ? trustedAppShopId : '');
       let shopName = existing?.shopName || initialShopName;
 
       // First, try to find an existing shop for this user
@@ -174,7 +186,7 @@ async function ensureOwnerProfile(
         if (shopId && shopId !== existing.shopId) {
           await client
             .from('profiles')
-            .update({
+          .update({
               shop_id: shopId,
               role: existing.role || 'owner',
               name: name || existing.name,
@@ -265,7 +277,7 @@ async function ensureOwnerProfile(
         name,
         username: '',
         phone,
-        role: 'owner' as UserRole,
+        role: isLabourAccount ? ('labour' as UserRole) : ('owner' as UserRole),
         shopId: shopId || '',
         shopName: shopName || DEFAULT_SHOP_NAME,
       };
