@@ -1,4 +1,4 @@
-`-- ============================================================
+-- ============================================================
 -- Seller Feature Migration
 -- Run this in the Supabase SQL Editor (Dashboard → SQL Editor).
 -- Safe to run multiple times (uses IF NOT EXISTS / DO blocks).

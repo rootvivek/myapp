@@ -1,8 +1,8 @@
 import { supabase } from '../lib/supabase';
 import { logger } from '../utils/logger';
 
-export const CURRENT_VERSION_CODE = 13;
-export const CURRENT_VERSION_NAME = '1.2.1';
+export const CURRENT_VERSION_CODE = 14;
+export const CURRENT_VERSION_NAME = '1.2.2';
 
 export type UpdateInfo = {
   hasUpdate: boolean;

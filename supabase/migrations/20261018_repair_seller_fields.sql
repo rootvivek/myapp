@@ -132,5 +132,4 @@ set order_code = 'ord' || case
   when id <= 99999 then lpad(id::text, 5, '0')
   else id::text
 end
-`where coalesce(btrim(order_code), '') = '';
-`
+where coalesce(btrim(order_code), '') = '';
