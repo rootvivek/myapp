@@ -9,14 +9,17 @@ CREATE TABLE IF NOT EXISTS public.sellers (
   id           BIGSERIAL PRIMARY KEY,
   seller_name  TEXT        NOT NULL,
   phone        TEXT        NOT NULL DEFAULT '',
-  address      TEXT        NOT NULL DEFAULT '',
-  notes        TEXT        NOT NULL DEFAULT '',
   user_id      UUID        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   shop_id      UUID        REFERENCES public.shops(id) ON DELETE SET NULL,
   created_by   UUID        NOT NULL REFERENCES auth.users(id),
   created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Remove these fields for databases where the earlier seller table already exists.
+ALTER TABLE public.sellers
+  DROP COLUMN IF EXISTS address,
+  DROP COLUMN IF EXISTS notes;
 
 -- 2. Unique constraint: case-insensitive seller name per shop/user
 --    Prevents "ABC Mobile" and "abc mobile" coexisting for the same shop.

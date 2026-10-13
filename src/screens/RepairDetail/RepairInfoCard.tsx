@@ -11,6 +11,7 @@ import {
   QrCode,
   Shield,
   Smartphone,
+  Store,
   TriangleAlert,
 } from 'lucide-react-native';
 import { InfoRow } from '../../components/InfoRow';
@@ -101,6 +102,17 @@ export const RepairInfoCard = React.memo(function RepairInfoCard({
           styles={styles}
           iconColor={colors.accent}
         />
+
+        {repair.sellerId !== null && (
+          <InfoRow
+            icon={Store}
+            iconBg={accentAlpha(colors.accent, 0.14)}
+            label="Item buyer"
+            value={repair.sellerName || 'Unavailable'}
+            styles={styles}
+            iconColor={colors.accent}
+          />
+        )}
 
         <InfoRow
           icon={TriangleAlert}

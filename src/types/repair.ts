@@ -44,6 +44,8 @@ export interface Repair {
   paymentType: 'cash' | 'online';
   /** FK → sellers.id (optional). Null if not recorded. */
   sellerId: number | null;
+  /** Display name of the linked seller, populated when loading a repair detail. */
+  sellerName?: string;
   createdBy: string;
   createdByName: string;
   createdByRole: 'owner' | 'labour' | null;

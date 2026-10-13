@@ -130,9 +130,13 @@ export function RepairDetailScreen({ navigation, route }: Props) {
   }
 
   function handleBack(): void {
-    // Switch the tab behind the stack, then pop this screen so the
-    // dashboard is actually visible (previously it only set the tab).
-    setActiveTab('home');
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+
+    // The dashboard is the fallback only when this screen has no prior route.
+    setActiveTab('jobs');
     navigation.navigate('Home');
   }
 

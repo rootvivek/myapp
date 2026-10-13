@@ -33,18 +33,16 @@ export function AppNavigator() {
 
       const state = navigationRef.getRootState();
       if (!state) return false;
-      const currentRoute = state.routes[state.index];
 
-      // Screens such as Khata and Customer Directory are pushed above Home.
-      // Back from any of them should return directly to the Home dashboard.
-      if (state.index > 0 || currentRoute?.name !== 'Home') {
-        navigationRef.resetRoot({ index: 0, routes: [{ name: 'Home' }] });
-        setActiveTab('home');
+      // Preserve the navigation history: return to the screen that opened the
+      // current one instead of resetting the entire stack to Home.
+      if (navigationRef.canGoBack()) {
+        navigationRef.goBack();
         return true;
       }
 
-      // Main-tab screens (including login) share the Home stack route, so
-      // switch tabs first. A subsequent back on Home is allowed to exit.
+      // Main-tab screens share the Home stack route, so at the root go back to
+      // the dashboard tab. A subsequent back on the dashboard is allowed to exit.
       if (activeTab !== 'home') {
         setActiveTab('home');
         return true;

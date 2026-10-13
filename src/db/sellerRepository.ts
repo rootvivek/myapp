@@ -20,8 +20,6 @@ function rowToSeller(row: Record<string, unknown>): Seller {
     id: Number(row.id),
     sellerName: String(row.seller_name ?? '').trim(),
     phone: String(row.phone ?? ''),
-    address: String(row.address ?? ''),
-    notes: String(row.notes ?? ''),
     createdBy: String(row.created_by ?? ''),
     createdAt: String(row.created_at ?? ''),
     updatedAt: String(row.updated_at ?? ''),
@@ -71,8 +69,6 @@ export async function insertSeller(input: SellerInput): Promise<Seller> {
     const payload: Record<string, unknown> = {
       seller_name: normalizedName,
       phone: input.phone?.trim() ?? '',
-      address: input.address?.trim() ?? '',
-      notes: input.notes?.trim() ?? '',
       user_id: ctx.userId,
       shop_id: ctx.shopId || null,
       created_by: ctx.userId,

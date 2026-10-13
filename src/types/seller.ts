@@ -3,8 +3,6 @@ export interface Seller {
   id: number;
   sellerName: string;
   phone: string;
-  address: string;
-  notes: string;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
@@ -14,6 +12,4 @@ export interface Seller {
 export type SellerInput = {
   sellerName: string;
   phone?: string;
-  address?: string;
-  notes?: string;
 };

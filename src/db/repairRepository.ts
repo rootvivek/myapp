@@ -216,6 +216,27 @@ export async function getRepairById(id: number): Promise<Repair | null> {
         repair.createdByName = profile.name || (profile.role === 'owner' ? 'Owner' : 'Staff');
       }
     }
+
+    if (repair.sellerId !== null) {
+      try {
+        let sellerQuery = supabase
+          .from('sellers')
+          .select('seller_name')
+          .eq('id', repair.sellerId);
+        sellerQuery = applyShopOrUserFilter(sellerQuery, ctx);
+
+        const { data: seller, error: sellerError } = await sellerQuery.maybeSingle();
+        if (sellerError) {
+          console.warn('[getRepairById] Could not load seller name:', sellerError);
+        } else if (seller?.seller_name) {
+          repair.sellerName = String(seller.seller_name).trim();
+        }
+      } catch (sellerError) {
+        // Keep the repair detail usable if seller lookup fails independently.
+        console.warn('[getRepairById] Could not load seller name:', sellerError);
+      }
+    }
+
     return repair;
   } catch (err) {
     handleRepositoryError(err, 'Failed to get repair by ID');
