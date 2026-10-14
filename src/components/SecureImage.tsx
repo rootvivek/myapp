@@ -12,6 +12,15 @@ type SignedUrlCacheEntry = { url: string; expiresAt: number };
 // again (a network round trip per image per mount).
 const signedUrlCache = new Map<string, SignedUrlCacheEntry>();
 
+/** Invalidate cached signed URL(s) when images are updated or re-uploaded. */
+export function invalidateSignedUrlCache(imageUrl?: string) {
+  if (imageUrl) {
+    signedUrlCache.delete(imageUrl);
+  } else {
+    signedUrlCache.clear();
+  }
+}
+
 /** Extract the storage object path from a Supabase storage URL. */
 function extractRepairImagePath(imageUrl: string): string {
   if (imageUrl.includes('/repair-images/')) {
@@ -119,5 +128,12 @@ export function SecureImage({ source, ...props }: ImageProps) {
     return <Image {...props} source={require('../../assets/app-logo.jpg')} />;
   }
 
-  return <Image {...props} source={resolvedSource!} />;
+  return (
+    <Image
+      {...props}
+      source={resolvedSource!}
+      fadeDuration={0}
+      progressiveRenderingEnabled={true}
+    />
+  );
 }

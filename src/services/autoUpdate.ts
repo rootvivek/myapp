@@ -1,6 +1,7 @@
 import { Platform, Alert, NativeModules } from 'react-native';
 import RNFS from 'react-native-fs';
 import FileViewer from 'react-native-file-viewer';
+import { supabase } from '../lib/supabase';
 
 // @ts-ignore react-native-dotenv exposes the app's build-time environment values.
 import {
@@ -96,7 +97,7 @@ export interface UpdateConfig {
 const DEFAULT_CONFIG: UpdateConfig = {
   apiUrl: UPDATE_API_URL || 'https://api.yourdomain.com',
   checkInterval: parseInt(UPDATE_CHECK_INTERVAL || '14400000', 10),
-  enableApkUpdate: ENABLE_APK_UPDATE !== 'false' && Boolean((UPDATE_API_URL || '').trim()),
+  enableApkUpdate: ENABLE_APK_UPDATE !== 'false',
   autoDownloadApk: AUTO_DOWNLOAD_APK !== 'false',
   showReleaseNotes: SHOW_RELEASE_NOTES !== 'false',
 };
@@ -119,13 +120,11 @@ export function configureAutoUpdate(userConfig: Partial<UpdateConfig>) {
 
 async function getCurrentVersion(): Promise<{ versionName: string; versionCode: number }> {
   try {
-    // Provided at bundle time from .env via react-native-dotenv
-    const versionName = APP_VERSION_NAME || '1.0.0';
-    const versionCode = APP_VERSION_CODE || 1;
+    const versionName = APP_VERSION_NAME || '1.2.2';
+    const versionCode = APP_VERSION_CODE || 14;
     return { versionName, versionCode: parseInt(versionCode.toString(), 10) };
   } catch {
-    // Fallback to package.json
-    return { versionName: '1.0.4', versionCode: 5 };
+    return { versionName: '1.2.2', versionCode: 14 };
   }
 }
 
@@ -161,46 +160,35 @@ function fetchWithTimeout(url: string, options: RequestInit = {}): Promise<Respo
 
 async function fetchLatestVersion(): Promise<UpdateInfo> {
   const { versionName, versionCode } = await getCurrentVersion();
-  const apiBaseUrl = resolveApiBaseUrl(config.apiUrl);
-
-  if (!apiBaseUrl.startsWith('http')) {
-    return { hasUpdate: false, versionName, versionCode, downloadUrl: '' };
-  }
-
   try {
-    const response = await fetchWithTimeout(`${apiBaseUrl}/app/update/check`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        platform: Platform.OS,
-        currentVersionCode: versionCode,
-        currentVersionName: versionName,
-        packageName: 'com.myapp',
-      }),
-    });
+    if (!supabase) {
+      return { hasUpdate: false, versionName, versionCode, downloadUrl: '' };
+    }
+    const { data, error } = await supabase
+      .from('app_versions')
+      .select('version_code, version_name, apk_url, changelog, is_force_update')
+      .order('version_code', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-    if (!response.ok) {
-      throw new Error(`Update check failed: ${response.status}`);
+    if (error || !data) {
+      return { hasUpdate: false, versionName, versionCode, downloadUrl: '' };
     }
 
-    const data = await response.json();
+    const dbVersionCode = data.version_code;
+    const hasUpdate = dbVersionCode > versionCode;
+
     return {
-      hasUpdate: data.hasUpdate === true,
-      versionName: data.versionName || versionName,
-      versionCode: data.versionCode || versionCode,
-      downloadUrl: data.downloadUrl || '',
-      releaseNotes: data.releaseNotes,
-      mandatory: data.mandatory === true,
-      minVersionCode: data.minVersionCode,
+      hasUpdate,
+      versionName: data.version_name || versionName,
+      versionCode: dbVersionCode,
+      downloadUrl: data.apk_url || '',
+      releaseNotes: data.changelog || undefined,
+      mandatory: !!data.is_force_update,
     };
   } catch (error) {
-    // An offline/unreachable update backend is expected during development, so
-    // report it as a warning (not console.error, which surfaces a red LogBox).
     if (__DEV__) {
-      console.warn(
-        `[AutoUpdate] Update check skipped (${apiBaseUrl} unreachable):`,
-        error instanceof Error ? error.message : error,
-      );
+      console.warn('[AutoUpdate] Supabase fetch failed:', error);
     }
     return { hasUpdate: false, versionName, versionCode, downloadUrl: '' };
   }
@@ -355,7 +343,7 @@ export async function checkForUpdates(showAlert = true): Promise<{
   }
 }
 
-async function downloadAndPrepareApk(info: UpdateInfo, showAlert = true) {
+export async function downloadAndPrepareApk(info: UpdateInfo, showAlert = true) {
   try {
     await downloadApk(info.downloadUrl!);
 

@@ -20,14 +20,6 @@ export const WarrantySection = React.memo(function WarrantySection({
   onChangeWarrantyType,
   styles,
 }: Props) {
-  const localStyles = StyleSheet.create({
-    chipsRow: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 6,
-    },
-  });
-
   return (
     <AppCard>
       <Text style={styles.fieldLabel}>Warranty Period</Text>
@@ -56,4 +48,12 @@ export const WarrantySection = React.memo(function WarrantySection({
       </View>
     </AppCard>
   );
+});
+
+const localStyles = StyleSheet.create({
+  chipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
 });

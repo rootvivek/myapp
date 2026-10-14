@@ -30,32 +30,11 @@ export const LockSection = React.memo(function LockSection({
 }: Props) {
   const [isPatternModalVisible, setIsPatternModalVisible] = useState(false);
 
-  const localStyles = StyleSheet.create({
-    typesRow: {
-      flexDirection: 'row',
-      gap: 6,
-      marginBottom: lockType ? 8 : 0,
-    },
-    patternRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
-      marginTop: 2,
-    },
-    previewBox: {
-      padding: 3,
-      backgroundColor: colors.surface2,
-      borderRadius: radius.md,
-      borderWidth: sizes.hairline,
-      borderColor: colors.border,
-    },
-  });
-
   return (
     <AppCard>
       <Text style={styles.fieldLabel}>Device Security Lock</Text>
 
-      <View style={localStyles.typesRow}>
+      <View style={[localStyles.typesRow, { marginBottom: lockType ? 8 : 0 }]}>
         {LOCK_TYPES.map((lt) => {
           const isSelected = lockType === lt.value;
           return (
@@ -97,7 +76,15 @@ export const LockSection = React.memo(function LockSection({
           </AppButton>
 
           {lockValue ? (
-            <View style={localStyles.previewBox}>
+            <View
+              style={[
+                localStyles.previewBox,
+                {
+                  backgroundColor: colors.surface2,
+                  borderColor: colors.border,
+                },
+              ]}
+            >
               <PatternPreview path={lockValue} size={36} />
             </View>
           ) : null}
@@ -127,4 +114,22 @@ export const LockSection = React.memo(function LockSection({
       />
     </AppCard>
   );
+});
+
+const localStyles = StyleSheet.create({
+  typesRow: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  patternRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 2,
+  },
+  previewBox: {
+    padding: 3,
+    borderRadius: radius.md,
+    borderWidth: sizes.hairline,
+  },
 });

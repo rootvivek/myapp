@@ -5,6 +5,29 @@
 // so the deprecated `@testing-library/jest-native/extend-expect` is not needed.
 // `react-native-gesture-handler` is not a dependency of this project either.
 
+// Mock react-native
+jest.mock('react-native', () => ({
+  Platform: {
+    OS: 'ios',
+    select: jest.fn((dict) => dict.ios || dict.default),
+  },
+  PermissionsAndroid: {
+    PERMISSIONS: {
+      RECORD_AUDIO: 'android.permission.RECORD_AUDIO',
+    },
+    RESULTS: {
+      GRANTED: 'granted',
+      DENIED: 'denied',
+      NEVER_ASK_AGAIN: 'never_ask_again',
+    },
+    check: jest.fn().mockResolvedValue(true),
+    request: jest.fn().mockResolvedValue('granted'),
+  },
+  Alert: {
+    alert: jest.fn(),
+  },
+}));
+
 // Mock react-native modules
 jest.mock('react-native-reanimated', () => {
   const Reanimated = require('react-native-reanimated/mock');
@@ -62,6 +85,23 @@ jest.mock('react-native-paper', () => {
     Portal: ({ children }) => children,
   };
 });
+
+jest.mock('@react-native-voice/voice', () => ({
+  default: {
+    onSpeechStart: null,
+    onSpeechRecognized: null,
+    onSpeechEnd: null,
+    onSpeechError: null,
+    onSpeechResults: null,
+    onSpeechPartialResults: null,
+    start: jest.fn().mockResolvedValue(undefined),
+    stop: jest.fn().mockResolvedValue(undefined),
+    cancel: jest.fn().mockResolvedValue(undefined),
+    destroy: jest.fn().mockResolvedValue(undefined),
+    removeAllListeners: jest.fn().mockResolvedValue(undefined),
+    isAvailable: jest.fn().mockResolvedValue(1),
+  },
+}));
 
 // Suppress specific warnings
 const originalError = console.error;

@@ -8,6 +8,7 @@ import { accentAlpha } from '../theme';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { checkAppUpdate, CURRENT_VERSION_NAME } from '../components/AutoUpdater';
+import { downloadAndPrepareApk } from '../services/autoUpdate';
 import { AppActivityIndicator } from '../components/ui/AppActivityIndicator';
 import { AppCard } from '../components/ui/AppCard';
 import { launchLibraryForImage } from '../utils/pickImage';
@@ -20,7 +21,6 @@ import {
 
 import { AccountCard } from './Settings/AccountCard';
 import { AppearanceCard } from './Settings/AppearanceCard';
-import { BrandingAndProfileCard } from './Settings/BrandingAndProfileCard';
 import { ProfileEditCard } from './Settings/ProfileEditCard';
 import { createStyles } from './Settings/styles';
 import { TeamCard } from './Settings/TeamCard';
@@ -79,7 +79,13 @@ export function SettingsScreen({ navigation }: Props) {
                   Alert.alert('Security Warning', 'Download URL must use HTTPS. Update rejected.');
                   return;
                 }
-                void Linking.openURL(info.apkUrl);
+                void downloadAndPrepareApk({
+                  hasUpdate: true,
+                  versionCode: info.versionCode,
+                  versionName: info.versionName,
+                  downloadUrl: info.apkUrl,
+                  mandatory: info.isForceUpdate,
+                }, true);
               },
             },
           ]
@@ -208,21 +214,17 @@ export function SettingsScreen({ navigation }: Props) {
           colors={colors}
         />
 
-        {/* Card 2: Shop Branding */}
-        <BrandingAndProfileCard
-          logoUri={logoUri}
-          logoBusy={logoBusy}
-          isOwner={isOwner}
-          onPickLogo={() => void onPickLogo()}
-          onRemoveLogo={() => void onRemoveLogo()}
-          colors={colors}
-        />
-
+        {/* Card 2: Shop Profile & Logo */}
         <ProfileEditCard
           name={profile?.name || ''}
           shopName={profile?.shopName || ''}
           isOwner={isOwner}
           busy={profileBusy}
+          logoUri={logoUri}
+          logoBusy={logoBusy}
+          onPickLogo={() => void onPickLogo()}
+          onRemoveLogo={() => void onRemoveLogo()}
+          colors={colors}
           onSave={(name, shopName) => void onSaveProfileDetails(name, shopName)}
         />
 

@@ -16,23 +16,6 @@ export const AccessoriesSection = React.memo(function AccessoriesSection({
   onChangeAccessory,
   styles,
 }: Props) {
-  const localStyles = StyleSheet.create({
-    row: {
-      flexDirection: 'row',
-      gap: 12,
-    },
-    group: {
-      flex: 1,
-    },
-    chipRow: {
-      flexDirection: 'row',
-      gap: 6,
-    },
-    choice: {
-      flex: 1,
-    },
-  });
-
   const renderChoice = (
     label: 'Yes' | 'No',
     key: 'accSimTray' | 'accBackCover',
@@ -76,4 +59,21 @@ export const AccessoriesSection = React.memo(function AccessoriesSection({
       </View>
     </AppCard>
   );
+});
+
+const localStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  group: {
+    flex: 1,
+  },
+  chipRow: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  choice: {
+    flex: 1,
+  },
 });

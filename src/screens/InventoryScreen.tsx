@@ -227,8 +227,11 @@ export function InventoryScreen() {
         {isOwner && (
           <AppButton
             variant="primary"
-            leftIcon={<Plus size={18} color="#FFFFFF" />}
+            leftIcon={<Plus size={15} color="#FFFFFF" strokeWidth={2.4} />}
             onPress={openAddModal}
+            style={{ minHeight: sizes.buttonHeightCompact }}
+            contentStyle={{ minHeight: sizes.buttonHeightCompact }}
+            labelStyle={{ fontSize: 13, fontWeight: '600' }}
           >
             Add Item
           </AppButton>

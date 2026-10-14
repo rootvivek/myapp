@@ -86,33 +86,6 @@ export const CustomerSection = React.memo(function CustomerSection({
     onChangePhone('');
   };
 
-  const localStyles = StyleSheet.create({
-    selectedCard: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      backgroundColor: colors.surface2,
-      paddingHorizontal: 12,
-      paddingVertical: 10,
-      borderRadius: radius.md,
-      borderWidth: sizes.hairline,
-      borderColor: colors.border,
-    },
-    selectedInfo: {
-      flex: 1,
-    },
-    selectedName: {
-      color: colors.text,
-      fontSize: 14,
-      fontWeight: '600',
-    },
-    selectedPhone: {
-      color: colors.textMuted,
-      fontSize: 12,
-      marginTop: 2,
-    },
-  });
-
   return (
     <AppCard>
       {/* Mode 1: Search Customer */}
@@ -159,10 +132,22 @@ export const CustomerSection = React.memo(function CustomerSection({
       {!isEdit && selectedExisting && (
         <View>
           <Text style={styles.fieldLabel}>Customer</Text>
-          <View style={localStyles.selectedCard}>
+          <View
+            style={[
+              localStyles.selectedCard,
+              {
+                backgroundColor: colors.surface2,
+                borderColor: colors.border,
+              },
+            ]}
+          >
             <View style={localStyles.selectedInfo}>
-              <Text style={localStyles.selectedName}>{customerName}</Text>
-              <Text style={localStyles.selectedPhone}>{phone}</Text>
+              <Text style={[localStyles.selectedName, { color: colors.text }]}>
+                {customerName}
+              </Text>
+              <Text style={[localStyles.selectedPhone, { color: colors.textMuted }]}>
+                {phone}
+              </Text>
             </View>
             <AppButton
               variant="tertiary"
@@ -214,4 +199,27 @@ export const CustomerSection = React.memo(function CustomerSection({
       )}
     </AppCard>
   );
+});
+
+const localStyles = StyleSheet.create({
+  selectedCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: radius.md,
+    borderWidth: sizes.hairline,
+  },
+  selectedInfo: {
+    flex: 1,
+  },
+  selectedName: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  selectedPhone: {
+    fontSize: 12,
+    marginTop: 2,
+  },
 });

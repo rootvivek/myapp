@@ -1,10 +1,10 @@
-import { useFocusEffect } from '@react-navigation/native';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { ChevronLeft } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, BackHandler, ScrollView, StatusBar, Text, View, type LayoutChangeEvent } from 'react-native';
 import { Appbar } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { ChevronLeft } from 'lucide-react-native';
 
 import { AppActivityIndicator } from '../../components/ui/AppActivityIndicator';
 import { useTheme } from '../../context/ThemeContext';

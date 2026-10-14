@@ -169,8 +169,8 @@ export function useRepairSave() {
         if (shouldAutoSendWhatsApp && savedRepair) {
           try {
             await shareReceiptPdfToWhatsAppContact(savedRepair, ph);
-          } catch (err: any) {
-            const msg = String(err?.message || err).toLowerCase();
+          } catch (err: unknown) {
+            const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
             const isCancel = msg.includes('user did not share') || msg.includes('cancel') || msg.includes('abort');
             if (!isCancel) {
               Alert.alert(

@@ -40,7 +40,7 @@ export function AutoUpdateInitializer() {
     });
 
     startAutoUpdateCheck();
-    void checkForUpdates(false);
+    void checkForUpdates(true);
 
     return () => {
       stopAutoUpdateCheck();

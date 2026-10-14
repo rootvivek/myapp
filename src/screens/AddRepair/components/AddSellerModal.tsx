@@ -78,17 +78,6 @@ export const AddSellerModal = React.memo(function AddSellerModal({
     }
   }, [sellerName, phone, onSaved, reset]);
 
-  const localStyles = StyleSheet.create({
-    body: {
-      paddingVertical: spacing.lg,
-      paddingHorizontal: spacing.sm,
-      gap: spacing.xs,
-    },
-    requiredDot: {
-      color: colors.danger,
-    },
-  });
-
   return (
     <AppModal
       visible={visible}
@@ -102,7 +91,7 @@ export const AddSellerModal = React.memo(function AddSellerModal({
         <FormTextInput
           label={
             <Text>
-              Seller Name <Text style={localStyles.requiredDot}>*</Text>
+              Seller Name <Text style={{ color: colors.danger }}>*</Text>
             </Text>
           }
           placeholder="e.g. ABC Mobile"
@@ -143,4 +132,12 @@ export const AddSellerModal = React.memo(function AddSellerModal({
       </View>
     </AppModal>
   );
+});
+
+const localStyles = StyleSheet.create({
+  body: {
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.sm,
+    gap: spacing.xs,
+  },
 });

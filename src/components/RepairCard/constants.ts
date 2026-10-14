@@ -105,9 +105,9 @@ export function getDialString(raw: string | undefined | null): string | null {
 const APP_LOGO = require('../../../assets/app-logo.jpg');
 
 export function getImageSource(repair: Repair) {
-  const front = repair.imagePhoneFront?.trim();
   const thumb = repair.imageThumbnail?.trim();
-  const uri = front || thumb;
+  const front = repair.imagePhoneFront?.trim();
+  const uri = thumb || front;
   if (uri && uri.length > 0) {
     return { uri };
   }

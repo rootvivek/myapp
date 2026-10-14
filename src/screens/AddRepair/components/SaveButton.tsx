@@ -21,28 +21,17 @@ export const SaveButton = React.memo(function SaveButton({
   const insets = useSafeAreaInsets();
   const bottomPadding = Math.max(insets.bottom, 12);
 
-  const localStyles = StyleSheet.create({
-    container: {
-      position: 'absolute',
-      bottom: 0,
-      left: 0,
-      right: 0,
-      paddingTop: spacing.sm,
-      paddingBottom: bottomPadding,
-      paddingHorizontal: spacing.gutter,
-      backgroundColor: colors.surface,
-      borderTopWidth: sizes.hairline,
-      borderTopColor: colors.border,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: -2 },
-      shadowOpacity: 0.05,
-      shadowRadius: 6,
-      elevation: 3,
-    },
-  });
-
   return (
-    <View style={localStyles.container}>
+    <View
+      style={[
+        styles.container,
+        {
+          paddingBottom: bottomPadding,
+          backgroundColor: colors.surface,
+          borderTopColor: colors.border,
+        },
+      ]}
+    >
       <AppButton
         variant="primary"
         fullWidth
@@ -62,4 +51,21 @@ export const SaveButton = React.memo(function SaveButton({
       </AppButton>
     </View>
   );
+});
+
+const styles = StyleSheet.create({
+  container: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingTop: spacing.sm,
+    paddingHorizontal: spacing.gutter,
+    borderTopWidth: sizes.hairline,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 3,
+  },
 });

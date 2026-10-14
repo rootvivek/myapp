@@ -10,7 +10,7 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Appbar } from 'react-native-paper';
@@ -30,25 +30,9 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 import { accentAlpha, radius, sizes, spacing, type AppColors } from '../theme';
 import { formatCurrency, formatDateDisplay, parseMoney } from '../utils/format';
+import { calculateDue, computeFinanceData, type FinancePeriod } from '../utils/financeStats';
 import { dialPhone } from '../utils/phone';
 import type { Repair } from '../types/repair';
-
-// ------------------------------------------------------------------
-// REUSABLE FINANCE HELPERS
-// ------------------------------------------------------------------
-
-function calculateDue(cost: number, advance: number): number {
-  const due = cost - advance;
-  return due > 0 ? due : 0;
-}
-
-function calculatePaidAmount(isPaid: boolean, cost: number, advance: number): number {
-  return isPaid ? cost : advance;
-}
-
-function calculateNetProfit(totalValue: number, totalExpense: number): number {
-  return totalValue - totalExpense;
-}
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Home'>;
@@ -60,8 +44,9 @@ export function FinanceScreen({ navigation }: Props) {
   const { isOwner } = useAuth();
   const { repairs, loading, refresh } = useRepairs();
 
-  const [subTab, setSubTab] = useState<'dues' | 'paid'>('dues');
-  const [period, setPeriod] = useState<'today' | 'week' | 'month' | 'all' | 'custom'>('all');
+  // Three full tabs: Unpaid jobs · Paid jobs · Profit & Loss (own period filter, shown last).
+  const [subTab, setSubTab] = useState<'dues' | 'paid' | 'profitLoss'>('dues');
+  const [period, setPeriod] = useState<FinancePeriod>('all');
   const [customStartDate, setCustomStartDate] = useState<Date>(new Date());
   const [customEndDate, setCustomEndDate] = useState<Date>(new Date());
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
@@ -152,84 +137,13 @@ export function FinanceScreen({ navigation }: Props) {
   );
 
   // ------------------------------------------------------------------
-  // SINGLE PASS CALCULATION (FILTER + STATS + DUES/PAID LISTS)
+  // STATS (P&L period filter) + ALL-TIME UNPAID/PAID JOB LISTS
   // ------------------------------------------------------------------
 
-  const { stats, duesList, paidList } = useMemo(() => {
-    let totalPaid = 0;
-    let totalDues = 0;
-    let totalValue = 0;
-    let totalExpense = 0;
-    let cashPaid = 0;
-    let onlinePaid = 0;
-
-    const dues: Repair[] = [];
-    const paid: Repair[] = [];
-
-    const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const currentDay = now.getDay();
-    const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - currentDay);
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
-    const isCustomValid = period !== 'custom' || customEndDate >= customStartDate;
-
-    repairs.forEach((r) => {
-      if (!r.dateReceived) return;
-      const rDate = new Date(r.dateReceived + (r.dateReceived.includes('T') ? '' : 'T12:00:00'));
-      if (Number.isNaN(rDate.getTime())) return;
-
-      const rDateStart = new Date(rDate.getFullYear(), rDate.getMonth(), rDate.getDate());
-
-      let matchesPeriod = true;
-      if (period === 'today') {
-        matchesPeriod = rDateStart >= startOfToday;
-      } else if (period === 'week') {
-        matchesPeriod = rDateStart >= startOfWeek;
-      } else if (period === 'month') {
-        matchesPeriod = rDateStart >= startOfMonth;
-      } else if (period === 'custom' && isCustomValid) {
-        const start = new Date(customStartDate.getFullYear(), customStartDate.getMonth(), customStartDate.getDate());
-        const end = new Date(customEndDate.getFullYear(), customEndDate.getMonth(), customEndDate.getDate());
-        matchesPeriod = rDateStart >= start && rDateStart <= end;
-      }
-
-      if (!matchesPeriod) return;
-
-      const cost = Number(r.repairCost || 0);
-      const exp = Number(r.expense || 0);
-      const adv = Number(r.advanceAmount || 0);
-
-      totalValue += cost;
-      totalExpense += exp;
-
-      const paidAmt = calculatePaidAmount(r.isPaid, cost, adv);
-      if (!r.isPaid) {
-        totalDues += calculateDue(cost, adv);
-      }
-      totalPaid += paidAmt;
-
-      if (r.paymentType === 'online') {
-        onlinePaid += paidAmt;
-      } else {
-        cashPaid += paidAmt;
-      }
-
-      if (!r.isPaid && cost > adv) {
-        dues.push(r);
-      } else if (r.isPaid) {
-        paid.push(r);
-      }
-    });
-
-    const netProfit = calculateNetProfit(totalValue, totalExpense);
-
-    return {
-      stats: { totalPaid, totalDues, totalValue, totalExpense, netProfit, cashPaid, onlinePaid },
-      duesList: dues,
-      paidList: paid,
-    };
-  }, [repairs, period, customStartDate, customEndDate]);
+  const { stats, duesList, paidList } = useMemo(
+    () => computeFinanceData(repairs, period, customStartDate, customEndDate),
+    [repairs, period, customStartDate, customEndDate]
+  );
 
   const activeList = subTab === 'dues' ? duesList : paidList;
 
@@ -312,7 +226,7 @@ export function FinanceScreen({ navigation }: Props) {
     [editingRepair, editCost, editAdvance, editPaid, updatePaymentStatus]
   );
 
-  const handleStartDateChange = useCallback((_event: any, date?: Date) => {
+  const handleStartDateChange = useCallback((_event: DateTimePickerEvent, date?: Date) => {
     setShowStartDatePicker(Platform.OS === 'ios');
     if (date) {
       if (date > customEndDate) {
@@ -323,7 +237,7 @@ export function FinanceScreen({ navigation }: Props) {
     }
   }, [customEndDate]);
 
-  const handleEndDateChange = useCallback((_event: any, date?: Date) => {
+  const handleEndDateChange = useCallback((_event: DateTimePickerEvent, date?: Date) => {
     setShowEndDatePicker(Platform.OS === 'ios');
     if (date) {
       if (date < customStartDate) {
@@ -463,6 +377,45 @@ export function FinanceScreen({ navigation }: Props) {
         />
       </Appbar.Header>
 
+      {/* Full-width tabs: Unpaid jobs · Paid jobs · Profit & Loss (last) */}
+      <View style={styles.tabContainer}>
+        {([
+          { key: 'dues', label: `Unpaid (${duesList.length})` },
+          { key: 'paid', label: `Paid (${paidList.length})` },
+          { key: 'profitLoss', label: 'Profit & Loss' },
+        ] as const).map((tab) => {
+          const active = subTab === tab.key;
+          return (
+            <AppChip
+              key={tab.key}
+              variant={active ? 'primary' : 'default'}
+              selected={active}
+              showSelectedCheck={false}
+              onPress={() => setSubTab(tab.key)}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: active }}
+              containerStyle={[
+                styles.tabChip,
+                {
+                  backgroundColor: active ? colors.accent : colors.surface2,
+                  borderColor: active ? colors.accent : colors.border,
+                  borderWidth: sizes.hairline,
+                },
+              ]}
+              labelStyle={{
+                color: active ? '#FFFFFF' : colors.textMuted,
+                fontWeight: active ? '700' : '600',
+              }}
+            >
+              {tab.label}
+            </AppChip>
+          );
+        })}
+      </View>
+
+      {/* Profit & Loss tab: own period filter + stats, fills the full tab area */}
+      {subTab === 'profitLoss' && (
+        <ScrollView contentContainerStyle={styles.pnlScroll} showsVerticalScrollIndicator={false}>
       {/* Time Period Filter Row */}
       <View style={styles.periodContainer}>
         <ScrollView
@@ -569,100 +522,75 @@ export function FinanceScreen({ navigation }: Props) {
         </View>
       </View>
 
-      <View style={styles.statsContainer}>
-        <View style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Text style={[styles.statLabel, { color: colors.textMuted }]}>Total Expense</Text>
-          <Text style={[styles.statValue, { color: colors.danger }]}>
-            {formatCurrency(stats.totalExpense)}
-          </Text>
-          <Text style={[styles.statSubText, { color: colors.textMuted }]}>Out of pocket</Text>
+        <View style={styles.statsContainer}>
+          <View style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.statLabel, { color: colors.textMuted }]}>Total Expense</Text>
+            <Text style={[styles.statValue, { color: colors.danger }]}>
+              {formatCurrency(stats.totalExpense)}
+            </Text>
+            <Text style={[styles.statSubText, { color: colors.textMuted }]}>Out of pocket</Text>
+          </View>
+
+          <View style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={styles.fullStatHeader}>
+              <Text style={[styles.statLabel, { color: colors.textMuted }]}>Grand Total</Text>
+              <ArrowUpRight size={14} color={colors.accent} />
+            </View>
+            <Text style={[styles.statValue, { color: colors.text }]}>
+              {formatCurrency(stats.totalValue)}
+            </Text>
+            <Text style={[styles.statSubText, { color: colors.textMuted }]}>Total billed</Text>
+          </View>
         </View>
 
-        <View style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Text style={[styles.statLabel, { color: colors.textMuted }]}>Net Profit</Text>
-          <Text style={[styles.statValue, { color: colors.success }]}>
-            {formatCurrency(stats.netProfit)}
-          </Text>
-          <Text style={[styles.statSubText, { color: colors.textMuted }]}>Business - Expense</Text>
-        </View>
-      </View>
+        {/* Profit and Loss shown as separate figures */}
+        <View style={styles.statsContainer}>
+          <View style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.statLabel, { color: colors.textMuted }]}>Profit</Text>
+            <Text style={[styles.statValue, { color: colors.success }]}>
+              {formatCurrency(stats.profit)}
+            </Text>
+            <Text style={[styles.statSubText, { color: colors.textMuted }]}>Income above expense</Text>
+          </View>
 
-      <View style={[styles.fullStatCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        <View style={styles.fullStatHeader}>
-          <Text style={[styles.statLabel, { color: colors.textMuted }]}>Grand Total Business</Text>
-          <ArrowUpRight size={16} color={colors.accent} />
+          <View style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.statLabel, { color: colors.textMuted }]}>Loss</Text>
+            <Text style={[styles.statValue, { color: colors.danger }]}>
+              {formatCurrency(stats.loss)}
+            </Text>
+            <Text style={[styles.statSubText, { color: colors.textMuted }]}>Expense above income</Text>
+          </View>
         </View>
-        <Text style={[styles.fullStatValue, { color: colors.text }]}>
-          {formatCurrency(stats.totalValue)}
-        </Text>
-      </View>
 
-      {/* Sub tabs selection */}
-      <View style={styles.tabContainer}>
-        <AppChip
-          variant={subTab === 'dues' ? 'primary' : 'default'}
-          selected={subTab === 'dues'}
-          showSelectedCheck={false}
-          onPress={() => setSubTab('dues')}
-          accessibilityRole="tab"
-          accessibilityState={{ selected: subTab === 'dues' }}
-          containerStyle={{
-            backgroundColor: subTab === 'dues' ? colors.accent : colors.surface2,
-            borderColor: subTab === 'dues' ? colors.accent : colors.border,
-            borderWidth: sizes.hairline,
-          }}
-          labelStyle={{
-            color: subTab === 'dues' ? '#FFFFFF' : colors.textMuted,
-            fontWeight: subTab === 'dues' ? '700' : '600',
-          }}
-        >
-          Unpaid Jobs ({duesList.length})
-        </AppChip>
-        <AppChip
-          variant={subTab === 'paid' ? 'primary' : 'default'}
-          selected={subTab === 'paid'}
-          showSelectedCheck={false}
-          onPress={() => setSubTab('paid')}
-          accessibilityRole="tab"
-          accessibilityState={{ selected: subTab === 'paid' }}
-          containerStyle={{
-            backgroundColor: subTab === 'paid' ? colors.accent : colors.surface2,
-            borderColor: subTab === 'paid' ? colors.accent : colors.border,
-            borderWidth: sizes.hairline,
-          }}
-          labelStyle={{
-            color: subTab === 'paid' ? '#FFFFFF' : colors.textMuted,
-            fontWeight: subTab === 'paid' ? '700' : '600',
-          }}
-        >
-          Fully Paid ({paidList.length})
-        </AppChip>
-      </View>
-
-      {/* List content */}
-      {loading && repairs.length === 0 ? (
-        <View style={styles.centered}>
-          <AppActivityIndicator size="large" color={colors.accent} />
-        </View>
-      ) : (
-        <FlatList
-          data={activeList}
-          keyExtractor={keyExtractor}
-          contentContainerStyle={styles.list}
-          initialNumToRender={10}
-          maxToRenderPerBatch={10}
-          windowSize={5}
-          updateCellsBatchingPeriod={50}
-          removeClippedSubviews={Platform.OS === 'android'}
-          ListEmptyComponent={
-            <EmptyState
-              title={subTab === 'dues' ? 'No unpaid jobs!' : 'No paid jobs yet'}
-              description={subTab === 'dues' ? 'All paid up.' : undefined}
-            />
-          }
-          renderItem={renderItem}
-        />
+        </ScrollView>
       )}
+
+      {/* Unpaid / Paid jobs — each list fills the full tab area */}
+      {subTab !== 'profitLoss' ? (
+        loading && repairs.length === 0 ? (
+          <View style={styles.centered}>
+            <AppActivityIndicator size="large" color={colors.accent} />
+          </View>
+        ) : (
+          <FlatList
+            data={activeList}
+            keyExtractor={keyExtractor}
+            contentContainerStyle={styles.list}
+            initialNumToRender={10}
+            maxToRenderPerBatch={10}
+            windowSize={5}
+            updateCellsBatchingPeriod={50}
+            removeClippedSubviews={Platform.OS === 'android'}
+            ListEmptyComponent={
+              <EmptyState
+                title={subTab === 'dues' ? 'No unpaid jobs!' : 'No paid jobs yet'}
+                description={subTab === 'dues' ? 'All paid up.' : undefined}
+              />
+            }
+            renderItem={renderItem}
+          />
+        )
+      ) : null}
 
       {/* Edit Payment Modal */}
       {editingRepair && (
@@ -816,6 +744,14 @@ function createStyles(colors: AppColors): ReturnType<typeof StyleSheet.create> {
       marginHorizontal: spacing.gutter,
       marginBottom: 12,
       gap: spacing.sm,
+    },
+    /** Each of the three tabs takes an equal third of the row width. */
+    tabChip: {
+      flex: 1,
+    },
+    /** Content padding for the Profit & Loss tab scroll view. */
+    pnlScroll: {
+      paddingBottom: 120,
     },
     list: {
       paddingHorizontal: spacing.gutter,

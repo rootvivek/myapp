@@ -154,8 +154,9 @@ export async function shareReceiptPdfToWhatsAppContact(repair: Repair, phone: st
       message: `Invoice for repair ${repair.orderCode}`,
       title: `Invoice ${repair.orderCode}`,
     } as any);
-  } catch (err: any) {
-    const msg = String(err?.message || err).toLowerCase();
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    const msg = message.toLowerCase();
     const isCancel = msg.includes('user did not share') || msg.includes('cancel') || msg.includes('abort');
     if (isCancel) {
       throw err;

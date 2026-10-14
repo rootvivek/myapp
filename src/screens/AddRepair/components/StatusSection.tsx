@@ -19,13 +19,6 @@ export const StatusSection = React.memo(function StatusSection({
 }: Props) {
   const visibleStatuses = REPAIR_STATUSES;
 
-  const localStyles = StyleSheet.create({
-    chipsRow: {
-      flexDirection: 'row',
-      gap: 6,
-    },
-  });
-
   return (
     <AppCard>
       <Text style={styles.fieldLabel}>Job Status</Text>
@@ -53,4 +46,11 @@ export const StatusSection = React.memo(function StatusSection({
       </ScrollView>
     </AppCard>
   );
+});
+
+const localStyles = StyleSheet.create({
+  chipsRow: {
+    flexDirection: 'row',
+    gap: 6,
+  },
 });

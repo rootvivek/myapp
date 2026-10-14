@@ -32,14 +32,6 @@ export const ProblemSection = React.memo(function ProblemSection({
     }
   };
 
-  const localStyles = StyleSheet.create({
-    chipsWrap: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 6,
-    },
-  });
-
   return (
     <AppCard>
       <FormTextInput
@@ -75,4 +67,12 @@ export const ProblemSection = React.memo(function ProblemSection({
       </View>
     </AppCard>
   );
+});
+
+const localStyles = StyleSheet.create({
+  chipsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
 });
