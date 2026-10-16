@@ -34,7 +34,6 @@ import { dialPhone } from '../utils/phone';
 import { ActionButtons } from './RepairDetail/ActionButtons';
 import { PaymentCard } from './RepairDetail/PaymentCard';
 import { RepairInfoCard } from './RepairDetail/RepairInfoCard';
-import { CustomerHistoryModal } from '../components/CustomerHistoryModal';
 import { createStyles } from './RepairDetail/styles';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'RepairDetail'>;
@@ -51,7 +50,6 @@ export function RepairDetailScreen({ navigation, route }: Props) {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [revealLock, setRevealLock] = useState(false);
-  const [historyVisible, setHistoryVisible] = useState(false);
 
   const mountedRef = useRef(true);
 
@@ -272,22 +270,15 @@ export function RepairDetailScreen({ navigation, route }: Props) {
           revealLock={revealLock}
           setRevealLock={setRevealLock}
           onCall={handleCall}
-          onViewHistory={() => setHistoryVisible(true)}
+          onViewHistory={() => navigation.navigate('CustomerHistory', {
+            customer: {
+              customerName: repair.customerName,
+              phone: repair.phone,
+            },
+          })}
           colors={colors}
           cardColors={cardColors}
         />
-
-        {/* Accessories Received */}
-        <View style={styles.sectionTitle}>
-          <Text style={styles.sectionTitleText}>Accessories received</Text>
-        </View>
-        <AppCard variant="outlined" containerStyle={styles.sectionCard}>
-          <View style={styles.listCardBody}>
-            {ACCESSORY_ITEMS.map(({ key, label }) => (
-              <AccessoryRow key={key} label={label} value={repair[key]} styles={styles} />
-            ))}
-          </View>
-        </AppCard>
 
         {/* Device Photos */}
         <View style={styles.sectionTitle}>
@@ -314,43 +305,12 @@ export function RepairDetailScreen({ navigation, route }: Props) {
         <ActionButtons
           canModify={canModify}
           onPdf={() => void handlePdf()}
+          onWhatsApp={handleNotifyWhatsApp}
           onEdit={() => navigation.navigate('AddRepair', { repairId: repair.id })}
           onDelete={() => void handleDelete()}
           colors={colors}
         />
-
-        {/* WhatsApp Status Notification */}
-        <View style={{ marginHorizontal: spacing.gutter, marginTop: spacing.sm + 2 }}>
-          <AppButton
-            variant="secondary"
-            fullWidth
-            leftIcon={<WhatsAppIcon size={16} />}
-            onPress={handleNotifyWhatsApp}
-            accessibilityLabel="Send status update on WhatsApp"
-          >
-            Send Status Update on WhatsApp
-          </AppButton>
-        </View>
       </ScrollView>
-
-      <CustomerHistoryModal
-        visible={historyVisible}
-        customer={{
-          customerName: repair.customerName,
-          phone: repair.phone,
-          deviceModel: repair.deviceModel,
-        }}
-        repairs={repairs}
-        onClose={() => setHistoryVisible(false)}
-        onSelectRepair={(id) => {
-          setHistoryVisible(false);
-          navigation.navigate('RepairDetail', { repairId: id });
-        }}
-        onNewRepair={(prefillCustomer) => {
-          setHistoryVisible(false);
-          navigation.navigate('AddRepair', { prefillCustomer });
-        }}
-      />
     </SafeAreaView>
   );
 }

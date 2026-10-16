@@ -65,6 +65,7 @@ const localStyles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     gap: 12,
+    marginTop: 6,
   },
   group: {
     flex: 1,
@@ -72,6 +73,7 @@ const localStyles = StyleSheet.create({
   chipRow: {
     flexDirection: 'row',
     gap: 6,
+    marginTop: 4,
   },
   choice: {
     flex: 1,

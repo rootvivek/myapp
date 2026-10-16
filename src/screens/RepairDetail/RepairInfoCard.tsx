@@ -14,12 +14,14 @@ import {
   Store,
   TriangleAlert,
 } from 'lucide-react-native';
+import { Package } from 'lucide-react-native';
 import { InfoRow } from '../../components/InfoRow';
 import { PatternPreview } from '../../components/PatternDrawingModal';
 import { StatusBadge } from '../../components/StatusBadge';
-import { getWarrantyInfo } from '../../components/CustomerHistoryModal';
+import { getWarrantyInfo } from '../../utils/customerHistory';
 import { AppCard } from '../../components/ui/AppCard';
 import { AppChip } from '../../components/ui/AppChip';
+import { AppIconButton } from '../../components/ui/AppIconButton';
 import { accentAlpha, radius, sizes, spacing, type AppColors } from '../../theme';
 import type { Repair } from '../../types/repair';
 import { formatDateDisplay } from '../../utils/format';
@@ -63,34 +65,42 @@ export const RepairInfoCard = React.memo(function RepairInfoCard({
         </View>
 
         {/* ── Customer Info & Quick Actions ── */}
-        <View>
-          <Text style={styles.customerName}>{repair.customerName}</Text>
-          <Text style={styles.customerPhone}>
-            {repair.phone}
-            {repair.createdByName && repair.createdByRole === 'labour' ? ` · Added by ${repair.createdByName}` : ''}
-          </Text>
-        </View>
+        <View style={styles.customerHeaderRow}>
+          <View style={styles.customerInfoContainer}>
+            <Text style={styles.customerName}>{repair.customerName}</Text>
+            <Text style={styles.customerPhone}>
+              {repair.phone}
+              {repair.createdByName && repair.createdByRole === 'labour' ? ` · Added by ${repair.createdByName}` : ''}
+            </Text>
+          </View>
 
-        <View style={styles.quickActionsRow}>
-          <Pressable
-            onPress={onCall}
-            style={[styles.quickBtn, styles.quickBtnCall]}
-            android_ripple={{ color: accentAlpha(colors.success, 0.2) }}
-          >
-            <Phone size={14} color={colors.success} strokeWidth={2.4} />
-            <Text style={[styles.quickBtnText, { color: colors.success }]}>Call</Text>
-          </Pressable>
+          <View style={styles.quickActionsRow}>
+            <AppIconButton
+              variant="secondary"
+              size={36}
+              icon={<Phone size={16} color={colors.success} strokeWidth={2.4} />}
+              onPress={onCall}
+              accessibilityLabel="Call customer"
+              containerStyle={{
+                backgroundColor: accentAlpha(colors.success, 0.12),
+                borderColor: accentAlpha(colors.success, 0.25),
+              }}
+            />
 
-          {onViewHistory && (
-            <Pressable
-              onPress={onViewHistory}
-              style={[styles.quickBtn, styles.quickBtnHistory]}
-              android_ripple={{ color: accentAlpha(colors.accent, 0.2) }}
-            >
-              <History size={14} color={colors.accent} strokeWidth={2.4} />
-              <Text style={[styles.quickBtnText, { color: colors.accent }]}>History</Text>
-            </Pressable>
-          )}
+            {onViewHistory && (
+              <AppIconButton
+                variant="secondary"
+                size={36}
+                icon={<History size={16} color={colors.accent} strokeWidth={2.4} />}
+                onPress={onViewHistory}
+                accessibilityLabel="Customer history"
+                containerStyle={{
+                  backgroundColor: accentAlpha(colors.accent, 0.12),
+                  borderColor: accentAlpha(colors.accent, 0.25),
+                }}
+              />
+            )}
+          </View>
         </View>
 
         {/* ── Details Rows ── */}
@@ -144,6 +154,15 @@ export const RepairInfoCard = React.memo(function RepairInfoCard({
               Alert.alert('Copied', 'IMEI copied to clipboard');
             }
           }}
+          styles={styles}
+          iconColor={colors.accent}
+        />
+
+        <InfoRow
+          icon={Package}
+          iconBg={accentAlpha(colors.accent, 0.14)}
+          label="Accessories Received"
+          value={`SIM Tray: ${repair.accSimTray ? 'Yes' : 'No'}  ·  Back Cover: ${repair.accBackCover ? 'Yes' : 'No'}`}
           styles={styles}
           iconColor={colors.accent}
         />

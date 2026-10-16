@@ -22,7 +22,6 @@ import type { RootStackParamList } from '../navigation/types';
 import type { AppColors } from '../theme';
 import { radius, sizes, spacing } from '../theme';
 import type { DirectoryCustomer } from '../types/customer';
-import { CustomerHistoryModal } from '../components/CustomerHistoryModal';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CustomerDirectory'>;
 
@@ -189,8 +188,6 @@ export function CustomerDirectoryScreen({ navigation }: Props) {
     );
   }, [customers, query]);
 
-  const [selectedCustomer, setSelectedCustomer] = useState<DirectoryCustomer | null>(null);
-
   const renderItem = useCallback(
     ({ item }: { item: DirectoryCustomer }) => {
       const name = item.customerName.trim() || '—';
@@ -200,7 +197,12 @@ export function CustomerDirectoryScreen({ navigation }: Props) {
       return (
         <View style={styles.row}>
           <Pressable
-            onPress={() => setSelectedCustomer(item)}
+            onPress={() => navigation.navigate('CustomerHistory', {
+              customer: {
+                customerName: item.customerName,
+                phone: item.phone,
+              },
+            })}
             style={styles.rowMain}
             android_ripple={{ color: colors.border }}
           >
@@ -231,7 +233,7 @@ export function CustomerDirectoryScreen({ navigation }: Props) {
         </View>
       );
     },
-    [colors, handleCall, styles]
+    [colors, handleCall, navigation, styles]
   );
 
   const keyExtractor = useCallback((item: DirectoryCustomer) => item.phone, []);
@@ -287,15 +289,6 @@ export function CustomerDirectoryScreen({ navigation }: Props) {
           renderItem={renderItem}
         />
       )}
-
-      <CustomerHistoryModal
-        visible={Boolean(selectedCustomer)}
-        customer={selectedCustomer}
-        repairs={repairs}
-        onClose={() => setSelectedCustomer(null)}
-        onSelectRepair={(repairId) => navigation.navigate('RepairDetail', { repairId })}
-        onNewRepair={(prefillCustomer) => navigation.navigate('AddRepair', { prefillCustomer })}
-      />
     </SafeAreaView>
   );
 }

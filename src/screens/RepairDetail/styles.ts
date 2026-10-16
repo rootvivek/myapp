@@ -37,12 +37,21 @@ export function createStyles(colors: AppColors) {
       borderBottomWidth: sizes.hairline,
       borderBottomColor: colors.border,
     },
+    customerHeaderRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: spacing.md,
+    },
+    customerInfoContainer: {
+      flex: 1,
+      minWidth: 0,
+    },
     customerName: {
       fontSize: 18,
       fontWeight: '800',
       color: colors.text,
       letterSpacing: -0.3,
-      flex: 1,
     },
     customerPhone: {
       fontSize: 13,
@@ -53,18 +62,16 @@ export function createStyles(colors: AppColors) {
     quickActionsRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: spacing.sm,
-      marginTop: spacing.xs,
+      gap: spacing.xs,
     },
     quickBtn: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingHorizontal: 12,
+      paddingHorizontal: 10,
       paddingVertical: 7,
       borderRadius: radius.md,
       borderWidth: sizes.hairline,
-      gap: 6,
-      flex: 1,
+      gap: 5,
       justifyContent: 'center',
     },
     quickBtnCall: {

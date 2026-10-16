@@ -15,4 +15,6 @@ export type RootStackParamList = {
   ManageLabour: undefined;
   Finance: undefined;
   AdminDashboard: undefined;
+  MasterAdminPanel: undefined;
+  CustomerHistory: { customer: { customerName: string; phone: string; email?: string } };
 };

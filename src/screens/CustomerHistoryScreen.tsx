@@ -1,3 +1,4 @@
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useCallback, useMemo } from 'react';
 import {
   FlatList,
@@ -7,100 +8,34 @@ import {
   Text,
   View,
 } from 'react-native';
+import { Appbar } from 'react-native-paper';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
+  ArrowLeft,
   ChevronRight,
   Phone,
   PlusCircle,
   ShieldAlert,
   ShieldCheck,
   Wrench,
-  X,
 } from 'lucide-react-native';
 
 import { useTheme } from '../context/ThemeContext';
+import { useRepairs } from '../context/RepairsContext';
+import type { RootStackParamList } from '../navigation/types';
 import { accentAlpha, radius, sizes, spacing } from '../theme';
-import type { DirectoryCustomer } from '../types/customer';
-import type { Repair } from '../types/repair';
 import { REPAIR_STATUSES } from '../types/repair';
+import { getWarrantyInfo, matchPhone } from '../utils/customerHistory';
 import { formatCurrency } from '../utils/format';
 import { dialPhone } from '../utils/phone';
-import { WhatsAppIcon } from './WhatsAppIcon';
-import { AppModal } from './ui/AppModal';
-import { AppButton } from './ui/AppButton';
-import { AppIconButton } from './ui/AppIconButton';
+import { WhatsAppIcon } from '../components/WhatsAppIcon';
 
-type Props = {
-  visible: boolean;
-  customer: DirectoryCustomer | null;
-  repairs: Repair[];
-  onClose: () => void;
-  onSelectRepair: (repairId: number) => void;
-  onNewRepair: (customer: DirectoryCustomer) => void;
-};
+type Props = NativeStackScreenProps<RootStackParamList, 'CustomerHistory'>;
 
-export function getWarrantyInfo(dateReceivedStr: string, warrantyStr: string) {
-  const w = (warrantyStr || '').trim().toLowerCase();
-  if (!w || w === 'no warranty' || w === 'none') {
-    return { isWarranted: false, active: false, daysLeft: 0, label: 'No Warranty' };
-  }
-
-  const match = w.match(/\d+/);
-  if (!match) {
-    return { isWarranted: true, active: true, daysLeft: 0, label: warrantyStr };
-  }
-
-  const daysCount = parseInt(match[0], 10);
-  if (Number.isNaN(daysCount) || daysCount <= 0) {
-    return { isWarranted: false, active: false, daysLeft: 0, label: 'No Warranty' };
-  }
-
-  const startDate = new Date(dateReceivedStr + (dateReceivedStr.includes('T') ? '' : 'T12:00:00'));
-  if (Number.isNaN(startDate.getTime())) {
-    return { isWarranted: true, active: true, daysLeft: 0, label: warrantyStr };
-  }
-
-  const expiryDate = new Date(startDate.getTime() + daysCount * 24 * 60 * 60 * 1000);
-  const now = new Date();
-
-  const diffTime = expiryDate.getTime() - now.getTime();
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-  if (diffDays > 0) {
-    return {
-      isWarranted: true,
-      active: true,
-      daysLeft: diffDays,
-      label: `Active (${diffDays} ${diffDays === 1 ? 'day' : 'days'} left)`,
-    };
-  }
-
-  return {
-    isWarranted: true,
-    active: false,
-    daysLeft: 0,
-    label: 'Expired',
-  };
-}
-
-export function matchPhone(phoneA: string, phoneB: string): boolean {
-  const dA = (phoneA || '').replace(/\D/g, '');
-  const dB = (phoneB || '').replace(/\D/g, '');
-  if (!dA || !dB) return false;
-  if (dA === dB) return true;
-  const last10A = dA.length >= 10 ? dA.slice(-10) : dA;
-  const last10B = dB.length >= 10 ? dB.slice(-10) : dB;
-  return last10A === last10B;
-}
-
-export function CustomerHistoryModal({
-  visible,
-  customer,
-  repairs,
-  onClose,
-  onSelectRepair,
-  onNewRepair,
-}: Props) {
+export function CustomerHistoryScreen({ navigation, route }: Props) {
   const { colors } = useTheme();
+  const { repairs } = useRepairs();
+  const { customer } = route.params;
 
   // Filter repairs belonging to this customer by matching phone number or customer name
   const customerRepairs = useMemo(() => {
@@ -160,19 +95,24 @@ export function CustomerHistoryModal({
     void Linking.openURL(url);
   }, [customer?.phone]);
 
-  if (!customer) return null;
-
   const initial = (customer.customerName.trim() || '?').slice(0, 1).toUpperCase();
 
   return (
-    <AppModal
-      visible={visible}
-      onClose={onClose}
-      size="full"
-      showCloseButton={false}
-    >
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['bottom']}>
+      <Appbar.Header mode="center-aligned" style={{ backgroundColor: colors.surface, elevation: 0 }}>
+        <Appbar.Action
+          icon={() => <ArrowLeft size={22} color={colors.text} />}
+          onPress={() => navigation.goBack()}
+          accessibilityLabel="Go back"
+        />
+        <Appbar.Content
+          title="Customer history"
+          titleStyle={{ fontSize: 17, fontWeight: '700', color: colors.text }}
+        />
+      </Appbar.Header>
+
       <View style={styles.container}>
-        {/* Header */}
+        {/* Customer header */}
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <View style={styles.headerLeft}>
             <View style={[styles.avatar, { backgroundColor: accentAlpha(colors.accent, 0.12), borderColor: colors.border }]}>
@@ -185,14 +125,6 @@ export function CustomerHistoryModal({
               <Text style={[styles.phone, { color: colors.textMuted }]}>{customer.phone}</Text>
             </View>
           </View>
-          <AppIconButton
-            variant="ghost"
-            size={32}
-            icon={<X size={18} color={colors.textMuted} strokeWidth={2.2} />}
-            onPress={onClose}
-            accessibilityLabel="Close profile"
-            style={styles.closeBtn}
-          />
         </View>
 
         {/* Quick Stats Grid */}
@@ -224,35 +156,38 @@ export function CustomerHistoryModal({
 
         {/* Quick Action Buttons */}
         <View style={styles.actionsRow}>
-          <AppButton
-            variant="outline"
-            leftIcon={<Phone size={15} color={colors.accent} />}
+          <Pressable
+            onPress={() => navigation.navigate('AddRepair', { prefillCustomer: { ...customer, deviceModel: '' } })}
+            style={[styles.actionButton, styles.newJobBtn, { backgroundColor: colors.accent, borderColor: colors.accent }]}
+            android_ripple={{ color: accentAlpha('#FFFFFF', 0.22) }}
+          >
+            <PlusCircle size={14} color={colors.onAccent} />
+            <Text style={[styles.actionLabel, { color: colors.onAccent }]} numberOfLines={1}>
+              New Job
+            </Text>
+          </Pressable>
+
+          <Pressable
             onPress={handleCall}
-            style={styles.actionBtn}
+            style={[styles.actionButton, styles.callBtn, { borderColor: accentAlpha(colors.accent, 0.4) }]}
+            android_ripple={{ color: accentAlpha(colors.accent, 0.16) }}
           >
-            Call
-          </AppButton>
+            <Phone size={14} color={colors.accent} />
+            <Text style={[styles.actionLabel, { color: colors.accent }]} numberOfLines={1}>
+              Call
+            </Text>
+          </Pressable>
 
-          <AppButton
-            variant="secondary"
-            leftIcon={<WhatsAppIcon size={15} />}
+          <Pressable
             onPress={handleWhatsApp}
-            style={styles.actionBtn}
+            style={[styles.actionButton, styles.whatsappBtn, { backgroundColor: colors.surface2, borderColor: colors.border }]}
+            android_ripple={{ color: colors.border }}
           >
-            WhatsApp
-          </AppButton>
-
-          <AppButton
-            variant="primary"
-            leftIcon={<PlusCircle size={15} color="#FFFFFF" />}
-            onPress={() => {
-              onClose();
-              onNewRepair(customer);
-            }}
-            style={styles.newJobBtn}
-          >
-            New Job
-          </AppButton>
+            <WhatsAppIcon size={14} />
+            <Text style={[styles.actionLabel, { color: colors.text }]} numberOfLines={1}>
+              WhatsApp
+            </Text>
+          </Pressable>
         </View>
 
         {/* Past Repairs Timeline Section */}
@@ -266,7 +201,10 @@ export function CustomerHistoryModal({
         <FlatList
           data={customerRepairs}
           keyExtractor={(item) => String(item.id)}
+          style={styles.historyList}
           contentContainerStyle={styles.listContent}
+          nestedScrollEnabled
+          keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <Text style={[styles.emptyText, { color: colors.textMuted }]}>
@@ -282,10 +220,7 @@ export function CustomerHistoryModal({
 
             return (
               <Pressable
-                onPress={() => {
-                  onClose();
-                  onSelectRepair(item.id);
-                }}
+                onPress={() => navigation.navigate('RepairDetail', { repairId: item.id })}
                 style={[styles.jobCard, { backgroundColor: colors.surface2, borderColor: colors.border }]}
                 android_ripple={{ color: colors.border }}
               >
@@ -376,14 +311,19 @@ export function CustomerHistoryModal({
           }}
         />
       </View>
-    </AppModal>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: 'transparent',
+  safe: {
     flex: 1,
+  },
+  container: {
+    flex: 1,
+    minHeight: 0,
+    paddingHorizontal: spacing.gutter,
+    paddingTop: spacing.sm,
   },
   header: {
     flexDirection: 'row',
@@ -420,11 +360,6 @@ const styles = StyleSheet.create({
     marginTop: 2,
     fontVariant: ['tabular-nums'],
   },
-  closeBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: radius.lg,
-  },
   statsContainer: {
     flexDirection: 'row',
     gap: spacing.sm,
@@ -450,19 +385,35 @@ const styles = StyleSheet.create({
   },
   actionsRow: {
     flexDirection: 'row',
-    gap: spacing.sm,
-    marginTop: 12,
+    gap: 6,
+    marginTop: 8,
   },
-  actionBtn: {
-    flex: 1,
+  actionButton: {
+    minWidth: 0,
     height: 36,
-    borderRadius: radius.md,
+    borderRadius: radius.sm,
     borderWidth: sizes.hairline,
+    paddingHorizontal: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    overflow: 'hidden',
+  },
+  callBtn: {
+    flex: 0.9,
+  },
+  whatsappBtn: {
+    flex: 1.35,
   },
   newJobBtn: {
-    flex: 1.2,
-    height: 36,
-    borderRadius: radius.md,
+    flex: 1,
+  },
+  actionLabel: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '600',
+    flexShrink: 1,
   },
   timelineTitleRow: {
     flexDirection: 'row',
@@ -479,6 +430,10 @@ const styles = StyleSheet.create({
   listContent: {
     paddingBottom: 30,
     gap: 10,
+  },
+  historyList: {
+    flex: 1,
+    minHeight: 0,
   },
   emptyText: {
     textAlign: 'center',

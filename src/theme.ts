@@ -41,9 +41,11 @@ export type AppColors = {
   text: string;
   textMuted: string;
   accent: string;
+  onAccent: string;
   success: string;
   warning: string;
   danger: string;
+  onDanger: string;
   chipBg: string;
   /** Disabled control fill (inputs, buttons, cards). */
   surfaceDisabled: string;
@@ -81,9 +83,11 @@ export const darkColors: AppColors = {
   text: '#F5F5F7',
   textMuted: '#98989E',
   accent: '#0A84FF',
+  onAccent: '#FFFFFF',
   success: '#10B981',
   warning: '#F59E0B',
   danger: '#FF453A',
+  onDanger: '#FFFFFF',
   chipBg: '#1C1C1E',
   surfaceDisabled: 'rgba(255, 255, 255, 0.08)',
   onSurfaceDisabled: 'rgba(255, 255, 255, 0.30)',
@@ -119,9 +123,11 @@ export const lightColors: AppColors = {
   text: '#111114',                                // high contrast label
   textMuted: '#6B6B76',
   accent: '#007AFF',                              // iOS system blue
+  onAccent: '#FFFFFF',
   success: '#16A34A',
   warning: '#D97706',
   danger: '#DC2626',
+  onDanger: '#FFFFFF',
   chipBg: '#F2F2F7',
   surfaceDisabled: 'rgba(0, 0, 0, 0.06)',
   onSurfaceDisabled: 'rgba(0, 0, 0, 0.32)',
