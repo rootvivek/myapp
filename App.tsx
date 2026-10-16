@@ -14,6 +14,7 @@ import { InventoryProvider } from './src/context/InventoryContext';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { SplashScreen } from './src/components/SplashScreen';
 import { AutoUpdateInitializer } from './src/components/AutoUpdateInitializer';
+import { OfflineBanner } from './src/components/OfflineBanner';
 import { handleAuthDeepLink } from './src/auth/deepLink';
 import { supabase } from './src/lib/supabase';
 import { createPaperTheme } from './src/theme/paperTheme';
@@ -37,6 +38,7 @@ function AuthenticatedApp() {
       <RepairsProvider>
         <InventoryProvider>
           <StatusBar barStyle={mode === 'dark' ? 'light-content' : 'dark-content'} />
+          <OfflineBanner />
           <AutoUpdateInitializer />
           <TabProvider>
             <AppNavigator />

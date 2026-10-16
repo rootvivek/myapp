@@ -1,6 +1,6 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCallback, useMemo, useState } from 'react';
-import { FlatList, StyleSheet, View } from 'react-native';
+import { Alert, FlatList, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Wrench } from 'lucide-react-native';
@@ -9,6 +9,7 @@ import { HomeHeader } from '../components/HomeHeader';
 import type { StatusFilter } from '../components/HomeHeader';
 import { RepairCard } from '../components/RepairCard';
 import { RepairCardSkeleton } from '../components/Skeleton';
+import { checkInternetConnection } from '../utils/network';
 
 import { useAuth } from '../context/AuthContext';
 import {
@@ -49,6 +50,11 @@ export function HomeScreen({ navigation }: Props) {
   const filteredRepairs = useFilteredRepairs(statusFilter);
 
   const handleRefresh = useCallback(async () => {
+    const online = await checkInternetConnection();
+    if (!online) {
+      Alert.alert('Offline', 'No internet connection detected. Please check your network and try again.');
+      return;
+    }
     setRefreshing(true);
     try {
       await refresh(true);

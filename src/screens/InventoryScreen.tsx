@@ -25,6 +25,7 @@ import { radius, sizes, spacing } from '../theme';
 import { formatCurrency } from '../utils/format';
 import type { InventoryItem, InventoryInput } from '../types/inventory';
 import { inventoryService } from '../services/inventoryService';
+import { checkInternetConnection } from '../utils/network';
 
 function createStyles(colors: AppColors) {
   return StyleSheet.create({
@@ -88,6 +89,11 @@ export function InventoryScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const handleRefresh = useCallback(async () => {
+    const online = await checkInternetConnection();
+    if (!online) {
+      Alert.alert('Offline', 'No internet connection detected. Please check your network and try again.');
+      return;
+    }
     setRefreshing(true);
     try {
       await refresh();

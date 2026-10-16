@@ -6,7 +6,13 @@ export const COMMON_PROBLEMS = [
   'FRP lock',
   'Software',
   'Touch change',
+  'Folder change',
   'Speaker issue',
+  'Camera issue',
+  'Mic issue',
+  'Back glass',
+  'Water damage',
+  'Dead phone',
 ] as const;
 
 export const DEVICE_BRANDS = [

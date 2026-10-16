@@ -117,16 +117,12 @@ export function SecureImage({ source, ...props }: ImageProps) {
   const resolvedSource = useMemo(() => {
     if (!source) return source;
     if (typeof source === 'object' && 'uri' in source) {
-      if (!signedUrl) return null;
-      return { ...source, uri: signedUrl };
+      const finalUri = signedUrl || uri;
+      if (!finalUri) return source;
+      return { ...source, uri: finalUri };
     }
     return source;
-  }, [source, signedUrl]);
-
-  if (uri && !resolvedSource) {
-    // Show static app logo fallback while fetching the signed URL
-    return <Image {...props} source={require('../../assets/app-logo.jpg')} />;
-  }
+  }, [source, signedUrl, uri]);
 
   return (
     <Image

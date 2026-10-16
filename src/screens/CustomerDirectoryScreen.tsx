@@ -1,9 +1,11 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
+  Alert,
   FlatList,
   Platform,
   Pressable,
+  RefreshControl,
   StyleSheet,
   Text,
   View,
@@ -18,6 +20,7 @@ import { AppIconButton } from '../components/ui/AppIconButton';
 import { useTheme } from '../context/ThemeContext';
 import { dialPhone } from '../utils/phone';
 import { useRepairs } from '../context/RepairsContext';
+import { checkInternetConnection } from '../utils/network';
 import type { RootStackParamList } from '../navigation/types';
 import type { AppColors } from '../theme';
 import { radius, sizes, spacing } from '../theme';
@@ -127,9 +130,24 @@ function phoneKey(phone: string): string {
 
 export function CustomerDirectoryScreen({ navigation }: Props) {
   const { colors } = useTheme();
-  const { repairs, loading } = useRepairs();
+  const { repairs, loading, refresh } = useRepairs();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [query, setQuery] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = useCallback(async () => {
+    const online = await checkInternetConnection();
+    if (!online) {
+      Alert.alert('Offline', 'No internet connection detected. Please check your network and try again.');
+      return;
+    }
+    setRefreshing(true);
+    try {
+      await refresh();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refresh]);
 
   const customers = useMemo(() => {
     // Pre-index repair ids by phone/name so each customer's job count is a cheap
@@ -270,6 +288,8 @@ export function CustomerDirectoryScreen({ navigation }: Props) {
           data={filtered}
           keyExtractor={keyExtractor}
           contentContainerStyle={styles.list}
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
           initialNumToRender={12}
           maxToRenderPerBatch={10}
           windowSize={5}
