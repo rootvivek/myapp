@@ -1,9 +1,9 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCallback, useMemo, useState } from 'react';
-import { Alert, FlatList, StyleSheet, View } from 'react-native';
+import { Alert, FlatList, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Wrench } from 'lucide-react-native';
+import { Plus, Wrench } from 'lucide-react-native';
 import { EmptyState } from '../components/EmptyState';
 import { HomeHeader } from '../components/HomeHeader';
 import type { StatusFilter } from '../components/HomeHeader';
@@ -33,6 +33,24 @@ function createStyles(colors: AppColors) {
     main: { flex: 1, position: 'relative' },
 
     list: { paddingHorizontal: spacing.gutter, paddingTop: spacing.sm, paddingBottom: 120 },
+
+    fab: {
+      position: 'absolute',
+      bottom: 24,
+      right: 24,
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: colors.accent,
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: colors.text,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 6,
+      zIndex: 99,
+    },
   });
   return s;
 }
@@ -167,6 +185,15 @@ export function HomeScreen({ navigation }: Props) {
             renderItem={renderItem}
           />
         )}
+
+        <TouchableOpacity
+          onPress={() => navigation.navigate('AddRepair', {})}
+          style={styles.fab}
+          accessibilityLabel="Add New Job"
+          accessibilityRole="button"
+        >
+          <Plus size={26} color="#FFFFFF" strokeWidth={2.5} />
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );

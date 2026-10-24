@@ -593,8 +593,8 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+const env = process.env.NODE_ENV || 'development';
 app.listen(port, '0.0.0.0', () => {
-  const env = process.env.NODE_ENV || 'development';
   console.log(`OTP/update server listening on 0.0.0.0:${port} (${env})`);
   console.log(`Update check endpoint: POST /app/update/check`);
   if (!hasSupabaseConfig) {

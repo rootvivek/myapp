@@ -112,36 +112,77 @@ export function CustomerHistoryScreen({ navigation, route }: Props) {
       </Appbar.Header>
 
       <View style={styles.container}>
-        {/* Customer header */}
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <View style={styles.headerLeft}>
-            <View style={[styles.avatar, { backgroundColor: accentAlpha(colors.accent, 0.12), borderColor: colors.border }]}>
+        {/* Customer header card */}
+        <View style={[styles.headerCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={styles.headerTop}>
+            <View style={[styles.avatar, { backgroundColor: accentAlpha(colors.accent, 0.15), borderColor: colors.accent }]}>
               <Text style={[styles.avatarText, { color: colors.accent }]}>{initial}</Text>
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>
                 {customer.customerName || 'Customer Details'}
               </Text>
-              <Text style={[styles.phone, { color: colors.textMuted }]}>{customer.phone}</Text>
+              <Pressable onPress={handleCall} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                <Phone size={13} color={colors.accent} />
+                <Text style={[styles.phone, { color: colors.accent, fontWeight: '600' }]} selectable>
+                  {customer.phone || 'No phone number'}
+                </Text>
+              </Pressable>
             </View>
+          </View>
+
+          {/* Quick Action Buttons */}
+          <View style={styles.actionsRow}>
+            <Pressable
+              onPress={() => navigation.navigate('AddRepair', { prefillCustomer: { ...customer, deviceModel: '' } })}
+              style={[styles.actionButton, styles.newJobBtn, { backgroundColor: colors.accent, borderColor: colors.accent }]}
+              android_ripple={{ color: accentAlpha('#FFFFFF', 0.22) }}
+            >
+              <PlusCircle size={15} color={colors.onAccent} />
+              <Text style={[styles.actionLabel, { color: colors.onAccent }]} numberOfLines={1}>
+                New Job
+              </Text>
+            </Pressable>
+
+            <Pressable
+              onPress={handleCall}
+              style={[styles.actionButton, styles.callBtn, { backgroundColor: colors.surface2, borderColor: colors.border }]}
+              android_ripple={{ color: colors.border }}
+            >
+              <Phone size={15} color={colors.accent} />
+              <Text style={[styles.actionLabel, { color: colors.text }]} numberOfLines={1}>
+                Call
+              </Text>
+            </Pressable>
+
+            <Pressable
+              onPress={handleWhatsApp}
+              style={[styles.actionButton, styles.whatsappBtn, { backgroundColor: colors.surface2, borderColor: colors.border }]}
+              android_ripple={{ color: colors.border }}
+            >
+              <WhatsAppIcon size={15} />
+              <Text style={[styles.actionLabel, { color: colors.text }]} numberOfLines={1}>
+                WhatsApp
+              </Text>
+            </Pressable>
           </View>
         </View>
 
         {/* Quick Stats Grid */}
         <View style={styles.statsContainer}>
-          <View style={[styles.statBox, { backgroundColor: colors.surface2, borderColor: colors.border }]}>
+          <View style={[styles.statBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Text style={[styles.statValue, { color: colors.text }]}>{stats.totalJobs}</Text>
             <Text style={[styles.statLabel, { color: colors.textMuted }]}>Total Jobs</Text>
           </View>
 
-          <View style={[styles.statBox, { backgroundColor: colors.surface2, borderColor: colors.border }]}>
+          <View style={[styles.statBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Text style={[styles.statValue, { color: colors.success }]}>
               {formatCurrency(stats.totalSpent)}
             </Text>
             <Text style={[styles.statLabel, { color: colors.textMuted }]}>Total Spent</Text>
           </View>
 
-          <View style={[styles.statBox, { backgroundColor: colors.surface2, borderColor: colors.border }]}>
+          <View style={[styles.statBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Text
               style={[
                 styles.statValue,
@@ -152,42 +193,6 @@ export function CustomerHistoryScreen({ navigation, route }: Props) {
             </Text>
             <Text style={[styles.statLabel, { color: colors.textMuted }]}>Warranties</Text>
           </View>
-        </View>
-
-        {/* Quick Action Buttons */}
-        <View style={styles.actionsRow}>
-          <Pressable
-            onPress={() => navigation.navigate('AddRepair', { prefillCustomer: { ...customer, deviceModel: '' } })}
-            style={[styles.actionButton, styles.newJobBtn, { backgroundColor: colors.accent, borderColor: colors.accent }]}
-            android_ripple={{ color: accentAlpha('#FFFFFF', 0.22) }}
-          >
-            <PlusCircle size={14} color={colors.onAccent} />
-            <Text style={[styles.actionLabel, { color: colors.onAccent }]} numberOfLines={1}>
-              New Job
-            </Text>
-          </Pressable>
-
-          <Pressable
-            onPress={handleCall}
-            style={[styles.actionButton, styles.callBtn, { borderColor: accentAlpha(colors.accent, 0.4) }]}
-            android_ripple={{ color: accentAlpha(colors.accent, 0.16) }}
-          >
-            <Phone size={14} color={colors.accent} />
-            <Text style={[styles.actionLabel, { color: colors.accent }]} numberOfLines={1}>
-              Call
-            </Text>
-          </Pressable>
-
-          <Pressable
-            onPress={handleWhatsApp}
-            style={[styles.actionButton, styles.whatsappBtn, { backgroundColor: colors.surface2, borderColor: colors.border }]}
-            android_ripple={{ color: colors.border }}
-          >
-            <WhatsAppIcon size={14} />
-            <Text style={[styles.actionLabel, { color: colors.text }]} numberOfLines={1}>
-              WhatsApp
-            </Text>
-          </Pressable>
         </View>
 
         {/* Past Repairs Timeline Section */}
@@ -325,18 +330,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.gutter,
     paddingTop: spacing.sm,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingBottom: 14,
-    borderBottomWidth: sizes.hairline,
+  headerCard: {
+    borderRadius: radius.lg,
+    borderWidth: sizes.hairline,
+    padding: 14,
+    marginBottom: 4,
   },
-  headerLeft: {
-    flex: 1,
+  headerTop: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 12,
+    marginBottom: 12,
   },
   avatar: {
     width: 44,

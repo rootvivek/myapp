@@ -31,11 +31,11 @@ import {
     Users,
     Wrench,
 } from 'lucide-react-native';
-import Svg, { Circle, Ellipse, G, Path, Rect } from 'react-native-svg';
 import { AppButton } from '../components/ui/AppButton';
 import { AppCard } from '../components/ui/AppCard';
 import { AppIconButton } from '../components/ui/AppIconButton';
 import { ThreeDIcon } from '../components/ui/ThreeDIcon';
+import { PromoBanners, BannerItem } from '../components/home/PromoBanners';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import type { RootStackParamList } from '../navigation/types';
@@ -94,117 +94,30 @@ const POPULAR_SERVICES: PopularService[] = [
 /*  Promo banners (carousel)                                           */
 /* ------------------------------------------------------------------ */
 
-type Banner = {
-    key: string;
-    title: string;
-    subtitle?: string;
-    cta: string;
-    /** Flat identity fill of the tile (no gradients), resolved from design tokens. */
-    color: 'accent' | 'success' | 'warning' | 'danger';
-    badge?: string;
-    repairs?: boolean; // CTA opens the repair flow
-    inventory?: boolean;
-    support?: boolean;
-};
-
-const BANNERS: Banner[] = [
+const PROMO_BANNERS: BannerItem[] = [
     {
         key: 'expert',
-        title: 'Precision Mobile\nRepair & Care',
-        subtitle: 'Diagnostics, job cards & digital billing',
-        cta: 'Open Repair Desk',
-        color: 'accent',
-        badge: 'Core Service',
+        image: require('../../assets/app-logo.jpg'),
         repairs: true,
     },
     {
         key: 'screen-offer',
-        title: 'Instant Job\nEntry System',
-        subtitle: 'Log IMEIs, passcodes & advance payment',
-        cta: 'New Job Entry',
-        color: 'success',
-        badge: 'Fast Flow',
+        image: require('../../assets/icon.png'),
         repairs: true,
     },
     {
         key: 'parts',
-        title: 'Spare Parts &\nStock Catalog',
-        subtitle: 'Live stock count with auto deduction',
-        cta: 'View Inventory',
-        color: 'warning',
-        badge: 'Stock Care',
+        image: require('../../assets/splash-icon.png'),
         inventory: true,
     },
     {
         key: 'helpdesk',
-        title: 'Need help with\nyour device?',
-        subtitle: 'Call our team for repair support',
-        cta: 'Contact Helpdesk',
-        color: 'danger',
+        image: require('../../assets/app-logo-zoomed.jpg'),
         support: true,
     },
 ];
 
-/** Decorative, locally-rendered mobile shop artwork for each promo banner. */
-function BannerArtwork({ type }: { type: Banner['key'] }) {
-    const screenColor = type === 'parts' ? '#FDBA74' : type === 'helpdesk' ? '#67E8F9' : '#A5B4FC';
 
-    return (
-        <Svg width="100%" height="100%" viewBox="0 0 156 180" preserveAspectRatio="xMidYMid slice">
-            <Circle cx="111" cy="90" r="68" fill="#FFFFFF" fillOpacity={0.13} />
-            <Circle cx="143" cy="37" r="23" fill="#FFFFFF" fillOpacity={0.1} />
-            <Path d="M66 180 144 84l42 96H66Z" fill="#FFFFFF" fillOpacity={0.08} />
-
-            {/* Smartphone with a colorful service screen */}
-            <G rotation={8} origin="111, 99">
-                <Rect x="86" y="36" width="54" height="112" rx="13" fill="#111827" fillOpacity={0.3} />
-                <Rect x="83" y="31" width="54" height="112" rx="13" fill="#0F172A" stroke="#FFFFFF" strokeOpacity={0.6} strokeWidth="1.5" />
-                <Rect x="88" y="40" width="44" height="94" rx="8" fill="#F8FAFC" />
-                <Rect x="88" y="40" width="44" height="39" rx="8" fill={screenColor} />
-                <Rect x="101" y="45" width="18" height="3" rx="1.5" fill="#0F172A" fillOpacity={0.62} />
-                <Circle cx="110" cy="65" r="9" fill="#FFFFFF" fillOpacity={0.78} />
-                <Path d="m106 65 3 3 6-7" fill="none" stroke="#0F172A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                <Rect x="94" y="87" width="32" height="6" rx="3" fill="#CBD5E1" />
-                <Rect x="94" y="99" width="23" height="5" rx="2.5" fill="#E2E8F0" />
-                <Rect x="94" y="111" width="32" height="13" rx="4" fill={screenColor} fillOpacity={0.7} />
-            </G>
-
-            {/* Small themed details make each banner artwork distinct. */}
-            {type === 'expert' ? (
-                <G rotation={-35} origin="58, 106">
-                    <Rect x="54" y="88" width="8" height="39" rx="4" fill="#FDE68A" />
-                    <Rect x="52" y="83" width="12" height="12" rx="4" fill="#FFFFFF" />
-                    <Path d="M58 127v9" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" />
-                </G>
-            ) : null}
-            {type === 'screen-offer' ? (
-                <G>
-                    <Circle cx="63" cy="65" r="17" fill="#34D399" />
-                    <Path d="m56 65 5 5 10-11" fill="none" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-                    <Circle cx="66" cy="128" r="5" fill="#FDE68A" />
-                </G>
-            ) : null}
-            {type === 'parts' ? (
-                <G>
-                    <Rect x="47" y="107" width="24" height="27" rx="4" fill="#FDBA74" />
-                    <Path d="m47 114 12 7 12-7M59 121v13" fill="none" stroke="#FFFFFF" strokeWidth="1.7" strokeLinejoin="round" />
-                    <Rect x="53" y="82" width="16" height="16" rx="4" fill="#FFFFFF" fillOpacity={0.85} />
-                    <Circle cx="61" cy="90" r="4" fill="#FB923C" />
-                </G>
-            ) : null}
-            {type === 'helpdesk' ? (
-                <G>
-                    <Path d="M47 97v-8a18 18 0 0 1 36 0v8" fill="none" stroke="#FFFFFF" strokeWidth="6" strokeLinecap="round" />
-                    <Rect x="45" y="91" width="10" height="19" rx="5" fill="#67E8F9" />
-                    <Rect x="75" y="91" width="10" height="19" rx="5" fill="#67E8F9" />
-                    <Path d="M80 108c-3 8-9 11-17 11" fill="none" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" />
-                    <Circle cx="60" cy="119" r="4" fill="#FDE68A" />
-                </G>
-            ) : null}
-            <Ellipse cx="112" cy="155" rx="39" ry="6" fill="#0F172A" fillOpacity={0.18} />
-        </Svg>
-    );
-}
 
 /* ------------------------------------------------------------------ */
 /*  Styles                                                             */
@@ -303,71 +216,7 @@ function createStyles(colors: AppColors) {
             color: colors.textMuted,
         },
 
-        /* Promo banner carousel */
-        bannerRow: {
-            marginTop: spacing.xs,
-        },
-        banner: {
-            borderRadius: radius.xl,
-            overflow: 'hidden',
-        },
-        bannerArtwork: {
-            ...StyleSheet.absoluteFillObject,
-            left: '52%',
-        },
-        bannerScrim: {
-            ...StyleSheet.absoluteFillObject,
-            backgroundColor: '#0F172A',
-            opacity: 0.22,
-        },
-        bannerInner: {
-            minHeight: 194,
-            padding: spacing.md + 2,
-            paddingRight: '30%',
-            gap: spacing.sm,
-            justifyContent: 'center',
-        },
-        bannerBadge: {
-            alignSelf: 'flex-start',
-            backgroundColor: colors.surface,
-            paddingHorizontal: 9,
-            paddingVertical: 3,
-            borderRadius: radius.full,
-        },
-        bannerBadgeText: {
-            color: colors.text,
-            fontSize: 10.5,
-            fontWeight: '800',
-            textTransform: 'uppercase',
-            letterSpacing: 0.6,
-        },
-        bannerTitle: {
-            fontSize: 20,
-            fontWeight: '900',
-            color: '#FFFFFF',
-            lineHeight: 26,
-        },
-        bannerSubtitle: {
-            fontSize: 12,
-            fontWeight: '500',
-            color: '#FFFFFF',
-            lineHeight: 16,
-        },
-        bannerBtn: {
-            alignSelf: 'flex-start',
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 6,
-            backgroundColor: '#FFFFFF',
-            paddingHorizontal: spacing.md,
-            paddingVertical: 9,
-            borderRadius: radius.full,
-            marginTop: spacing.xs,
-        },
-        bannerBtnText: {
-            fontSize: 13,
-            fontWeight: '800',
-        },
+
 
         /* Services grid */
         sectionRow: {
@@ -524,8 +373,8 @@ export function HomeDashboardScreen({ navigation }: Props) {
 
     useEffect(() => {
         const interval = setInterval(() => {
-            if (bannerScrollRef.current && BANNERS.length > 1) {
-                bannerIndexRef.current = (bannerIndexRef.current + 1) % BANNERS.length;
+            if (bannerScrollRef.current && PROMO_BANNERS.length > 1) {
+                bannerIndexRef.current = (bannerIndexRef.current + 1) % PROMO_BANNERS.length;
                 bannerScrollRef.current.scrollTo({
                     x: bannerIndexRef.current * (bannerWidth + 12),
                     animated: true,
@@ -625,13 +474,7 @@ export function HomeDashboardScreen({ navigation }: Props) {
 
     const shopTitle = profile?.shopName || 'MCA Phone Wala';
 
-    /** Banner base colors are resolved from the active theme; artwork overlays them. */
-    const bannerTints: Record<Banner['color'], string> = {
-        accent: colors.accent,
-        success: colors.success,
-        warning: colors.warning,
-        danger: colors.danger,
-    };
+
 
     return (
         <SafeAreaView style={styles.safe} edges={['top']}>
@@ -697,64 +540,21 @@ export function HomeDashboardScreen({ navigation }: Props) {
                         />
                     </View>
 
-                    <ScrollView
-                        ref={bannerScrollRef}
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        snapToInterval={bannerWidth + 12}
-                        decelerationRate="fast"
-                        contentContainerStyle={styles.bannerRow}
-                        accessibilityLabel="Promotional banners"
-                    >
-                        {BANNERS.map((banner) => (
-                            <AppCard
-                                key={banner.key}
-                                variant="elevated"
-                                padding={0}
-                                containerStyle={[
-                                    styles.banner,
-                                    { width: bannerWidth, marginRight: 12, backgroundColor: bannerTints[banner.color] },
-                                ]}
-                            >
-                                <View pointerEvents="none" style={styles.bannerArtwork}>
-                                    <BannerArtwork type={banner.key} />
-                                </View>
-                                <View pointerEvents="none" style={styles.bannerScrim} />
-                                <View style={styles.bannerInner}>
-                                    {banner.badge ? (
-                                        <View style={styles.bannerBadge}>
-                                            <Text style={styles.bannerBadgeText}>{banner.badge}</Text>
-                                        </View>
-                                    ) : null}
-                                    <Text style={styles.bannerTitle}>{banner.title}</Text>
-                                    {banner.subtitle ? (
-                                        <Text style={styles.bannerSubtitle}>{banner.subtitle}</Text>
-                                    ) : null}
-                                    <Pressable
-                                        onPress={() => {
-                                            if (banner.repairs) {
-                                                handleOpenRepairs();
-                                            } else if (banner.inventory) {
-                                                if (session) setActiveTab('inventory');
-                                                else setActiveTab('settings');
-                                            } else if (banner.support) {
-                                                void dialPhone(HELPDESK_PHONE);
-                                            }
-                                        }}
-                                        style={styles.bannerBtn}
-                                        android_ripple={{ color: accentAlpha(colors.accent, 0.1) }}
-                                        accessibilityRole="button"
-                                        accessibilityLabel={banner.cta}
-                                    >
-                                        <Text style={[styles.bannerBtnText, { color: bannerTints[banner.color] }]}>
-                                            {banner.cta}
-                                        </Text>
-                                        <ArrowRight size={16} color={bannerTints[banner.color]} strokeWidth={2.6} />
-                                    </Pressable>
-                                </View>
-                            </AppCard>
-                        ))}
-                    </ScrollView>
+                    <PromoBanners
+                        banners={PROMO_BANNERS}
+                        bannerWidth={bannerWidth}
+                        onBannerPress={(banner) => {
+                            if (banner.repairs) {
+                                handleOpenRepairs();
+                            } else if (banner.inventory) {
+                                if (session) setActiveTab('inventory');
+                                else setActiveTab('settings');
+                            } else if (banner.support) {
+                                void dialPhone(HELPDESK_PHONE);
+                            }
+                        }}
+                        scrollRef={bannerScrollRef}
+                    />
 
                     {/* ── Services grid ── */}
                     <View style={styles.sectionRow}>

@@ -1,9 +1,10 @@
-import type { LockType, Repair, RepairImageSlot, RepairStatus } from '../../types/repair';
+import type { LockType, Repair, RepairImageSlot, RepairStatus, TransactionType } from '../../types/repair';
 
 export type WarrantyType = 'none' | '30' | '90' | '180';
 export type PaymentStep = 'paid_status' | 'payment_method';
 
 export interface RepairFormState {
+  transactionType?: TransactionType;
   customerName: string;
   phone: string;
   deviceModel: string;

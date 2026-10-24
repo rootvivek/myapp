@@ -1,10 +1,11 @@
 import type { DirectoryCustomer } from '../types/customer';
+import type { TransactionType } from '../types/repair';
 
 export type RootStackParamList = {
   Home: undefined;
   Khata: undefined;
   AddRepair:
-    | { repairId?: number; scannedImei?: string; prefillCustomer?: DirectoryCustomer }
+    | { repairId?: number; scannedImei?: string; prefillCustomer?: DirectoryCustomer; transactionType?: TransactionType }
     | undefined;
   RepairDetail: { repairId: number };
   Search: undefined;
@@ -15,6 +16,6 @@ export type RootStackParamList = {
   ManageLabour: undefined;
   Finance: undefined;
   AdminDashboard: undefined;
-  MasterAdminPanel: undefined;
   CustomerHistory: { customer: { customerName: string; phone: string; email?: string } };
+  BuySell: undefined;
 };

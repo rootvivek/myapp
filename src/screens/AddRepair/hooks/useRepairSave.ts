@@ -43,11 +43,16 @@ export function useRepairSave() {
       const { isEdit, repairId, initialImagesRef, onValidationError, onSuccess } = options;
 
       try {
+        const defaultProblem = state.transactionType
+          ? (state.transactionType === 'buy' ? 'Buy Phone' : 'Sell Phone')
+          : '';
+        const problemValue = state.problem.trim() || defaultProblem;
+
         const formErrors = validateRepairFormErrors({
           customerName: state.customerName,
           phone: state.phone,
           deviceModel: state.deviceModel,
-          problem: state.problem,
+          problem: problemValue,
           images: state.images,
         });
 
@@ -71,13 +76,14 @@ export function useRepairSave() {
 
         const base: RepairInput = {
           orderCode: state.orderCode || '',
+          transactionType: state.transactionType,
           customerName: name,
           phone: ph,
           deviceModel: state.deviceModel.trim(),
           imei: normalizeImeiInput(state.imei),
           lockType: state.lockType,
           lockValue: state.lockValue,
-          problem: state.problem.trim(),
+          problem: problemValue,
           warranty: state.warranty.trim(),
           dateReceived: state.dateReceived,
           status: state.status,

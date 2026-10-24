@@ -18,6 +18,7 @@ import { AdminDashboard } from '../screens/AdminDashboard';
 import { KhataNavigator } from '../features/khata/navigation/KhataNavigator';
 import { ScanQrScreen } from '../screens/ScanQrScreen';
 import { CustomerHistoryScreen } from '../screens/CustomerHistoryScreen';
+import { BuySellScreen } from '../screens/BuySell';
 
 import type { RootStackParamList } from './types';
 
@@ -93,6 +94,7 @@ export function AppNavigator() {
           <Stack.Screen name="Finance" component={FinanceScreen} options={{ headerShown: false }} />
           <Stack.Screen name="AdminDashboard" component={AdminDashboard} options={{ headerShown: false }} />
           <Stack.Screen name="CustomerHistory" component={CustomerHistoryScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="BuySell" component={BuySellScreen} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

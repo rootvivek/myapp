@@ -40,14 +40,19 @@ export const RepairCard = React.memo(function RepairCard({
 
   const statusBusyRef = useRef(false);
 
-  const pill = useMemo(() => getStatusPill(repair.status, colors), [repair.status, colors]);
+  const pill = useMemo(() => getStatusPill(repair, colors), [repair, colors]);
 
-  const statusLabel =
-    REPAIR_STATUSES.find((s) => s.value === repair.status)?.label ?? repair.status;
+  const statusLabel = repair.transactionType === 'buy'
+    ? 'Buy Phone'
+    : repair.transactionType === 'sell'
+    ? 'Sell Phone'
+    : REPAIR_STATUSES.find((s) => s.value === repair.status)?.label ?? repair.status;
 
-  const handleStatusChipPress = useCallback(() => {
-    setStatusModal(true);
-  }, []);
+  const handleStatusChipPress = repair.transactionType
+    ? undefined
+    : useCallback(() => {
+        setStatusModal(true);
+      }, []);
 
   const promptWhatsAppNotification = useCallback((status: RepairStatus) => {
     const phone = getWhatsAppPhone(repair.phone);

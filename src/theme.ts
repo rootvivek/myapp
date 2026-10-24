@@ -7,7 +7,7 @@ export const spacing = {
   xl: 32,
   xxl: 48,
   /** Screen-level left/right gutter — applied on every screen (tabs + stack screens). */
-  gutter: 4,
+  gutter: 8,
 };
 
 /** One corner-radius system for the whole app. */
@@ -114,21 +114,21 @@ export const darkColors: AppColors = {
   statusCancelledBorder: 'rgba(251, 113, 133, 0.32)',
 };
 
-/** Flat, iOS-inspired light palette (solid fills, hairline borders, no glass). */
+/** Exact clean light palette matching reference screenshot (#F8FAFC background, white surfaces, #E2E8F0 borders). */
 export const lightColors: AppColors = {
-  bg: '#F2F2F7',
+  bg: '#F8FAFC',
   surface: '#FFFFFF',                             // cards, sheets, modals
-  surface2: '#F2F2F7',                            // inputs, tonal fills, secondary buttons
-  border: '#E3E3E8',                              // hairline separators
-  text: '#111114',                                // high contrast label
-  textMuted: '#6B6B76',
-  accent: '#007AFF',                              // iOS system blue
+  surface2: '#F1F5F9',                            // inputs, tonal fills, secondary buttons
+  border: '#E2E8F0',                              // hairline separators
+  text: '#0F172A',                                // high contrast slate label
+  textMuted: '#64748B',                           // muted slate
+  accent: '#0066FF',                              // modern royal blue accent
   onAccent: '#FFFFFF',
   success: '#16A34A',
   warning: '#D97706',
   danger: '#DC2626',
   onDanger: '#FFFFFF',
-  chipBg: '#F2F2F7',
+  chipBg: '#F1F5F9',
   surfaceDisabled: 'rgba(0, 0, 0, 0.06)',
   onSurfaceDisabled: 'rgba(0, 0, 0, 0.32)',
 
@@ -154,16 +154,16 @@ export const lightColors: AppColors = {
   statusCancelledBorder: 'rgba(220, 38, 38, 0.24)',
 };
 
-export function colorsForMode(mode: 'light' | 'dark'): AppColors {
-  return mode === 'light' ? lightColors : darkColors;
+export function accentAlpha(hex: string, alpha: number): string {
+  const value = hex.replace('#', '');
+  if (!/^[\da-f]{6}$/i.test(value)) return hex;
+  const num = parseInt(value, 16);
+  const r = (num >> 16) & 255;
+  const g = (num >> 8) & 255;
+  const b = num & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-/** Soft overlay using the accent hex (chips, tinted buttons). */
-export function accentAlpha(accentHex: string, alpha: number): string {
-  const hex = accentHex.replace('#', '').slice(0, 6);
-  if (hex.length !== 6) return `rgba(234, 88, 12, ${alpha})`;
-  const r = parseInt(hex.slice(0, 2), 16);
-  const g = parseInt(hex.slice(2, 4), 16);
-  const b = parseInt(hex.slice(4, 6), 16);
-  return `rgba(${r},${g},${b},${alpha})`;
+export function colorsForMode(mode: 'dark' | 'light'): AppColors {
+  return mode === 'dark' ? darkColors : lightColors;
 }

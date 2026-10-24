@@ -28,13 +28,15 @@ export function MainTabScreen({ navigation, route }: Props) {
   const hadSessionRef = useRef(!!session);
   useEffect(() => {
     const hasSession = !!session;
-    if (hasSession && !hadSessionRef.current && activeTab === 'settings') {
-      setActiveTab('jobs');
+    if (hasSession && !hadSessionRef.current) {
+      if (activeTab === 'settings') {
+        setActiveTab('jobs');
+      }
     } else if (!hasSession && hadSessionRef.current && activeTab !== 'home') {
       setActiveTab('home'); // logged out → home page
     }
     hadSessionRef.current = hasSession;
-  }, [session, activeTab]);
+  }, [session, activeTab, navigation, setActiveTab]);
 
   const renderContent = () => {
     switch (activeTab) {

@@ -88,7 +88,7 @@ export function AddTransactionScreen({ route }: { route: { params: { partyId: st
       />
 
       </ScrollView>
-      <View style={{ flexDirection: 'row', gap: 10, paddingHorizontal: 16, paddingTop: 10, paddingBottom: insets.bottom + 10, backgroundColor: colors.bg }}>
+      <View style={{ flexDirection: 'row', gap: 10, paddingHorizontal: 4, paddingTop: 10, paddingBottom: insets.bottom + 10, backgroundColor: colors.bg }}>
         <AppButton
           variant="secondary"
           style={{ flex: 1 }}

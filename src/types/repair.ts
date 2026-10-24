@@ -1,5 +1,7 @@
 export type RepairStatus = 'pending' | 'in_progress' | 'completed' | 'delivered';
 
+export type TransactionType = 'buy' | 'sell';
+
 export type LockType = '' | 'pattern' | 'pin' | 'password';
 
 export const LOCK_TYPES: { value: LockType; label: string }[] = [
@@ -19,6 +21,7 @@ export interface Repair {
   id: number;
   /** Unique display id from record id (e.g. ord00123 — `ord` + up to 5-digit number). */
   orderCode: string;
+  transactionType?: TransactionType;
   customerName: string;
   phone: string;
   deviceModel: string;

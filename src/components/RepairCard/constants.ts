@@ -62,13 +62,29 @@ export type PillConfig = {
   icon: string;
 };
 
-export function getStatusPill(status: RepairStatus, colors: AppColors): PillConfig {
-  const keys = STATUS_COLOR_KEYS[status] ?? STATUS_COLOR_KEYS.pending;
+export function getStatusPill(repair: Repair, colors: AppColors): PillConfig {
+  if (repair.transactionType === 'buy') {
+    return {
+      bg: colors.statusCompletedBg,
+      text: colors.statusCompletedText,
+      border: colors.statusCompletedBorder,
+      icon: '📥',
+    };
+  }
+  if (repair.transactionType === 'sell') {
+    return {
+      bg: colors.statusInProgressBg,
+      text: colors.statusInProgressText,
+      border: colors.statusInProgressBorder,
+      icon: '📤',
+    };
+  }
+  const keys = STATUS_COLOR_KEYS[repair.status] ?? STATUS_COLOR_KEYS.pending;
   return {
     bg: colors[keys.bg],
     text: colors[keys.text],
     border: colors[keys.border],
-    icon: STATUS_ICONS[status] ?? '⏳',
+    icon: STATUS_ICONS[repair.status] ?? '⏳',
   };
 }
 

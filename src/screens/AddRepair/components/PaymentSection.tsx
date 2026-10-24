@@ -7,6 +7,7 @@ import { FormTextInput } from '../../../components/FormTextInput';
 import { formatCurrency } from '../../../utils/format';
 import type { AddRepairStyles } from '../styles';
 import { AppCard } from '../../../components/ui/AppCard';
+import type { TransactionType } from '../../../types/repair';
 
 type Props = {
   repairCost: string;
@@ -16,6 +17,7 @@ type Props = {
   paymentType: 'cash' | 'online';
   sendWhatsAppInvoice: boolean;
   isEdit: boolean;
+  transactionType?: TransactionType;
   onChangeRepairCost: (val: string) => void;
   onChangeExpense: (val: string) => void;
   onChangeAdvanceAmount: (val: string) => void;
@@ -33,6 +35,7 @@ export const PaymentSection = React.memo(function PaymentSection({
   isPaid,
   sendWhatsAppInvoice,
   isEdit,
+  transactionType,
   onChangeRepairCost,
   onChangeExpense,
   onChangeAdvanceAmount,
@@ -40,6 +43,25 @@ export const PaymentSection = React.memo(function PaymentSection({
   styles,
   colors,
 }: Props) {
+  const isBuyOrSell = transactionType === 'buy' || transactionType === 'sell';
+
+  if (isBuyOrSell) {
+    const label = transactionType === 'buy' ? 'Buy Price (₹)' : 'Sell Price (₹)';
+    return (
+      <AppCard>
+        <Text style={styles.fieldLabel}>Total Cost</Text>
+        <FormTextInput
+          label={label}
+          placeholder="0"
+          value={repairCost}
+          onChangeText={onChangeRepairCost}
+          keyboardType="decimal-pad"
+          accessibilityLabel={label}
+        />
+      </AppCard>
+    );
+  }
+
   const costNum = Number(repairCost) || 0;
   const advNum = Number(advanceAmount) || 0;
   const dueAmount = Math.max(0, costNum - advNum);

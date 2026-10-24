@@ -5,6 +5,7 @@ import { generateInvoicePdfBase64 } from '../utils/invoicePdfDesign';
 const repair: Repair = {
   id: 676,
   orderCode: 'ORD00676',
+  transactionType: undefined,
   customerName: 'Sahil',
   phone: '8218125066',
   deviceModel: 'Oppo a15',

@@ -5,6 +5,7 @@ function makeRepair(overrides: Partial<Repair> = {}): Repair {
   return {
     id: 1,
     orderCode: 'ord00001',
+    transactionType: undefined,
     customerName: 'Test Customer',
     phone: '9876543210',
     deviceModel: 'Test Phone',

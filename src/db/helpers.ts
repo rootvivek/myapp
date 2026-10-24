@@ -78,8 +78,16 @@ export function getMissingColumn(message: string): string | null {
   if (!message.includes('schema cache') && !message.includes('does not exist')) {
     return null;
   }
-  const match = message.match(/Could not find the '([^']+)' column/);
-  return match ? match[1] : null;
+  const match1 = message.match(/Could not find the ['"]?([a-zA-Z0-9_]+)['"]? column/i);
+  if (match1) return match1[1];
+
+  const match2 = message.match(/Could not find the column ['"]?([a-zA-Z0-9_]+)['"]?/i);
+  if (match2) return match2[1];
+
+  const match3 = message.match(/column ['"]?([a-zA-Z0-9_]+)['"]?(?: of relation ['"][^'"]+['"])? does not exist/i);
+  if (match3) return match3[1];
+
+  return null;
 }
 
 export async function safeInsert(payload: Record<string, unknown>, retryCount = 0): Promise<Record<string, unknown>> {
@@ -94,7 +102,7 @@ export async function safeInsert(payload: Record<string, unknown>, retryCount = 
 
   if (error) {
     const columnName = getMissingColumn(error.message);
-    if (columnName) {
+    if (columnName && columnName in payload) {
       // Log warning so silent data loss is visible in logs
       console.warn(`[safeInsert] Dropping missing column "${columnName}" from insert payload`);
       const nextPayload = { ...payload };
@@ -104,4 +112,29 @@ export async function safeInsert(payload: Record<string, unknown>, retryCount = 
     throw error;
   }
   return data as Record<string, unknown>;
+}
+
+export async function safeUpdate(
+  table: string,
+  id: number,
+  payload: Record<string, unknown>,
+  ctx: { userId: string; shopId: string },
+  retryCount = 0
+): Promise<void> {
+  if (retryCount > 10) {
+    throw new Error('Too many schema discrepancy retries');
+  }
+  let query = supabase.from(table).update(payload as any).eq('id', id);
+  query = applyShopOrUserFilter(query, ctx);
+  const { error } = await query;
+  if (error) {
+    const columnName = getMissingColumn(error.message);
+    if (columnName && columnName in payload) {
+      console.warn(`[safeUpdate] Dropping missing column "${columnName}" from update payload`);
+      const nextPayload = { ...payload };
+      delete nextPayload[columnName];
+      return safeUpdate(table, id, nextPayload, ctx, retryCount + 1);
+    }
+    throw error;
+  }
 }

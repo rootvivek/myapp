@@ -11,8 +11,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Searchbar } from 'react-native-paper';
 import { Plus, Package, Trash2, Search, X } from 'lucide-react-native';
 
-import { AppActivityIndicator } from '../components/ui/AppActivityIndicator';
+import { ScreenContainer } from '../components/ui/ScreenContainer';
+import { SectionHeader } from '../components/ui/SectionHeader';
 import { AppButton } from '../components/ui/AppButton';
+import { AppActivityIndicator } from '../components/ui/AppActivityIndicator';
 import { EmptyState } from '../components/EmptyState';
 import { AppIconButton } from '../components/ui/AppIconButton';
 import { AppInput } from '../components/ui/AppInput';
@@ -226,35 +228,38 @@ export function InventoryScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      
-      <View style={styles.header}>
-        <Text style={styles.title}>Inventory</Text>
-        {isOwner && (
-          <AppButton
-            variant="primary"
-            leftIcon={<Plus size={15} color="#FFFFFF" strokeWidth={2.4} />}
-            onPress={openAddModal}
-            style={{ minHeight: sizes.buttonHeightCompact }}
-            contentStyle={{ minHeight: sizes.buttonHeightCompact }}
-            labelStyle={{ fontSize: 13, fontWeight: '600' }}
-          >
-            Add Item
-          </AppButton>
-        )}
-      </View>
+    <ScreenContainer scroll={false} padding={0}>
+      <View style={{ paddingHorizontal: spacing.gutter, paddingTop: spacing.md }}>
+        <SectionHeader
+          title="Inventory"
+          rightAction={
+            isOwner && (
+              <AppButton
+                variant="primary"
+                leftIcon={<Plus size={15} color="#FFFFFF" strokeWidth={2.4} />}
+                onPress={openAddModal}
+                style={{ minHeight: sizes.buttonHeightCompact }}
+                contentStyle={{ minHeight: sizes.buttonHeightCompact }}
+                labelStyle={{ fontSize: 13, fontWeight: '600' }}
+              >
+                Add Item
+              </AppButton>
+            )
+          }
+        />
 
-      <Searchbar
-        placeholder="Search accessories or SKU"
-        placeholderTextColor={colors.textMuted}
-        onChangeText={setQuery}
-        value={query}
-        style={[styles.searchbar, { height: 46, justifyContent: 'center' }]}
-        icon={() => <Search size={18} color={colors.accent} />}
-        clearIcon={() => <X size={18} color={colors.textMuted} />}
-        inputStyle={{ color: colors.text, fontSize: 14, minHeight: 0, paddingVertical: 0, alignSelf: 'center' }}
-        theme={{ colors: { elevation: { level3: colors.surface } } }}
-      />
+        <Searchbar
+          placeholder="Search accessories or SKU"
+          placeholderTextColor={colors.textMuted}
+          onChangeText={setQuery}
+          value={query}
+          style={[styles.searchbar, { height: 46, justifyContent: 'center', marginHorizontal: 0 }]}
+          icon={() => <Search size={18} color={colors.accent} />}
+          clearIcon={() => <X size={18} color={colors.textMuted} />}
+          inputStyle={{ color: colors.text, fontSize: 14, minHeight: 0, paddingVertical: 0, alignSelf: 'center' }}
+          theme={{ colors: { elevation: { level3: colors.surface } } }}
+        />
+      </View>
 
       {loading && inventory.length === 0 ? (
         <AppActivityIndicator size="large" color={colors.accent} containerStyle={{ marginTop: 40 }} />
@@ -368,6 +373,6 @@ export function InventoryScreen() {
           </View>
         </AppModal>
       )}
-    </SafeAreaView>
+    </ScreenContainer>
   );
 }

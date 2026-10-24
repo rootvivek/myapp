@@ -64,9 +64,11 @@ export const RepairInfo = React.memo(function RepairInfo({
           </View>
 
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>{LABELS.PROBLEM}</Text>
+            <Text style={styles.infoLabel}>
+              {repair.transactionType === 'buy' ? 'Buy Price' : repair.transactionType === 'sell' ? 'Sell Price' : LABELS.PROBLEM}
+            </Text>
             <Text style={styles.infoValue} numberOfLines={2}>
-              {repair.problem || '—'}
+              {repair.transactionType ? `₹${repair.repairCost}` : (repair.problem || '—')}
             </Text>
           </View>
 

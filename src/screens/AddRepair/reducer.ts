@@ -3,6 +3,7 @@ import { emptyImageState } from '../../utils/repairImages';
 import type { RepairFormAction, RepairFormState } from './types';
 
 export const initialRepairFormState: RepairFormState = {
+  transactionType: undefined,
   customerName: '',
   phone: '',
   deviceModel: '',

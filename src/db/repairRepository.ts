@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import type { LockType, Repair, RepairInput, RepairStatus } from '../types/repair';
+import type { LockType, Repair, RepairInput, RepairStatus, TransactionType } from '../types/repair';
 import { orderCodeFromRepairId } from '../utils/orderCode';
 import { removeAllRepairImages } from '../utils/repairImageUpload';
 import {
@@ -9,12 +9,14 @@ import {
   requireUserContext,
   requireUserId,
   safeInsert,
+  safeUpdate,
 } from './helpers';
 
 export function rowToRepair(row: Record<string, unknown>): Repair {
   return {
     id: Number(row.id),
     orderCode: String(row.order_code ?? '').trim() || orderCodeFromRepairId(Number(row.id)),
+    transactionType: row.transaction_type ? (row.transaction_type as TransactionType) : undefined,
     customerName: String(row.customer_name ?? ''),
     phone: String(row.phone ?? ''),
     deviceModel: String(row.device_model ?? ''),
@@ -48,6 +50,7 @@ export function rowToRepair(row: Record<string, unknown>): Repair {
 
 export function mapInputToRow(input: RepairInput): Record<string, any> {
   return {
+    transaction_type: input.transactionType || null,
     customer_name: input.customerName,
     phone: input.phone,
     device_model: input.deviceModel,
@@ -318,12 +321,7 @@ export async function updateRepair(input: RepairInput & { id: number }): Promise
       updated_at: now,
     };
 
-    // Apply the same scope as every other query so shop-less owners can update
-    // their own repairs (`.eq('shop_id', null)` never matches a NULL column).
-    let query = supabase.from('repairs').update(payload).eq('id', input.id);
-    query = applyShopOrUserFilter(query, ctx);
-    const { error } = await query;
-    if (error) throw error;
+    await safeUpdate('repairs', input.id, payload, ctx);
   } catch (err) {
     handleRepositoryError(err, 'Failed to update repair');
   }

@@ -54,6 +54,12 @@ create index if not exists shops_owner_id_idx on public.shops (owner_id);
 
 alter table public.shops enable row level security;
 
+drop policy if exists "shops_select_admin" on public.shops;
+create policy "shops_select_admin" on public.shops
+  for select using (
+    public.get_user_role(auth.uid()) = 'admin'
+  );
+
 drop policy if exists "shops_select_member" on public.shops;
 create policy "shops_select_member" on public.shops
   for select using (
@@ -97,6 +103,12 @@ alter table public.profiles drop column if exists shop_name;
 create index if not exists profiles_shop_id_idx on public.profiles (shop_id);
 
 alter table public.profiles enable row level security;
+
+drop policy if exists "profiles_select_admin" on public.profiles;
+create policy "profiles_select_admin" on public.profiles
+  for select using (
+    public.get_user_role(auth.uid()) = 'admin'
+  );
 
 drop policy if exists "profiles_select_own" on public.profiles;
 create policy "profiles_select_own" on public.profiles
@@ -351,6 +363,12 @@ create index if not exists repairs_created_by_idx on public.repairs (created_by)
 alter table public.repairs enable row level security;
 
 -- All shop members can see all shop repairs
+drop policy if exists "repairs_select_admin" on public.repairs;
+create policy "repairs_select_admin" on public.repairs
+  for select using (
+    public.get_user_role(auth.uid()) = 'admin'
+  );
+
 drop policy if exists "repairs_select_own" on public.repairs;
 drop policy if exists "repairs_select_shop" on public.repairs;
 create policy "repairs_select_shop" on public.repairs

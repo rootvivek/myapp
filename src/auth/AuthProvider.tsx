@@ -23,6 +23,7 @@ import {
 } from './ProfileService';
 import type { AuthContextValue, UserProfile } from './types';
 
+
 const isSupabaseConfigured = _isSupabaseConfigured ?? (() => false);
 const supabase = _supabase ?? null;
 

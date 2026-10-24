@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, BackHandler, ScrollView, StatusBar, Text, View, type LayoutChangeEvent } from 'react-native';
+import { Alert, BackHandler, Pressable, ScrollView, StatusBar, Switch, Text, View, type LayoutChangeEvent } from 'react-native';
 import { Appbar } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -7,6 +7,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ChevronLeft } from 'lucide-react-native';
 
 import { AppActivityIndicator } from '../../components/ui/AppActivityIndicator';
+import { AppCard } from '../../components/ui/AppCard';
 import { useTheme } from '../../context/ThemeContext';
 import { customerService } from '../../services/customerService';
 import { repairService } from '../../services/repairService';
@@ -77,8 +78,10 @@ export function AddRepairScreen({ navigation, route }: Props) {
   const lastProcessedImeiRef = useRef<string | undefined>(undefined);
   const lastProcessedCustomerRef = useRef<string | undefined>(undefined);
 
-  const { state, setField, setAccessory, setImageSlot, setFormData } = useRepairForm();
+  const initialTxType = route.params?.transactionType;
+  const { state, setField, setAccessory, setImageSlot, setFormData } = useRepairForm({ transactionType: initialTxType });
   const { saving, saveRepair } = useRepairSave();
+  const isBuyOrSell = state.transactionType === 'buy' || state.transactionType === 'sell';
 
   const clearFieldError = useCallback((field: RepairFormField) => {
     setFieldErrors((current) => {
@@ -315,6 +318,28 @@ export function AddRepairScreen({ navigation, route }: Props) {
       </Appbar.Header>
 
       <ScrollView ref={formScrollRef} showsVerticalScrollIndicator={false} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        {!isEdit && route.params?.transactionType && (
+          <AppCard variant="outlined" style={{ marginBottom: 16, padding: 12 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text }}>Transaction Type</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Text style={{ fontSize: 13, fontWeight: '600', color: state.transactionType === 'buy' ? colors.accent : colors.textMuted }}>
+                  Buy Phone
+                </Text>
+                <Switch
+                  value={state.transactionType === 'sell'}
+                  onValueChange={(val) => setField('transactionType', val ? 'sell' : 'buy')}
+                  trackColor={{ false: colors.border, true: colors.accent }}
+                  thumbColor="#FFFFFF"
+                />
+                <Text style={{ fontSize: 13, fontWeight: '600', color: state.transactionType === 'sell' ? colors.accent : colors.textMuted }}>
+                  Sell Phone
+                </Text>
+              </View>
+            </View>
+          </AppCard>
+        )}
+
         {isEdit && state.orderCode ? (
           <View style={styles.orderBanner}>
             <Text style={styles.orderBannerLabel}>Order ID</Text>
@@ -348,14 +373,16 @@ export function AddRepairScreen({ navigation, route }: Props) {
           />
         </View>
 
-        <View onLayout={handleSectionLayout('problem')}>
-          <ProblemSection
-            problem={state.problem}
-            errors={fieldErrors}
-            onChangeProblem={(val) => updateField('problem', val)}
-            styles={styles}
-          />
-        </View>
+        {!isBuyOrSell && (
+          <View onLayout={handleSectionLayout('problem')}>
+            <ProblemSection
+              problem={state.problem}
+              errors={fieldErrors}
+              onChangeProblem={(val) => updateField('problem', val)}
+              styles={styles}
+            />
+          </View>
+        )}
 
         <AccessoriesSection
           accessories={state.accessories}
@@ -372,11 +399,13 @@ export function AddRepairScreen({ navigation, route }: Props) {
           colors={colors}
         />
 
-        <SellerSection
-          selectedSellerId={state.sellerId}
-          onSelectSeller={(seller) => setField('sellerId', seller?.id ?? null)}
-          colors={colors}
-        />
+        {!isBuyOrSell && (
+          <SellerSection
+            selectedSellerId={state.sellerId}
+            onSelectSeller={(seller) => setField('sellerId', seller?.id ?? null)}
+            colors={colors}
+          />
+        )}
 
         <View onLayout={handleSectionLayout('photos')}>
           <PhotosSection
@@ -395,11 +424,13 @@ export function AddRepairScreen({ navigation, route }: Props) {
           styles={styles}
         />
 
-        <StatusSection
-          status={state.status}
-          onChangeStatus={(val) => setField('status', val)}
-          styles={styles}
-        />
+        {!isBuyOrSell && (
+          <StatusSection
+            status={state.status}
+            onChangeStatus={(val) => setField('status', val)}
+            styles={styles}
+          />
+        )}
 
         <PaymentSection
           repairCost={state.repairCost}
@@ -409,6 +440,7 @@ export function AddRepairScreen({ navigation, route }: Props) {
           paymentType={state.paymentType}
           sendWhatsAppInvoice={state.sendWhatsAppInvoice}
           isEdit={isEdit}
+          transactionType={state.transactionType}
           onChangeRepairCost={(val) => setField('repairCost', val)}
           onChangeExpense={(val) => setField('expense', val)}
           onChangeAdvanceAmount={(val) => setField('advanceAmount', val)}

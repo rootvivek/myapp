@@ -52,6 +52,7 @@ function AppChip({
       backgroundColor: disabled ? colors.surfaceDisabled : fill,
       borderWidth: isFilled ? 0 : sizes.hairline,
       borderColor: colors.border,
+      paddingHorizontal: 2,
     },
     containerStyle,
     style as StyleProp<ViewStyle>,
@@ -61,7 +62,7 @@ function AppChip({
     <Chip
       mode="flat"
       disabled={disabled}
-      textStyle={[{ fontSize: 11, fontWeight: isFilled ? '600' : '500', color: labelColor }, labelStyle]}
+      textStyle={[{ fontSize: 10, fontWeight: isFilled ? '600' : '500', color: labelColor }, labelStyle]}
       style={chipStyle}
       {...rest}
     >

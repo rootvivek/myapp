@@ -218,7 +218,11 @@ export function AdminDashboard({ navigation }: Props) {
             </Text>
           </View>
         ) : (
-          <DashboardContent stats={stats} colors={colors} signOut={signOut} />
+          <DashboardContent
+            stats={stats}
+            colors={colors}
+            signOut={signOut}
+          />
         )}
       </ScrollView>
     </SafeAreaView>
